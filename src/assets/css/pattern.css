@@ -1,0 +1,24 @@
+.poka_pattern_dark {
+  background-image: radial-gradient(
+      rgba(229, 173, 82, 0.4) 0.7px,
+      transparent 0.7px
+    ),
+    radial-gradient(rgba(229, 173, 82, 0.4) 0.7px, transparent 0.7px);
+  background-size: 22px 22px;
+  background-position: 0 0, 11px 11px;
+}
+
+
+.center-grey-btn {
+  background-color: #f5f5f572;
+  color: rgb(106, 105, 105);
+  border: 1px solid #f5f5f572;
+  border-radius: 0.6rem;
+  padding: 0.5rem 1rem;
+  font-size: 0.938rem;
+  cursor: pointer;
+  transition: 0.3s ease;
+  margin: auto;
+  display: block;
+  width: 90%;
+}

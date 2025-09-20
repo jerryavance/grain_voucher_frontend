@@ -1,0 +1,100 @@
+@media print {
+  * {
+    padding: 0;
+    margin: 0;
+  }
+
+  html,
+  body {
+    height: 100vh;
+    margin: 0 !important;
+    padding: 0 !important;
+    overflow: hidden;
+  }
+
+  .print-root {
+    display: block !important;
+    margin: 2rem !important;
+  }
+
+  .print-header {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .print-receipt {
+    @import url("https://fonts.googleapis.com/css2?family=Inconsolata:wght@400;500&display=swap");
+    font-family: "Inconsolata", monospace;
+  }
+
+  .account-statement {
+    margin-bottom: 2rem;
+  }
+
+  .account-statement .d-flex {
+    display: flex;
+  }
+
+  .account-statement .busi-part {
+    width: 100%;
+    align-items: center;
+  }
+
+  .account-statement .busi-part .report-title {
+    margin-left: auto;
+    align-self: flex-end;
+    text-transform: uppercase;
+    justify-self: end;
+  }
+
+  .account-statement .busi-part .business-logo {
+    height: 60px;
+    width: 60px;
+  }
+
+  .account-statement .busi-part .business-logo img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+  }
+
+  .account-statement .busi-part .business-details {
+    margin-left: 15px;
+  }
+
+  .business-details h3 {
+    font-size: 1.2rem;
+    font-weight: bold;
+    margin-bottom: 0.2rem;
+    text-transform: uppercase;
+  }
+
+  .business-details p {
+    line-height: 1.1;
+    font-size: 1rem;
+    font-weight: 500;
+  }
+
+  .account-statement .statement-title {
+    align-items: center;
+    margin-top: 2rem;
+    justify-content: space-between;
+  }
+
+  .statement-title .client-details p {
+    line-height: 1.1;
+    font-size: 1rem;
+    font-weight: 500;
+  }
+
+  .account-statement .statement-details table td{
+    font-weight: 500;
+    padding: 5px;
+  }
+}
+
+@media screen {
+  .print-header {
+    display: none !important;
+  }
+}

@@ -1,0 +1,51 @@
+.step-slider-container {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 20px;
+}
+
+.step-slider-button {
+  flex-grow: 1;
+  padding: 10px;
+}
+
+@media (max-width: 600px) {
+  .step-slider-container {
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .step-slider-button {
+    flex-grow: initial;
+    padding: 10px 0;
+  }
+}
+
+.step-slider-button.active {
+  background-color: #ffd700;
+  color: #fff;
+}
+
+.previous-button,
+.next-button {
+  margin-top: 10px;
+}
+
+@media (max-width: 600px) {
+  .previous-button,
+  .next-button {
+    width: 100%;
+  }
+}
+
+.step-slider-container {
+  margin-bottom: 20px;
+}
+
+.step-slider-button {
+  margin-right: 10px;
+}
+
+.previous-button {
+  margin-right: 10px;
+}

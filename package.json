@@ -1,0 +1,95 @@
+{
+  "name": "invest",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "dependencies": {
+    "@coreui/coreui": "^5.1.2",
+    "@coreui/react": "^5.3.0",
+    "@emotion/react": "^11.11.1",
+    "@emotion/styled": "^11.11.0",
+    "@mui/base": "^5.0.0-beta.9",
+    "@mui/icons-material": "^5.14.3",
+    "@mui/lab": "^5.0.0-alpha.54",
+    "@mui/material": "^5.14.3",
+    "@mui/styled-engine-sc": "^6.0.0",
+    "@mui/x-date-pickers": "^6.11.0",
+    "@types/node": "^12.0.0",
+    "@types/react": "^17.0.0",
+    "@types/react-dom": "^17.0.0",
+    "ajv": "^6.12.6",
+    "ajv-keywords": "^3.5.2",
+    "antd": "^5.20.6",
+    "apexcharts": "^4.5.0",
+    "axios": "^1.7.5",
+    "axios-mock-adapter": "^1.20.0",
+    "date-fns": "^2.23.0",
+    "formik": "^2.2.9",
+    "history": "5",
+    "html2canvas": "^1.4.1",
+    "i18next": "^21.3.3",
+    "jsonwebtoken": "^9.0.2",
+    "jspdf": "^2.5.1",
+    "jwt-decode": "^3.1.2",
+    "lodash.debounce": "^4.0.8",
+    "moment": "^2.29.4",
+    "nprogress": "^0.2.0",
+    "react": "^18.3.1",
+    "react-apexcharts": "^1.7.0",
+    "react-dnd": "^16.0.1",
+    "react-dnd-html5-backend": "^16.0.1",
+    "react-dom": "^18.3.1",
+    "react-hot-toast": "^2.1.1",
+    "react-image-lightbox": "^5.1.4",
+    "react-phone-input-2": "^2.15.1",
+    "react-router-dom": "6",
+    "react-scripts": "^5.0.1",
+    "react-slick": "^0.30.2",
+    "react-table": "7.7.0",
+    "react-to-print": "^2.14.13",
+    "simplebar-react": "^3.2.6",
+    "slick-carousel": "1.8.1",
+    "styled-components": "6.0.0",
+    "stylis": "4.0.10",
+    "typescript": "^5.5.4",
+    "yup": "0.32.9"
+  },
+  "scripts": {
+    "start": "react-scripts start --host 192.168.1.142",
+    "start:local": "react-scripts start",
+    "build": "CI=false DISABLE_ESLINT_PLUGIN=true react-scripts build",
+    "test": "react-scripts test --passWithNoTests",
+    "eject": "react-scripts eject",
+    "fix:prettier": "prettier --write ."
+  },
+  "eslintConfig": {
+    "extends": [
+      "react-app",
+      "react-app/jest"
+    ],
+    "rules": {
+      "@typescript-eslint/no-unused-vars": "off",
+      "eqeqeq": "off"
+    }
+  },
+  "browserslist": {
+    "production": [
+      ">0.2%",
+      "not dead",
+      "not op_mini all"
+    ],
+    "development": [
+      "last 1 chrome version",
+      "last 1 firefox version",
+      "last 1 safari version"
+    ]
+  },
+  "devDependencies": {
+    "@types/jsonwebtoken": "^8.5.5",
+    "@types/nprogress": "^0.2.0",
+    "@types/react-router-dom": "^5.3.3",
+    "@types/react-slick": "^0.23.10",
+    "@types/react-table": "^7.7.2",
+    "@types/slick-carousel": "^1.6.37"
+  }
+}

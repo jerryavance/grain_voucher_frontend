@@ -1,0 +1,10 @@
+.smallCalendar .ant-picker-calendar-date-value,
+.ant-select-selection-item,
+.ant-radio-button-wrapper {
+  font-size: 12px;
+}
+
+.smallCalendar th {
+  font-size: 12px;
+  font-weight: 600 !important;
+}
