@@ -19,29 +19,9 @@ export const MenuList = (isSuperUser: boolean, CanCreateDeposit: boolean ): IMen
       visible: true,
     },
     {
-      title: "Active Products",
-      Icon: Icons.AccountBalanceWalletIcon,    
-      path: "/dashboard/investments",
-      visible: true,
-    },
-    {
-      title: "Loans",
-      Icon: Icons.RequestQuoteIcon,
-      path: "/admin/loan",
-      visible: true,
-    },
-    {
-      title: "Investment",
-      Icon: Icons.MonetizationOnIcon,
-      path: "/admin/investment",
-      // visible: isSuperUser,
-      visible: true,
-    },
-    {
-      title: "Institutions",
-      Icon: Icons.SavingsIcon,
-      path: "/institutions",
-      // visible: isSuperUser,
+      title: "Vouchers",
+      Icon: Icons.ConfirmationNumberIcon,    
+      path: "/dashboard/vouchers",
       visible: true,
     },
     {
@@ -50,6 +30,18 @@ export const MenuList = (isSuperUser: boolean, CanCreateDeposit: boolean ): IMen
       path: "/admin/transactions", 
       // visible: isSuperUser,
       visible: true,
+    },
+    {
+      title: "Hubs",
+      Icon: Icons.FactoryIcon,
+      path: "/hub-list", 
+      visible: true,
+    },
+    {
+      title: "Hub Members",
+      Icon: Icons.GroupAddIcon,
+      path: "/admin/membership", 
+      visible: CanCreateDeposit,
     },
     {
       title: "Deposit Grain",
@@ -76,7 +68,7 @@ export const MenuList = (isSuperUser: boolean, CanCreateDeposit: boolean ): IMen
       visible: isSuperUser,
     },
     {
-      title: "Hubs",
+      title: "Grain Hubs",
       Icon: Icons.Agriculture,
       path: "/hubs",
       visible: isSuperUser,

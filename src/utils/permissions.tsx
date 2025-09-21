@@ -5,10 +5,6 @@ import { IVoucher } from "../pages/Voucher/Voucher.interface";
 
 // useless
 import { TYPE_INVESTOR, TYPE_ADMIN } from "../api/constants";
-import { ILoan } from "../pages/Loans/Loan.interface";
-import { IInvestment } from "../pages/Investments/Investment.interface";
-// useless
-
 
 
 export const IsSuperUser = () => {
@@ -67,35 +63,13 @@ export const CanApproveOrPayRedemption = (voucher: IVoucher) => {
 
 
 // useless
-export const IsThisLoanTabMaster = (loan: ILoan) => {
-  return [TYPE_ADMIN].includes(loan?.user?.user_type || "");
-};
+// export const IsThisLoanTabMaster = (loan: ILoan) => {
+//   return [TYPE_ADMIN].includes(loan?.user?.user_type || "");
+// };
 
-export const IsLoanInvestor = (loan: ILoan) => {
-  return [TYPE_INVESTOR].includes(loan?.user?.user_type || "");
-}
+// export const IsLoanInvestor = (loan: ILoan) => {
+//   return [TYPE_INVESTOR].includes(loan?.user?.user_type || "");
+// }
 
-export const CanChangeParticipantRole = (loan: ILoan) => {
-  return [TYPE_ADMIN].includes(loan?.user?.user_type || "");
-}
-
-// delete this function if not needed
-export const IsThisInvestmentTabMaster = (loan: ILoan) => {
-  return [TYPE_ADMIN].includes(loan?.user?.user_type || "");
-};
-export const CanChangeInvestmentRole = (investment: IInvestment) => {
-  return [TYPE_ADMIN].includes(investment?.user?.user_type || "");
-}
-export const CanChangeInvestmentStatus = (investment: IInvestment) => {
-  return [TYPE_ADMIN].includes(investment?.user?.user_type || "");
-}
-export const CanChangeLoanStatus = (loan: ILoan) => {
-  return [TYPE_ADMIN].includes(loan?.user?.user_type || "");
-}
-export const CanChangeInvestmentParticipantRole = (investment: IInvestment) => {
-  return [TYPE_ADMIN].includes(investment?.user?.user_type || "");
-}
-export const CanChangeInvestmentParticipantStatus = (investment: IInvestment) => {
-  return [TYPE_ADMIN].includes(investment?.user?.user_type || "");
-}
-// useless
+// export const CanChangeParticipantRole = (loan: ILoan) => {
+//   return [TYPE_ADMIN].includes(loan?.user?.user_type || "");

@@ -14,7 +14,7 @@ import { primaryColor, secondaryColor } from "../../../components/UI/Theme";
 import LoadingScreen from "../../../components/LoadingScreen";
 import { useModalContext } from "../../../contexts/ModalDialogContext";
 import UserProfile from "../Profile/UserProfile";
-import PastInvestments from "../../Investments/PastInvestments/PastInvestments";
+// import PastInvestments from "../../Investments/PastInvestments/PastInvestments";
 import {
   ACCOUNT_CHANGE_PASSWORD,
   ACCOUNT_PAST_INVESTMENTS,
@@ -154,7 +154,7 @@ const OptionsMenu = ({
 // tab screens
 const detailViews = {
   [ACCOUNT_PROFILE]: UserProfile,
-  [ACCOUNT_PAST_INVESTMENTS]: PastInvestments,
+  // [ACCOUNT_PAST_INVESTMENTS]: PastInvestments,
   [ACCOUNT_CHANGE_PASSWORD]: ChangePassword,
 };
 

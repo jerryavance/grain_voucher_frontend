@@ -66,20 +66,49 @@ interface NestedObject {
   [key: string]: NestedObject | string;
 }
 
-export function deepMerge<T extends NestedObject>(target: T, source: T): T {
-  for (const key of Object.keys(source)) {
-    if (typeof source[key] === "object" && source[key] !== null) {
-      if (!target[key]) {
-        target[key as keyof T] = {} as T[keyof T];
-      }
-      if (typeof target[key] === "object" && target[key] !== null) {
-        deepMerge(target[key], source[key]);
-      }
-    } else {
-      target[key as keyof T] = source[key as keyof T];
-    }
-  }
-  return target;
+// export function deepMerge<T extends NestedObject>(target: T, source: T): T {
+//   for (const key of Object.keys(source)) {
+//     if (typeof source[key] === "object" && source[key] !== null) {
+//       if (!target[key]) {
+//         target[key as keyof T] = {} as T[keyof T];
+//       }
+//       if (typeof target[key] === "object" && target[key] !== null) {
+//         deepMerge(target[key], source[key]);
+//       }
+//     } else {
+//       target[key as keyof T] = source[key as keyof T];
+//     }
+//   }
+//   return target;
+// }
+
+// utils/form_factory.ts
+export function deepMerge<T>(...objects: T[]): T {
+  return objects.reduce((result, obj) => {
+    if (!obj) return result;
+    return {
+      ...result,
+      ...obj,
+      ...Object.keys(obj).reduce((acc, key) => {
+        const objValue = (obj as Record<string, unknown>)[key];
+        const resultValue = (result as Record<string, unknown>)[key];
+        if (
+          typeof objValue === "object" &&
+          objValue !== null &&
+          !Array.isArray(objValue)
+        ) {
+          return {
+            ...acc,
+            [key]: deepMerge(
+              (typeof resultValue === "object" && resultValue !== null && !Array.isArray(resultValue)) ? resultValue : {},
+              objValue
+            ),
+          };
+        }
+        return acc;
+      }, {}),
+    };
+  }, {} as T);
 }
 
 export const getInitialValues = (formFields: IFormField[]) => {

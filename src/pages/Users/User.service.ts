@@ -8,6 +8,15 @@ export const UserService = {
       })
       .then((response) => response.data);
   },
+
+  // User.service.ts
+  async getAvailableFarmers(filters: Record<string, any>) {
+    return instance
+      .get("vouchers/deposits/available_farmers", { params: filters })
+      .then((response) => response.data);
+  },
+
+  
   async createUser(payload: Object) {
     return instance.post("auth/users/", payload).then((response) => response.data);
   },

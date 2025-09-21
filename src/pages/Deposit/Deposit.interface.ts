@@ -244,3 +244,9 @@ export interface IUserFilters {
   page?: number;
   page_size?: number;
 }
+
+
+export interface IDepositResults {
+  count: number;
+  results: IHub[];
+}

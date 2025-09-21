@@ -51,6 +51,8 @@ import GradeIcon from '@mui/icons-material/Grade';
 import GrainIcon from '@mui/icons-material/Grain';
 import PriceChangeIcon from '@mui/icons-material/PriceChange';
 import AddBusinessIcon from '@mui/icons-material/AddBusiness';
+import GroupAddIcon from '@mui/icons-material/GroupAdd';
+import FactoryIcon from '@mui/icons-material/Factory';
 
 // eslint-disable-next-line import/no-anonymous-default-export
 export default {
@@ -101,6 +103,8 @@ export default {
   GrainIcon,
   PriceChangeIcon,
   AddBusinessIcon,
+  GroupAddIcon,
+  FactoryIcon,
 
 };
 

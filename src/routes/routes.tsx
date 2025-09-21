@@ -5,7 +5,6 @@ import GuestGuard from "../components/authentication/GuestGuard";
 import DashboardLayout from "../components/Layouts/DashboardLayout";
 import { LoginPortal } from "../pages/Authentication/Login/LoginPortal";
 import LazyLoader from "./routes-loader";
-import { ACCOUNT_PAST_INVESTMENTS, ACCOUNT_PROFILE } from "../api/constants";
 
 const routes = [
   {
@@ -37,23 +36,13 @@ const routes = [
     ),
     children: [
       {
-        path: "investments/details/:investmentId",
-        element: <LazyLoader.InvestmentDetailView />,
+        path: "hub-list",
+        element: <LazyLoader.HubList />,
         requiresAuth: true,
       },
       {
-        path: "investments/details/:investmentId/:tabId",
-        element: <LazyLoader.InvestmentDetailView />,
-        requiresAuth: true,
-      },
-      {
-        path: "loan/details/:loanId",
-        element: <LazyLoader.DepositDetailView />,
-        requiresAuth: true,
-      },
-      {
-        path: "loan/details/:loanId/:tabId",
-        element: <LazyLoader.DepositDetailView />,
+        path: "hub-list/details/:hubId",
+        element: <LazyLoader.HubListDetails />,
         requiresAuth: true,
       },
     ],
@@ -76,8 +65,12 @@ const routes = [
         element: <LazyLoader.AccountView />,
       },
       {
-        path: "investments",
-        element: <LazyLoader.InvestmentDashboard />,
+        path: "hub-list",
+        element: <LazyLoader.HubList />,
+      },
+      {
+        path: "vouchers",
+        element: <LazyLoader.VoucherGrid />,
       },
     ],
   },
@@ -114,39 +107,18 @@ const routes = [
         requiresAuth: true,
       },
       {
-        path: "investment",
-        element: <LazyLoader.Investment />,
-        requiresAuth: true,
-      },
-      {
-        path: "investment/create",
-        element: <LazyLoader.InvestmentForm />,
-        requiresAuth: true,
-      },
-      {
-        path: "investment/details/:investmentId",
-        element: <LazyLoader.InvestmentDetailView />,
-        requiresAuth: true,
-      },
-      // DEPOSIT
-      {
         path: "deposit",
         element: <LazyLoader.Deposit />,
         requiresAuth: true,
       },
+      // {
+      //   path: "transactions",
+      //   element: <LazyLoader.Transactions />,
+      //   requiresAuth: true,
+      // },
       {
-        path: "deposit/create",
-        element: <LazyLoader.DepositForm />,
-        requiresAuth: true,
-      },
-      {
-        path: "deposit/details/:depositId",
-        element: <LazyLoader.DepositDetailView />,
-        requiresAuth: true,
-      },
-      {
-        path: "transactions",
-        element: <LazyLoader.Transactions />,
+        path: "membership",
+        element: <LazyLoader.Membership />,
         requiresAuth: true,
       },
     ],
@@ -164,25 +136,6 @@ const routes = [
         element: (
           <RouteGuard requiredPermissions={[]}>
             <LazyLoader.Hub />
-          </RouteGuard>
-        ),
-        requiresAuth: true,
-      },
-    ],
-  },
-  {
-    path: "institutions",
-    element: (
-      <AuthGuard>
-        <DashboardLayout />
-      </AuthGuard>
-    ),
-    children: [
-      {
-        path: "/institutions",
-        element: (
-          <RouteGuard requiredPermissions={[]}>
-            <LazyLoader.Institutions />
           </RouteGuard>
         ),
         requiresAuth: true,
