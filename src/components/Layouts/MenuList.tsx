@@ -77,8 +77,8 @@ export const MenuList = (isSuperUser: boolean, CanCreateDeposit: boolean ): IMen
       title: "Users",
       Icon: Icons.GroupsIcon,
       path: "/users",
-      // visible: isSuperUser,
-      visible: CanCreateDeposit,
+      visible: isSuperUser,
+      // visible: CanCreateDeposit || isSuperUser,
     },
   ];
 };
