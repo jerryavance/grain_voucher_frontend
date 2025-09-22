@@ -120,8 +120,8 @@ export const CURRENCY_OPTIONS: TOption[] = [
 // User Types
 export const USER_ROLE_OPTIONS: TOption[] = [
   { value: "farmer", label: "Farmer" },
-  // { value: "agent", label: "Agent" },
-  // { value: "hub_admin", label: "Hub Admin" },
+  { value: "agent", label: "Agent" },
+  { value: "hub_admin", label: "Hub Admin" },
   { value: "investor", label: "Investor" },
 ];
 
