@@ -24,13 +24,13 @@ export const MenuList = (isSuperUser: boolean, CanCreateDeposit: boolean ): IMen
       path: "/dashboard/vouchers",
       visible: true,
     },
-    {
-      title: "Transactions",
-      Icon: Icons.PaidIcon,
-      path: "/admin/transactions", 
-      // visible: isSuperUser,
-      visible: true,
-    },
+    // {
+    //   title: "Transactions",
+    //   Icon: Icons.PaidIcon,
+    //   path: "/admin/transactions", 
+    //   // visible: isSuperUser,
+    //   visible: true,
+    // },
     {
       title: "Hubs",
       Icon: Icons.FactoryIcon,
@@ -78,7 +78,7 @@ export const MenuList = (isSuperUser: boolean, CanCreateDeposit: boolean ): IMen
       Icon: Icons.GroupsIcon,
       path: "/users",
       // visible: isSuperUser,
-      visible: true,
+      visible: CanCreateDeposit,
     },
   ];
 };

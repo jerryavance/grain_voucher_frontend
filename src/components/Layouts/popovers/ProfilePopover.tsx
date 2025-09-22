@@ -70,18 +70,18 @@ const ProfilePopover: FC = () => {
                 {user?.first_name} {user?.last_name}
               </H6>
               <Tiny display="block" fontWeight={500} color="text.disabled">
-                {user?.email}
+                {user?.phone_number}
               </Tiny>
             </Box>
           </FlexBox>
         }
       >
         <Box pt={1}>
-          <StyledSmall
+          {/* <StyledSmall
             onClick={() => handleMenuItem(`/dashboard/account/${ACCOUNT_PROFILE}`)}
           >
             Account
-          </StyledSmall>
+          </StyledSmall> */}
 
           <Divider sx={{ my: 1 }} />
 

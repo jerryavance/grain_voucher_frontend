@@ -1,183 +1,185 @@
 import { debounce } from 'lodash';
-import { Box, Grid, useTheme, Button } from "@mui/material";
-import { FC , useEffect, useState} from "react";
-import Analytics from "./Analytics/Analytics";
-import Portfolio from "./Analytics/Portfolio";
-import SaaSCard from "./Card";
-import Footer from "./Footer";
-import Performance from "./Performance/Performance";
-import PerformanceLine from "./Performance/PerformanceLine";
-import useTitle from "../../hooks/useTitle";
-import BucketIcon from "../../icons/BucketIcon";
-import EarningIcon from "../../icons/EarningIcon";
-import PeopleIcon from "../../icons/PeopleIcon";
-import WindowsLogoIcon from "../../icons/WindowsLogoIcon";
+import { Box, Grid, useTheme, Button, Typography, Card, Avatar } from "@mui/material";
+import { FC, useEffect, useState } from "react";
 import { useNavigate } from 'react-router-dom';
-import { use } from "i18next";
+import useTitle from "../../hooks/useTitle";
 import useAuth from "../../hooks/useAuth";
-import { DashboardService } from "./services/Dashboard.service";
-import FilterListIcon from '@mui/icons-material/FilterList';
-import FilterListOffIcon from '@mui/icons-material/FilterListOff';
-import { FilterFormValidations } from './models/Validations';
-import { useFormik } from 'formik';
-import { getInitialValues } from '../../utils/form_factory';
-import { FilterFormFields } from './models/FilterForm';
-import TableFilter from '../../components/UI/TableFilter';
-import { H6, H4 } from "../../components/Typography";
+import { PriceFeedService } from "../PriceFeed/PriceFeed.service";
+import { GrainTypeService } from "../GrainType/GrainType.service";
+import { VoucherService } from "../Voucher/Voucher.service";
+import VoucherStatsCards from "./VoucherStatsCards";
+import MarketPriceFeeds from "./MarketPriceFeeds";
+import UserGreeting from "./UserGreeting";
+import QuickActions from "./QuickActions";
+import { H4 } from "../../components/Typography";
+import { IPriceFeedResults, IPriceFeed } from "../PriceFeed/PriceFeed.interface";
+import { IGrainTypeResults } from "../GrainType/GrainType.interface";
+import { ApiFilters } from "../Voucher/Voucher.interface";
 
 const SaaS: FC = () => {
-  // change navbar title
   useTitle("Dashboard");
-
+  
   const theme = useTheme();
   const navigate = useNavigate();
-
-  const [open, setOpen] = useState(false);
   const { user }: any = useAuth();
-  const [cardHeight, setCardHeight] = useState<string | number>(0);
+
+  // State management
   const [dashboardData, setDashboardData] = useState<any>({});
+  const [voucherStats, setVoucherStats] = useState<any>({});
+  const [priceFeeds, setPriceFeeds] = useState<IPriceFeed[]>([]);
+  const [grainTypes, setGrainTypes] = useState<any[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
-  const [filters, setFilters] = useState<any>({
-    // Set default date range for the last one month
-    start_date: new Date(new Date().setMonth(new Date().getMonth() - 1)).toISOString().split('T')[0],
-    end_date: new Date().toISOString().split('T')[0],
-  });
+  const [feedsLoading, setFeedsLoading] = useState<boolean>(true);
 
-  const handleFilterSubmit = () => {
-    const values = filterForm.values;
-    setFilters((prevFilters: any) => ({ ...prevFilters, ...values }));
-  };
+  // Fetch all data on component mount
+  useEffect(() => {
+    fetchAllData();
+  }, []);
 
-  const filterFormFields = FilterFormFields();
-  const filterForm = useFormik({
-    initialValues: getInitialValues(filterFormFields),
-    validateOnMount: true,
-    validateOnChange: true,
-    validationSchema: FilterFormValidations,
-    onSubmit: handleFilterSubmit,
-  });
-
-  const fetchData = async ( filters:any ) => {
+  const fetchAllData = async () => {
     setLoading(true);
     try {
-      const response = await DashboardService.getDashboardSummary();
-      setDashboardData(response);
-      setLoading(false);
+      await Promise.all([
+        fetchVoucherStats(),
+        fetchPriceFeeds(),
+        fetchGrainTypes()
+      ]);
     } catch (error) {
-      // Handle errors here
+      console.error("Error fetching dashboard data:", error);
+    } finally {
       setLoading(false);
     }
   };
-  
-  useEffect(() => {
-    fetchData(filters);
-  }, [filters]); // Make sure to include filters if they affect data fetching
-  
-  const formatNumberWithCommas = (number: number) => {
-    return number.toLocaleString();
-  };
 
-
-  const cardList = [
-    {
-      price: formatNumberWithCommas(dashboardData?.wallet_balance || 0),
-      Icon: EarningIcon,
-      title: "Net Invested (UGX)",
-      color: theme.palette.primary.main,
-    },
-    {
-      price: formatNumberWithCommas(dashboardData?.wallet_balance || 0),
-      title: "Wallet Balance (UGX)",
-      Icon: EarningIcon,
-      color: theme.palette.primary.purple,
-    },
-  ];
-
-  const handleToggle = () => {
-    setOpen((prevOpen) => !prevOpen);
-    setCardHeight(open ? 0 : 'auto');
-  };
-
-  const handleFilterClear = () => {
-    // Reset the filter form
-    filterForm.resetForm();
-    // Reset the date range to the default last one month
-    const defaultFilters = {
-      start_date: new Date(new Date().setMonth(new Date().getMonth() - 1)).toISOString().split('T')[0],
-      end_date: new Date().toISOString().split('T')[0],
-    };
-    setFilters(defaultFilters);
-    // Fetch data with the default filters
-    fetchData(defaultFilters);
-  }
-
-  const handleDeposit = (data: any) => {
-    navigate('/transactions/deposit')
-  }
-
-  const handleWithdraw = (data: any) => {
-    navigate('/transactions/withdraw')
-  }
-  
-  return (
-    <Box pt={2} pb={4}>
-      <Grid container spacing={4}>
-        <Grid item xs={12} md={6}>
-          <H4>Welcome {user?.first_name} {user?.last_name} !</H4>
-        </Grid>
-      </Grid>
-      <Grid container justifyContent="flex-end"> {/* Use justifyContent to move the filter button to the right */}
-        <Button variant="contained" size="small" sx={{ margin: "0 0.5rem 2rem 0" }} onClick={() => handleDeposit({ formType: 'Save'})}>
-          Deposit
-        </Button>
-
-        <Button variant="contained" size="small" sx={{ margin: "0 0.5rem 2rem 0" }} onClick={() => handleWithdraw({ formType: 'Save'})}>
-          Withdraw
-        </Button>
-
-        <Button onClick={handleToggle} sx={{ paddingX: '1px', margin: "0 0 2rem 0" }} variant="contained" color="primary">
-          {!open ? <FilterListIcon /> : <FilterListOffIcon />}
-        </Button>
-      </Grid>
+  const fetchVoucherStats = async () => {
+    try {
+      const filters: ApiFilters = { page_size: 1000 };
+      const response = await VoucherService.getMyVouchers(filters);
       
-      <TableFilter
+      if (response && response.results) {
+        const vouchers = response.results;
+        const stats = {
+          totalVouchers: vouchers.length,
+          totalValue: vouchers.reduce((sum: number, voucher: any) => sum + parseFloat(voucher.current_value), 0),
+          totalQuantity: vouchers.reduce((sum: number, voucher: any) => sum + parseFloat(voucher.deposit.quantity_kg), 0),
+          activeVouchers: vouchers.filter((v: any) => v.status === 'issued').length,
+        };
+        setVoucherStats(stats);
+      }
+    } catch (error) {
+      console.error("Error fetching voucher stats:", error);
+      setVoucherStats({
+        totalVouchers: 0,
+        totalValue: 0,
+        totalQuantity: 0,
+        activeVouchers: 0,
+      });
+    }
+  };
+
+  const fetchPriceFeeds = async () => {
+    setFeedsLoading(true);
+    try {
+      const filters = { 
+        page_size: 20,
+        ordering: '-effective_date'
+      };
+      const response: IPriceFeedResults = await PriceFeedService.getPriceFeeds(filters);
+      
+      if (response && response.results) {
+        setPriceFeeds(response.results);
+      }
+    } catch (error) {
+      console.error("Error fetching price feeds:", error);
+      setPriceFeeds([]);
+    } finally {
+      setFeedsLoading(false);
+    }
+  };
+
+  const fetchGrainTypes = async () => {
+    try {
+      const filters = { page_size: 100 };
+      const response: IGrainTypeResults = await GrainTypeService.getGrainTypes(filters);
+      
+      if (response && response.results) {
+        setGrainTypes(response.results);
+      }
+    } catch (error) {
+      console.error("Error fetching grain types:", error);
+      setGrainTypes([]);
+    }
+  };
+
+  const handleDeposit = () => {
+    navigate('/transactions/deposit');
+  };
+
+  const handleWithdraw = () => {
+    navigate('/transactions/withdraw');
+  };
+
+  const handleViewVouchers = () => {
+    navigate('/vouchers');
+  };
+
+  const handleCreateDeposit = () => {
+    navigate('/deposits/create');
+  };
+
+  return (
+    <Box pt={2} pb={4} sx={{ bgcolor: 'grey.50', minHeight: '100vh' }}>
+      {/* User Greeting Section */}
+      <UserGreeting user={user} />
+
+      {/* Quick Actions */}
+      {/* <QuickActions 
+        onDeposit={handleDeposit}
+        onWithdraw={handleWithdraw}
+        onViewVouchers={handleViewVouchers}
+        onCreateDeposit={handleCreateDeposit}
+      /> */}
+
+      {/* Voucher Stats Cards */}
+      <VoucherStatsCards 
+        stats={voucherStats}
         loading={loading}
-        height={cardHeight}
-        formInstance={filterForm}
-        validations={FilterFormValidations}
-        formFields={filterFormFields}
-        onSubmit={handleFilterSubmit}
-        onClear={handleFilterClear}
       />
 
+      {/* Market Price Feeds */}
+      <MarketPriceFeeds 
+        priceFeeds={priceFeeds}
+        grainTypes={grainTypes}
+        loading={feedsLoading}
+        onRefresh={fetchPriceFeeds}
+      />
 
-      <Grid container spacing={{ xs: 2, sm: 3, md: 4 }}>
-        {cardList.map((card, index) => (
-          <Grid item lg={3} xs={6} key={index}>
-            <SaaSCard card={card} />
-          </Grid>
-        ))}
-      </Grid>
-
+      {/* Analytics and Portfolio Section */}
       <Grid container spacing={4} pt={4}>
         <Grid item lg={8} md={7} xs={12}>
-          <PerformanceLine />
-        </Grid>
-        <Grid item lg={4} md={5} xs={12}>
-          <Portfolio />
-        </Grid>
-
-        <Grid item lg={8} md={7} xs={12}>
-          <Performance />
+          <Card sx={{ p: 3, height: '100%' }}>
+            <Typography variant="h6" sx={{ mb: 2, fontWeight: 600 }}>
+              Market Analytics
+            </Typography>
+            <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
+              Track market trends and price movements for better trading decisions.
+            </Typography>
+            {/* You can integrate your existing analytics component here */}
+            <Box sx={{ 
+              height: 300, 
+              display: 'flex', 
+              alignItems: 'center', 
+              justifyContent: 'center',
+              bgcolor: 'grey.100',
+              borderRadius: 2
+            }}>
+              <Typography color="text.secondary">
+                Analytics Chart Coming Soon
+              </Typography>
+            </Box>
+          </Card>
         </Grid>
         
-        <Grid item lg={4} md={5} xs={12}>
-          <Analytics />
-        </Grid>
-
-        <Grid item xs={12}>
-          <Footer imageLink="/static/illustration/sass-dashboard.svg" />
-        </Grid>
       </Grid>
     </Box>
   );

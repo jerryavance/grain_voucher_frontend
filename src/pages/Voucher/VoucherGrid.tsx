@@ -341,13 +341,13 @@ const VoucherGrid: FC = () => {
         )}
 
         {/* Floating Action Button */}
-        <Fab
+        {/* <Fab
           color="primary"
           sx={{ position: 'fixed', bottom: 24, right: 24 }}
           onClick={() => navigate('/deposits/create')} // Adjust route as needed
         >
           <Add />
-        </Fab>
+        </Fab> */}
 
         {/* Dialogs */}
         <VoucherDetailsDialog
