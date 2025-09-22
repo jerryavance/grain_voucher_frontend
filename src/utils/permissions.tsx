@@ -10,7 +10,12 @@ import { TYPE_INVESTOR, TYPE_ADMIN } from "../api/constants";
 export const IsSuperUser = () => {
   const { user } = useAuth();  
   return user?.is_superuser || false
-}
+};
+
+export const IsHubAdmin = () => {
+  const { user } = useAuth();
+  return user?.role === ROLE_HUB_ADMIN;
+};
 
 // Check if user can create a deposit (only hub_admin or agent)
 export const CanCreateDeposit = () => {
@@ -38,6 +43,12 @@ export const CanManageVoucher = (voucher: IVoucher) => {
 export const CanCreatePurchaseOffer = () => {
   const { user } = useAuth();
   return user?.role === ROLE_INVESTOR;
+};
+
+// Check if user can create a purchase offer (only investor)
+export const CanViewHubMembers = () => {
+  const { user } = useAuth();
+  return user?.role === ROLE_HUB_ADMIN;
 };
 
 // Check if user can accept a purchase offer (only hub_admin for the voucher's deposit hub)

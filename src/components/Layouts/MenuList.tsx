@@ -1,5 +1,4 @@
 import Icons from "../../icons/sidebar";
-
 export interface IMenuItem {
   title: string;
   Icon?: any;
@@ -10,7 +9,7 @@ export interface IMenuItem {
   visible: boolean;
 }
 
-export const MenuList = (isSuperUser: boolean, CanCreateDeposit: boolean ): IMenuItem[] => {
+export const MenuList = (isSuperUser: boolean, CanCreateDeposit: boolean , CanViewHubMembers: boolean, isHubAdmin: boolean): IMenuItem[] => {
   return [
     {
       title: "Home",
@@ -41,7 +40,7 @@ export const MenuList = (isSuperUser: boolean, CanCreateDeposit: boolean ): IMen
       title: "Hub Members",
       Icon: Icons.GroupAddIcon,
       path: "/admin/membership", 
-      visible: CanCreateDeposit,
+      visible: CanViewHubMembers,
     },
     {
       title: "Deposit Grain",
@@ -77,8 +76,8 @@ export const MenuList = (isSuperUser: boolean, CanCreateDeposit: boolean ): IMen
       title: "Users",
       Icon: Icons.GroupsIcon,
       path: "/users",
-      visible: isSuperUser,
-      // visible: CanCreateDeposit || isSuperUser,
+      // visible: isSuperUser,
+      visible: isHubAdmin || isSuperUser,
     },
   ];
 };
