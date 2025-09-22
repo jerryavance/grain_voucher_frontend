@@ -22,11 +22,11 @@ export const UserFormValidations = (otpSent: boolean) => {
         return cleaned;
       })
       .matches(
-        /^\+256(77|78|39)\d{7}$/,
-        "Must be a valid MTN Uganda phone number starting with +256 followed by 77, 78, or 39 and 7 digits"
+        /^\+256\d{9}$/,
+        "Must be a valid Ugandan phone number starting with +256 and followed by 9 digits"
       )
       .required("Phone number is required"),
-    role: Yup.string().required("Account type is required"), // Changed from 'type' to 'role'
+    role: Yup.string().required("Account type is required"),
     accept_terms: Yup.boolean()
       .oneOf([true], "You must accept the terms and conditions")
       .required("You must accept the terms and conditions"),
