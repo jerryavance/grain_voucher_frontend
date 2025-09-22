@@ -10,7 +10,9 @@ import {
 import { FC, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { IsSuperUser } from "../../utils/permissions";
-import {CanCreateDeposit} from "../../utils/permissions";
+import { IsHubAdmin } from "../../utils/permissions";
+import { CanCreateDeposit } from "../../utils/permissions";
+import { CanViewHubMembers } from "../../utils/permissions";
 import { MenuList } from "./MenuList";
 
 import { secondaryColor } from "../UI/Theme";
@@ -61,9 +63,17 @@ const DashboardSideBar: FC<SideNavBarProps> = ({ closeMobileSideBar }) => {
   const [active, setActive] = useState("Dashboard");
   const downMd = useMediaQuery((theme: Theme) => theme.breakpoints.down("md"));
 
-  const isSuperUser = IsSuperUser(); // Only called here, inside a React component
+  const isHubAdmin = IsHubAdmin();
+  const isSuperUser = IsSuperUser();
   const canCreateDeposit = CanCreateDeposit();
-  const topMenuList = MenuList(isSuperUser, canCreateDeposit);
+  const canViewHubMembers = CanViewHubMembers();
+
+  const topMenuList = MenuList(
+    isSuperUser,
+    canCreateDeposit,
+    canViewHubMembers,
+    isHubAdmin
+  );
 
   const handleActiveMainMenu = (menuItem: any) => () => {
     setActive(menuItem.title);
