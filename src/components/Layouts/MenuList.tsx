@@ -13,7 +13,7 @@ export interface IMenuItem {
 export const MenuList = (isSuperUser: boolean, CanCreateDeposit: boolean ): IMenuItem[] => {
   return [
     {
-      title: "Dashboard",
+      title: "Home",
       Icon: Icons.HomeIcon,
       path: "/dashboard",
       visible: true,
