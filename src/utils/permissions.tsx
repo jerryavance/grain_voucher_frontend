@@ -1,4 +1,4 @@
-import { ROLE_FARMER, ROLE_INVESTOR, ROLE_HUB_ADMIN, ROLE_AGENT } from "../api/constants";
+import { ROLE_FARMER, ROLE_INVESTOR, ROLE_HUB_ADMIN, ROLE_AGENT, ROLE_SUPER_ADMIN} from "../api/constants";
 import useAuth from "../hooks/useAuth";
 import { IDeposit } from "../pages/Deposit/Deposit.interface";
 import { IVoucher } from "../pages/Voucher/Voucher.interface";
@@ -9,7 +9,7 @@ import { TYPE_INVESTOR, TYPE_ADMIN } from "../api/constants";
 
 export const IsSuperUser = () => {
   const { user } = useAuth();  
-  return user?.is_superuser || false
+  return user?.is_superuser || user?.role === ROLE_SUPER_ADMIN;
 };
 
 export const IsHubAdmin = () => {

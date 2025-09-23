@@ -129,6 +129,7 @@ export const ROLE_HUB_ADMIN = 'hub_admin';
 export const ROLE_AGENT = 'agent';
 export const ROLE_FARMER = 'farmer';
 export const ROLE_INVESTOR = 'investor';
+export const ROLE_SUPER_ADMIN = 'super_admin';
 
 // Account Types
 export const ACCOUNT_TYPE_OPTIONS: TOption[] = [
