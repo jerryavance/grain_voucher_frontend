@@ -14,6 +14,7 @@ const InternetConnection = () => {
         return () => {
             window.removeEventListener("online", handleOnline);
             window.removeEventListener("offline", handleOffline);
+            
         };
     }, []);
 

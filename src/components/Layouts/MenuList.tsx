@@ -43,6 +43,12 @@ export const MenuList = (isSuperUser: boolean, CanCreateDeposit: boolean , CanVi
       visible: CanViewHubMembers,
     },
     {
+      title: "Agent Deposits",
+      Icon: Icons.AddBusinessIcon,
+      path: "/admin/deposit-management", 
+      visible: CanViewHubMembers,
+    },
+    {
       title: "Deposit Grain",
       Icon: Icons.AddBusinessIcon,
       path: "/admin/deposit", 
@@ -77,7 +83,7 @@ export const MenuList = (isSuperUser: boolean, CanCreateDeposit: boolean , CanVi
       Icon: Icons.GroupsIcon,
       path: "/users",
       // visible: isSuperUser,
-      visible: isHubAdmin || isSuperUser,
+      visible: isSuperUser,
     },
   ];
 };

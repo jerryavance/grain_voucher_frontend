@@ -111,6 +111,11 @@ const routes = [
         element: <LazyLoader.Deposit />,
         requiresAuth: true,
       },
+      {
+        path: "deposit-management",
+        element: <LazyLoader.DepositManangement />,
+        requiresAuth: true,
+      },
       // {
       //   path: "transactions",
       //   element: <LazyLoader.Transactions />,

@@ -27,6 +27,8 @@ const RouteLazyLoader = {
 
   Deposit: Loadable(lazy(() => import("../pages/Deposit/Deposit"))),
 
+  DepositManangement: Loadable(lazy(() => import("../pages/DepositManagement/DepositManagement"))),
+
   VoucherGrid: Loadable(lazy(() => import("../pages/Voucher/VoucherGrid"))),
 
   QualityGrade: Loadable(lazy(() => import("../pages/QualityGrade/QualityGrade"))),
