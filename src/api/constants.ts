@@ -109,7 +109,7 @@ export const TRANSACTION_TYPES = [
 ];
 
 
-export const INITIAL_PAGE_SIZE = 20
+export const INITIAL_PAGE_SIZE = 10
 
 // Currency
 export const CURRENCY_OPTIONS: TOption[] = [

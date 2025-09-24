@@ -18,7 +18,7 @@ import { INITIAL_PAGE_SIZE } from '../../api/constants';
 
 
 const Hub: FC = () => {
-  useTitle("Hubs");
+  useTitle("Grain Hubs");
   const { setShowModal } = useModalContext();
 
   const [hubs, setHubs] = useState<IHubResults>();
