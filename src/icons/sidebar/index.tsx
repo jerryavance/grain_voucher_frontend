@@ -29,7 +29,6 @@ import AccountBalanceWalletIcon from "@mui/icons-material/AccountBalanceWallet";
 import AdminPanelSettingsIcon from "@mui/icons-material/AdminPanelSettings";
 import BalanceIcon from "@mui/icons-material/Balance";
 import EmojiEventsIcon from '@mui/icons-material/EmojiEvents';
-import CalculateIcon from "@mui/icons-material/Calculate";
 import DriveFolderUploadIcon from "@mui/icons-material/DriveFolderUpload";
 import GroupsIcon from "@mui/icons-material/Groups";
 import KeyboardArrowRightIcon from "@mui/icons-material/KeyboardArrowRight";
@@ -55,6 +54,11 @@ import GroupAddIcon from '@mui/icons-material/GroupAdd';
 import FactoryIcon from '@mui/icons-material/Factory';
 import InventoryIcon from '@mui/icons-material/Inventory';
 import AccountTreeIcon from '@mui/icons-material/AccountTree';
+import PaymentsIcon from '@mui/icons-material/Payments';
+import CalculateIcon from '@mui/icons-material/Calculate';
+import Diversity3Icon from '@mui/icons-material/Diversity3';
+import ReceiptIcon from '@mui/icons-material/Receipt';
+import TrendingUpIcon from '@mui/icons-material/TrendingUp';
 
 // eslint-disable-next-line import/no-anonymous-default-export
 export default {
@@ -87,7 +91,6 @@ export default {
   PaidIcon,
   SavingsIcon,
   BalanceIcon,
-  CalculateIcon,
   SmsIcon,
   PhoneAndroidIcon,
   AccountBalanceIcon,
@@ -109,6 +112,11 @@ export default {
   FactoryIcon,
   InventoryIcon,
   AccountTreeIcon,
+  PaymentsIcon,
+  CalculateIcon,
+  Diversity3Icon,
+  ReceiptIcon,
+  TrendingUpIcon,
 
 };
 

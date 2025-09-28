@@ -6,7 +6,7 @@ const InventoriesColumnShape = (actions: IDropdownAction[]) => [
   {
     Header: "Grain Type",
     accessor: "grain_type.name",
-    minWidth: 150,
+    minWidth: 100,
     Cell: ({ row }: any) => {
       const { grain_type } = row.original;
       return <Span sx={{ fontSize: 12, fontWeight: "bold" }}>{grain_type?.name || "Unknown"}</Span>;
@@ -15,7 +15,7 @@ const InventoriesColumnShape = (actions: IDropdownAction[]) => [
   {
     Header: "Hub Name",
     accessor: "hub.name",
-    minWidth: 150,
+    minWidth: 100,
     Cell: ({ row }: any) => {
       const { hub } = row.original;
       return <Span sx={{ fontSize: 12 }}>{hub?.name || "Unknown"}</Span>;

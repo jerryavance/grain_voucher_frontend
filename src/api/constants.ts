@@ -117,12 +117,16 @@ export const CURRENCY_OPTIONS: TOption[] = [
   { value: "USD", label: "USD" },
 ];
 
+
 // User Types
 export const USER_ROLE_OPTIONS: TOption[] = [
   { value: "farmer", label: "Farmer" },
   { value: "agent", label: "Agent" },
   { value: "hub_admin", label: "Hub Admin" },
   { value: "investor", label: "Investor" },
+  { value: "bdm", label: "Business Development Manager" },
+  { value: "client", label: "Client" },
+  { value: "finance", label: "Finance" },
 ];
 
 export const ROLE_HUB_ADMIN = 'hub_admin';
@@ -130,6 +134,9 @@ export const ROLE_AGENT = 'agent';
 export const ROLE_FARMER = 'farmer';
 export const ROLE_INVESTOR = 'investor';
 export const ROLE_SUPER_ADMIN = 'super_admin';
+export const ROLE_BDM = 'bdm'
+export const ROLE_CLIENT = 'client'
+export const ROLE_FINANCE = 'finance'
 
 // Account Types
 export const ACCOUNT_TYPE_OPTIONS: TOption[] = [

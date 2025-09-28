@@ -1,3 +1,4 @@
+// PriceFeedColumnShape.tsx
 import { Span } from "../../components/Typography";
 import DropdownActionBtn, { IDropdownAction } from "../../components/UI/DropdownActionBtn";
 
@@ -8,7 +9,11 @@ const PriceFeedColumnShape = (actions: IDropdownAction[]) => [
     minWidth: 150,
     Cell: ({ row }: any) => {
       const { hub } = row.original;
-      return hub ? <Span sx={{ fontSize: 12, fontWeight: 'bold' }}>{hub.name} : {hub.location}</Span> : <Span sx={{ fontSize: 12, fontStyle: 'italic' }}>Global</Span>;
+      return hub ? (
+        <Span sx={{ fontSize: 12, fontWeight: 'bold' }}>{hub.name} : {hub.location}</Span>
+      ) : (
+        <Span sx={{ fontSize: 12, fontStyle: 'italic' }}>Global</Span>
+      );
     }
   },
   {
@@ -17,7 +22,7 @@ const PriceFeedColumnShape = (actions: IDropdownAction[]) => [
     minWidth: 150,
     Cell: ({ row }: any) => {
       const { grain_type } = row.original;
-      return <Span sx={{ fontSize: 12 }}>{grain_type.name}</Span>;
+      return <Span sx={{ fontSize: 12 }}>{grain_type?.name || 'Unknown'}</Span>;
     }
   },
   {

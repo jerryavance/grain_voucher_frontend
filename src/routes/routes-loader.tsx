@@ -33,6 +33,14 @@ const RouteLazyLoader = {
 
   QualityGrade: Loadable(lazy(() => import("../pages/QualityGrade/QualityGrade"))),
 
+  Payroll: Loadable(lazy(() => import("../pages/Payroll/Payroll"))),
+
+  Accounting: Loadable(lazy(() => import("../pages/Accounting/Accounting"))),
+
+  CRM: Loadable(lazy(() => import("../pages/CRM/CRM"))),
+
+  Trade: Loadable(lazy(() => import("../pages/Trade/Trades"))),
+
   GrainType: Loadable(lazy(() => import("../pages/GrainType/GrainType"))),
 
   PriceFeed: Loadable(lazy(() => import("../pages/PriceFeed/PriceFeed"))),

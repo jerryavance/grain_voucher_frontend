@@ -19,7 +19,8 @@ export const MenuList = (isSuperUser: boolean, CanCreateDeposit: boolean , CanVi
     },
     {
       title: "Vouchers",
-      Icon: Icons.ConfirmationNumberIcon,    
+      // Icon: Icons.ConfirmationNumberIcon, 
+      Icon: Icons.ReceiptIcon,    
       path: "/dashboard/vouchers",
       visible: true,
     },
@@ -70,6 +71,30 @@ export const MenuList = (isSuperUser: boolean, CanCreateDeposit: boolean , CanVi
       title: "Quality Grade",
       Icon: Icons.GradeIcon,
       path: "/admin/quality-grades", 
+      visible: isSuperUser,
+    },
+    {
+      title: "Trade",
+      Icon: Icons.TrendingUpIcon,
+      path: "/admin/trade", 
+      visible: isSuperUser,
+    },
+    {
+      title: "CRM",
+      Icon: Icons.Diversity3Icon,
+      path: "/admin/crm", 
+      visible: isSuperUser,
+    },
+    {
+      title: "Accounting",
+      Icon: Icons.CalculateIcon,
+      path: "/admin/accounting", 
+      visible: isSuperUser,
+    },
+    {
+      title: "Pay Roll",
+      Icon: Icons.PaymentsIcon,
+      path: "/admin/pay-roll", 
       visible: isSuperUser,
     },
     {

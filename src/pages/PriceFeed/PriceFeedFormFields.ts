@@ -8,7 +8,7 @@ export const PriceFeedFormFields = (
   handleGrainSearch: (query: string) => void
 ): IFormField[] => [
   {
-    name: "hub",
+    name: "hub_id",
     initailValue: "",
     label: "Hub",
     type: "text",
@@ -23,7 +23,7 @@ export const PriceFeedFormFields = (
     isClearable: true,
   },
   {
-    name: "grain_type",
+    name: "grain_type_id",
     initailValue: "",
     label: "Grain Type",
     type: "text",
@@ -56,8 +56,8 @@ export const PriceFeedFormFields = (
 ];
 
 export const PriceFeedFormValidations = Yup.object().shape({
-  hub: Yup.string(),
-  grain_type: Yup.string().required("Grain type is required"),
+  hub_id: Yup.string(),
+  grain_type_id: Yup.string().required("Grain type is required"),
   price_per_kg: Yup.number()
     .typeError("Price must be a number")
     .required("Price is required")

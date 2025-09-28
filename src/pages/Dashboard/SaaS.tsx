@@ -12,7 +12,7 @@ import MarketPriceFeeds from "./MarketPriceFeeds";
 import UserGreeting from "./UserGreeting";
 import QuickActions from "./QuickActions";
 import { H4 } from "../../components/Typography";
-import { IPriceFeedResults, IPriceFeed } from "../PriceFeed/PriceFeed.interface";
+import { IPriceFeedResults, IPriceFeed } from "./PriceFeed.interface";
 import { IGrainTypeResults } from "../GrainType/GrainType.interface";
 import { ApiFilters } from "../Voucher/Voucher.interface";
 
@@ -149,7 +149,7 @@ const SaaS: FC = () => {
       {/* Market Price Feeds */}
       <MarketPriceFeeds 
         priceFeeds={priceFeeds}
-        grainTypes={grainTypes}
+        // grainTypes={grainTypes}
         loading={feedsLoading}
         onRefresh={fetchPriceFeeds}
       />

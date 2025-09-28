@@ -107,6 +107,26 @@ const routes = [
         requiresAuth: true,
       },
       {
+        path: "pay-roll",
+        element: <LazyLoader.Payroll />,
+        requiresAuth: true,
+      },
+      {
+        path: "accounting",
+        element: <LazyLoader.Accounting />,
+        requiresAuth: true,
+      },
+      {
+        path: "crm",
+        element: <LazyLoader.CRM />,
+        requiresAuth: true,
+      },
+      {
+        path: "trade",
+        element: <LazyLoader.Trade />,
+        requiresAuth: true,
+      },
+      {
         path: "deposit",
         element: <LazyLoader.Deposit />,
         requiresAuth: true,
