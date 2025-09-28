@@ -92,7 +92,7 @@ export const MenuList = (isSuperUser: boolean, CanCreateDeposit: boolean , CanVi
       visible: isSuperUser,
     },
     {
-      title: "Pay Roll",
+      title: "Payroll",
       Icon: Icons.PaymentsIcon,
       path: "/admin/pay-roll", 
       visible: isSuperUser,
