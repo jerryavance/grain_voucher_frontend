@@ -73,6 +73,18 @@ export const MenuList = (isSuperUser: boolean, CanCreateDeposit: boolean , CanVi
       visible: isSuperUser,
     },
     {
+      title: "Inventories",
+      Icon: Icons.InventoryIcon,
+      path: "/admin/inventories", 
+      visible: isSuperUser,
+    },
+    {
+      title: "Ledger Entries",
+      Icon: Icons.AccountTreeIcon,
+      path: "/admin/ledger-entries", 
+      visible: isSuperUser,
+    },
+    {
       title: "Grain Hubs",
       Icon: Icons.Agriculture,
       path: "/hubs",

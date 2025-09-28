@@ -39,6 +39,10 @@ const RouteLazyLoader = {
 
   Hub: Loadable(lazy(() => import("../pages/Hub/Hub"))),
 
+  Inventories: Loadable(lazy(() => import("../pages/Inventories/Inventories"))),
+
+  LedgerEntries: Loadable(lazy(() => import("../pages/LedgerEntries/LedgerEntries"))),
+
   // Transactions: Loadable(lazy(() => import("../pages/Transactions/TransactionsList"))),
 
   Users: Loadable(lazy(() => import("../pages/Users/Users"))),

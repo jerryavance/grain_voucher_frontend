@@ -126,6 +126,16 @@ const routes = [
         element: <LazyLoader.Membership />,
         requiresAuth: true,
       },
+      {
+        path: "inventories",
+        element: <LazyLoader.Inventories />,
+        requiresAuth: true,
+      },
+      {
+        path: "ledger-entries",
+        element: <LazyLoader.LedgerEntries />,
+        requiresAuth: true,
+      },
     ],
   },
   {

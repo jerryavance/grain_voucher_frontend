@@ -3,7 +3,7 @@ import { TOption } from "../@types/common";
 export const API_BASE_URL = process.env.REACT_APP_API_BASE_URL;
 export const MEDIA_BASE_URL = process.env.REACT_APP_MEDIA_BASE_URL;
 
-export const APP_NAME = "Everpesa";
+export const APP_NAME = "Grain Hub";
 
 export const TYPE_ADMIN = "admin";
 export const TYPE_INVESTOR = "investor";

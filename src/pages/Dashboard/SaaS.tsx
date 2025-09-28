@@ -53,7 +53,7 @@ const SaaS: FC = () => {
 
   const fetchVoucherStats = async () => {
     try {
-      const filters: ApiFilters = { page_size: 1000 };
+      const filters: ApiFilters = { page_size: 100 };
       const response = await VoucherService.getMyVouchers(filters);
       
       if (response && response.results) {

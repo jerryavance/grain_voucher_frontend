@@ -1,0 +1,140 @@
+import { debounce } from 'lodash';
+import { Box, Button, SelectChangeEvent } from "@mui/material";
+import { FC, useEffect, useState } from "react";
+import CustomTable from "../../components/UI/CustomTable";
+import SearchInput from "../../components/SearchInput";
+import { ILedgerEntries, ILedgerEntriesResults } from "./LedgerEntries.interface";
+import LedgerEntriesColumnShape from "./LedgerEntriesColumnShape";
+import SelectInput from "../../components/UI/FormComponents/SelectInput";
+import { useModalContext } from "../../contexts/ModalDialogContext";
+import useTitle from "../../hooks/useTitle";
+import { IDropdownAction } from "../../components/UI/DropdownActionBtn";
+import { toast } from "react-hot-toast";
+import EditIcon from '@mui/icons-material/Edit';
+import DeleteIcon from '@mui/icons-material/Delete';
+import { LedgerEntriesService } from './LedgerEntries.service';
+import { INITIAL_PAGE_SIZE } from '../../api/constants';
+
+
+const LedgerEntries: FC = () => {
+  useTitle("Grain Ledger Entries");
+  const { setShowModal } = useModalContext();
+
+  const [ledgerEntriess, setLedgerEntriess] = useState<ILedgerEntriesResults>();
+  const [filters, setFilters] = useState<any>({})
+  const [loading, setLoading] = useState<boolean>(false);
+  const [editLedgerEntries, setEditLedgerEntries] = useState<ILedgerEntries | null>(null);
+  const [formType, setFormType] = useState<'Save' | 'Update'>('Save');
+
+  useEffect(() => {
+    fetchData(filters);
+  }, [filters]);
+
+
+  const fetchData = async (filters?: any) => {
+    try {
+      setLoading(true);
+      const results: ILedgerEntriesResults = await LedgerEntriesService.getLedgerEntries(filters);
+      setLedgerEntriess(results); // Update data with results array
+      setLoading(false);
+    } catch (error) {
+      setLoading(false);
+    }
+  };
+
+
+  const handleOpenModal = () => {
+    setFormType('Save');
+    setShowModal(true);
+  };
+
+  const handleCloseModal = () => {
+    setShowModal(false);
+  };
+
+
+  const handleEditLedgerEntries = (ledgerEntries: ILedgerEntries) => {
+    setFormType('Update');
+    setEditLedgerEntries(ledgerEntries);
+    setTimeout(() => {
+      setShowModal(true);
+    });
+  };
+
+  const handleRefreshData = async () => {
+    fetchData(filters)
+  };
+
+
+  const handleDeleteLedgerEntries = async (ledgerEntries: ILedgerEntries) => {
+    try {
+      await LedgerEntriesService.deleteLedgerEntries(ledgerEntries.id)
+      toast.success('Ledger Entries deleted successfully');
+      handleRefreshData()
+    } catch (error: any) {
+      toast.error('Something went wrong');
+    }
+  };
+
+
+  const tableActions: IDropdownAction[] = [
+    {
+      label: 'Edit',
+      icon: <EditIcon color="primary" />,
+      onClick: (ledgerEntries: ILedgerEntries) => handleEditLedgerEntries(ledgerEntries),
+    },
+    {
+      label: 'Delete',
+      icon: <DeleteIcon color="error" />,
+      onClick: (ledgerEntries: ILedgerEntries) => handleDeleteLedgerEntries(ledgerEntries),
+    },
+  ]
+  
+  return (
+    <Box pt={2} pb={4}>
+      <Box sx={styles.tablePreHeader}>
+        <SearchInput 
+          onBlur={(event) => setFilters({ ...filters, name: event.target.value})} 
+          onKeyUp={(event) => {
+            if (event.key === "Enter") {
+              const target = event.target as HTMLInputElement;
+              setFilters({ ...filters, name: target?.value });
+            }
+          }}
+          type="text" 
+          placeholder="Search Ledger Entries..." 
+        />
+      </Box>
+
+      <CustomTable
+        columnShape={LedgerEntriesColumnShape(tableActions)}
+        data={ledgerEntriess?.results || []}
+        dataCount={ledgerEntriess?.count || 0}
+        pageInitialState={{ pageSize: INITIAL_PAGE_SIZE, pageIndex: 0 }}
+        setPageIndex={(page: number) => setFilters({...filters, page})}
+        pageIndex={filters?.page || 1}
+        setPageSize={(page_size: number) => setFilters({ ...filters, page_size })}
+        loading={loading}
+      />
+    </Box>
+  );
+};
+
+const styles = {
+  tablePreHeader: {
+    display: "flex",
+    alignItems: "center", // This aligns items vertically
+    gap: 2, // This adds consistent spacing between elements
+    marginBottom: 2,
+  },
+  createButton: {
+    marginLeft: 'auto', // This pushes the button to the right
+    height: 'fit-content', // Ensures button height matches the input
+  },
+  pageSize: {
+    maxWidth: 60,
+    marginLeft: 2,
+  }
+}
+
+export default LedgerEntries;
