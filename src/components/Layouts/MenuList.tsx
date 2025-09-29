@@ -9,7 +9,7 @@ export interface IMenuItem {
   visible: boolean;
 }
 
-export const MenuList = (isSuperUser: boolean, CanCreateDeposit: boolean , CanViewHubMembers: boolean, isHubAdmin: boolean, IsBDM: boolean, IsFinance: boolean): IMenuItem[] => {
+export const MenuList = (isSuperUser: boolean, CanCreateDeposit: boolean , CanViewHubMembers: boolean, isHubAdmin: boolean, isBDM: boolean, IsFinance: boolean): IMenuItem[] => {
   return [
     {
       title: "Home",
@@ -77,37 +77,37 @@ export const MenuList = (isSuperUser: boolean, CanCreateDeposit: boolean , CanVi
       title: "Trade",
       Icon: Icons.TrendingUpIcon,
       path: "/admin/trade", 
-      visible: isSuperUser || IsBDM || IsFinance,
+      visible: isSuperUser || isBDM ,
     },
     {
       title: "CRM",
       Icon: Icons.Diversity3Icon,
       path: "/admin/crm", 
-      visible: isSuperUser || IsBDM,
+      visible: isSuperUser || isBDM,
     },
     {
       title: "Accounting",
       Icon: Icons.CalculateIcon,
       path: "/admin/accounting", 
-      visible: isSuperUser || IsFinance,
+      visible: isSuperUser,
     },
     {
       title: "Payroll",
       Icon: Icons.PaymentsIcon,
       path: "/admin/pay-roll", 
-      visible: isSuperUser || IsFinance,
+      visible: isSuperUser,
     },
     {
       title: "Inventories",
       Icon: Icons.InventoryIcon,
       path: "/admin/inventories", 
-      visible: isSuperUser || IsFinance,
+      visible: isSuperUser,
     },
     {
       title: "Ledger Entries",
       Icon: Icons.AccountTreeIcon,
       path: "/admin/ledger-entries", 
-      visible: isSuperUser || IsFinance,
+      visible: isSuperUser,
     },
     {
       title: "Grain Hubs",
