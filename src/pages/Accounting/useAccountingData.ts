@@ -12,7 +12,7 @@ export const useAccounts = () => {
       setLoading(true);
       setError(null);
       // This would be replaced with actual API call
-      const response = await fetch('/api/crm/accounts/');
+      const response = await fetch('crm/accounts/');
       const data = await response.json();
       setAccounts(data.results || []);
     } catch (err: any) {
@@ -41,7 +41,7 @@ export const useTrades = () => {
       setLoading(true);
       setError(null);
       // This would be replaced with actual API call
-      const response = await fetch('/api/trade/trades/');
+      const response = await fetch('trade/trades/');
       const data = await response.json();
       setTrades(data.results || []);
     } catch (err: any) {
@@ -70,7 +70,7 @@ export const useHubs = () => {
       setLoading(true);
       setError(null);
       // This would be replaced with actual API call
-      const response = await fetch('/api/hubs/hubs/');
+      const response = await fetch('hubs/hubs/');
       const data = await response.json();
       setHubs(data.results || []);
     } catch (err: any) {
@@ -99,7 +99,7 @@ export const useGrainTypes = () => {
       setLoading(true);
       setError(null);
       // This would be replaced with actual API call
-      const response = await fetch('/api/vouchers/grain-types/');
+      const response = await fetch('vouchers/grain-types/');
       const data = await response.json();
       setGrainTypes(data.results || []);
     } catch (err: any) {
