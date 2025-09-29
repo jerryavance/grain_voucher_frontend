@@ -1,4 +1,4 @@
-import { ROLE_FARMER, ROLE_INVESTOR, ROLE_HUB_ADMIN, ROLE_AGENT, ROLE_SUPER_ADMIN} from "../api/constants";
+import { ROLE_FARMER, ROLE_INVESTOR, ROLE_HUB_ADMIN, ROLE_AGENT, ROLE_SUPER_ADMIN, ROLE_BDM, ROLE_FINANCE} from "../api/constants";
 import useAuth from "../hooks/useAuth";
 import { IDeposit } from "../pages/Deposit/Deposit.interface";
 import { IVoucher } from "../pages/Voucher/Voucher.interface";
@@ -15,6 +15,16 @@ export const IsSuperUser = () => {
 export const IsHubAdmin = () => {
   const { user } = useAuth();
   return user?.role === ROLE_HUB_ADMIN;
+};
+
+export const IsBDM = () => {
+  const { user } = useAuth();
+  return user?.role === ROLE_BDM;
+};
+
+export const IsFinance = () => {
+  const { user } = useAuth();
+  return user?.role === ROLE_FINANCE;
 };
 
 // Check if user can create a deposit (only hub_admin or agent)

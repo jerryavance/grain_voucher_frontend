@@ -9,7 +9,7 @@ import {
 } from "@mui/material";
 import { FC, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { IsSuperUser } from "../../utils/permissions";
+import { IsBDM, IsFinance, IsSuperUser } from "../../utils/permissions";
 import { IsHubAdmin } from "../../utils/permissions";
 import { CanCreateDeposit } from "../../utils/permissions";
 import { CanViewHubMembers } from "../../utils/permissions";
@@ -67,12 +67,16 @@ const DashboardSideBar: FC<SideNavBarProps> = ({ closeMobileSideBar }) => {
   const isSuperUser = IsSuperUser();
   const canCreateDeposit = CanCreateDeposit();
   const canViewHubMembers = CanViewHubMembers();
+  const isFinance = IsFinance();
+  const isBDM = IsBDM();
 
   const topMenuList = MenuList(
     isSuperUser,
     canCreateDeposit,
     canViewHubMembers,
-    isHubAdmin
+    isHubAdmin,
+    isFinance,
+    isBDM
   );
 
   const handleActiveMainMenu = (menuItem: any) => () => {
