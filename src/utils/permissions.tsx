@@ -33,6 +33,14 @@ export const CanCreateDeposit = () => {
   return [ROLE_HUB_ADMIN, ROLE_AGENT].includes(user?.role || '');
 };
 
+export const CanMakeTrades = () => {
+  const { user } = useAuth(); // gets the logged-in user from your authentication hook
+
+  return [ROLE_SUPER_ADMIN, ROLE_BDM, ROLE_FINANCE] // allowed roles
+    .includes(user?.role || ''); // check if the user's role is in the list
+}
+
+
 // Check if user can validate a deposit (only hub_admin for the deposit's hub)
 export const CanValidateDeposit = (deposit: IDeposit) => {
   const { user } = useAuth();

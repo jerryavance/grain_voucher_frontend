@@ -9,7 +9,7 @@ export interface IMenuItem {
   visible: boolean;
 }
 
-export const MenuList = (isSuperUser: boolean, CanCreateDeposit: boolean , CanViewHubMembers: boolean, isHubAdmin: boolean, isBDM: boolean, IsFinance: boolean): IMenuItem[] => {
+export const MenuList = (isSuperUser: boolean, CanCreateDeposit: boolean , CanViewHubMembers: boolean, isHubAdmin: boolean, CanMakeTrades: boolean): IMenuItem[] => {
   return [
     {
       title: "Home",
@@ -77,13 +77,13 @@ export const MenuList = (isSuperUser: boolean, CanCreateDeposit: boolean , CanVi
       title: "Trade",
       Icon: Icons.TrendingUpIcon,
       path: "/admin/trade", 
-      visible: isSuperUser || isBDM ,
+      visible: isSuperUser || CanMakeTrades,
     },
     {
       title: "CRM",
       Icon: Icons.Diversity3Icon,
       path: "/admin/crm", 
-      visible: isSuperUser || isBDM,
+      visible: isSuperUser || CanMakeTrades,
     },
     {
       title: "Accounting",
