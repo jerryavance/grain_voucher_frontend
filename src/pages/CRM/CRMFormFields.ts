@@ -151,7 +151,7 @@ export const ContactFormFields = (accountOptions: any[] = [], userOptions: any[]
   {
     name: 'user_id',
     initailValue: '',
-    label: 'Link to User',
+    label: 'Link to BDM User',
     type: 'select',
     uiType: 'select',
     options: userOptions,

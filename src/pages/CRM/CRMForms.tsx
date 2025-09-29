@@ -290,7 +290,7 @@ export const ContactForm: FC<ICRMFormProps<IContact>> = ({
 
   const fetchClientUsers = async () => {
     try {
-      const response = await CRMService.getBDMUsers(); // Modify to get client users
+      const response = await CRMService.getBDMUsers(); // Modify to get client users user.role = 'client'
       const options = response.results?.filter((user: any) => user.role === 'client').map((user: any) => ({
         label: `${user.first_name} ${user.last_name}`,
         value: user.id,
