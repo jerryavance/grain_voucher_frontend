@@ -4,7 +4,7 @@ import { IHub } from "../Hub/Hub.interface";
 export interface ITrade {
     id: string;
     buyer: { id: string; name: string };
-    grain_type: { id: number; name: string };
+    grain_type: { id: string; name: string };
     quantity_mt: number;
     grade: string;
     price_per_mt: number;
