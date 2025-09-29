@@ -2,7 +2,7 @@ import * as Yup from "yup";
 
 export const TradeFormValidations = () => Yup.object().shape({
   buyer_id: Yup.string().required("Buyer is required"),
-  grain_type_id: Yup.number().required("Grain Type is required"),
+  grain_type_id: Yup.string().required("Grain Type is required"),
   quantity_mt: Yup.number()
     .min(0.01, "Quantity must be at least 0.01 MT")
     .required("Quantity is required"),
