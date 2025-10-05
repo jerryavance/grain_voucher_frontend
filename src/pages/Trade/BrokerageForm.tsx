@@ -1,4 +1,5 @@
-import React, { FC, useEffect, useRef, useState } from "react";
+// BrokerageForm.tsx
+import React, { FC, useEffect, useState } from "react";
 import { Box, Button } from "@mui/material";
 import { useFormik } from "formik";
 import ModalDialog from "../../components/UI/Modal/ModalDialog";
@@ -8,140 +9,175 @@ import FormFactory from "../../components/UI/FormFactory";
 import { toast } from "react-hot-toast";
 import { getInitialValues, patchInitialValues } from "../../utils/form_factory";
 import uniqueId from "../../utils/generateId";
-import { BrokerageFormFields } from "./BrokerageFormFields";
-import { TradeService, UserService } from "./Trade.service";
-import { BrokerageFormValidations } from "./BrokerageFormValidations";
-import { IBrokerageFormProps } from "./Trades.interface";
+import { TradeService } from "./Trade.service";
+import { BrokerageValidations } from "./TradeFormValidations";
+import { IBrokerage } from "./Trade.interface";
+import { IFormField } from "../../utils/form_factory";
+import { TOption } from "../../@types/common";
+import { useModalContext } from "../../contexts/ModalDialogContext";
+
+interface IBrokerageFormProps {
+  tradeId: string;
+  initialValues?: IBrokerage | null;
+  onClose: () => void;
+  onSuccess: () => void;
+}
+
+const COMMISSION_TYPE_OPTIONS: TOption[] = [
+  { label: 'Percentage of Trade Value', value: 'percentage' },
+  { label: 'Per Metric Ton', value: 'per_mt' },
+  { label: 'Per Kilogram', value: 'per_kg' },
+  { label: 'Fixed Amount', value: 'fixed' },
+];
 
 const BrokerageForm: FC<IBrokerageFormProps> = ({
-  handleClose,
-  formType = "Save",
+  tradeId,
   initialValues,
-  callBack,
+  onClose,
+  onSuccess,
 }) => {
-  const formRef = useRef<HTMLFormElement | null>(null);
-  const [loading, setLoading] = useState<boolean>(false);
-  const [trades, setTrades] = useState<any[]>([]);
-  const [agents, setAgents] = useState<any[]>([]);
+  const { showModal } = useModalContext();
+  const [loading, setLoading] = useState(false);
+  const [agents, setAgents] = useState<TOption[]>([]);
 
-  useEffect(() => {
-    const fetchOptions = async () => {
-      try {
-        const tradesData = await TradeService.getTrades({});
-        setTrades(tradesData.results.map((t: any) => ({ value: t.id, label: `Trade ${t.id}` })));
-        
-        const agentsData = await UserService.getUsers({ role__in: ['bdm', 'agent'] });
-        setAgents(agentsData.map((a: any) => ({ value: a.id, label: `${a.first_name} ${a.last_name}` })));
-      } catch (error) {
-        toast.error("Failed to load form options");
-      }
-    };
-    fetchOptions();
-  }, []);
-
-  const formFields = BrokerageFormFields({ trades, agents });
+  const BrokerageFormFields: IFormField[] = [
+    {
+      name: 'agent_id',
+      initailValue: '',
+      label: 'Agent/BDM',
+      type: 'select',
+      uiType: 'select',
+      options: agents,
+      uiBreakpoints: { xs: 12, sm: 12, md: 12 },
+      required: true,
+    },
+    {
+      name: 'commission_type',
+      initailValue: 'percentage',
+      label: 'Commission Type',
+      type: 'select',
+      uiType: 'select',
+      options: COMMISSION_TYPE_OPTIONS,
+      uiBreakpoints: { xs: 12, sm: 12, md: 6 },
+      required: true,
+    },
+    {
+      name: 'commission_value',
+      initailValue: '',
+      label: 'Commission Value',
+      type: 'number',
+      uiType: 'number',
+      uiBreakpoints: { xs: 12, sm: 12, md: 6 },
+      required: true,
+    },
+    {
+      name: 'notes',
+      initailValue: '',
+      label: 'Notes',
+      type: 'text',
+      uiType: 'textarea',
+      uiBreakpoints: { xs: 12, sm: 12, md: 12 },
+    },
+  ];
 
   const brokerageForm = useFormik({
-    initialValues: getInitialValues(formFields),
-    validationSchema: BrokerageFormValidations(),
+    initialValues: getInitialValues(BrokerageFormFields),
+    validationSchema: BrokerageValidations(),
     validateOnChange: false,
-    validateOnMount: false,
-    validateOnBlur: false,
-    enableReinitialize: true,
-    onSubmit: (values: any) => handleSubmit(values),
+    onSubmit: async (values: any) => {
+      setLoading(true);
+      try {
+        const payload = { ...values, trade_id: tradeId };
+        
+        if (initialValues) {
+          await TradeService.updateBrokerage(initialValues.id, payload);
+          toast.success("Brokerage updated successfully");
+        } else {
+          await TradeService.createBrokerage(payload);
+          toast.success("Brokerage added successfully");
+        }
+        
+        brokerageForm.resetForm();
+        onSuccess();
+      } catch (error: any) {
+        if (error.response?.data) {
+          brokerageForm.setErrors(error.response.data);
+        }
+        toast.error(error.message || "Failed to save brokerage");
+      } finally {
+        setLoading(false);
+      }
+    },
   });
 
   useEffect(() => {
-    if (formType === "Update" && initialValues) {
-      brokerageForm.setValues(
-        patchInitialValues(formFields)({
-          ...initialValues,
-          trade_id: initialValues.trade?.id,
-          agent_id: initialValues.agent?.id,
-        })
-      );
-    }
-  }, [initialValues, formType]);
+    fetchAgents();
+  }, []);
 
-  const handleSubmit = async (values: any) => {
-    setLoading(true);
+  useEffect(() => {
+    if (initialValues) {
+      const values = {
+        ...initialValues,
+        agent_id: initialValues.agent?.id,
+      };
+      brokerageForm.setValues(patchInitialValues(BrokerageFormFields)(values));
+    }
+  }, [initialValues, agents]);
+
+  const fetchAgents = async () => {
     try {
-      if (formType === "Update") {
-        await TradeService.updateBrokerage(values, initialValues.id);
-        toast.success("Brokerage updated successfully");
-        brokerageForm.resetForm();
-        callBack && callBack();
-        handleClose();
-      } else {
-        await TradeService.createBrokerage(values);
-        toast.success("Brokerage created successfully");
-        brokerageForm.resetForm();
-        callBack && callBack();
-        handleClose();
-      }
-    } catch (error: any) {
-      if (error.response?.data) {
-        brokerageForm.setErrors(error.response.data);
-      }
-      toast.error(error.message || "An error occurred");
-    } finally {
-      setLoading(false);
+      const agentsData = await TradeService.getAgents();
+      setAgents(
+        agentsData.map((a: any) => ({
+          label: `${a.first_name} ${a.last_name}`,
+          value: a.id,
+        }))
+      );
+    } catch (error) {
+      console.error("Failed to fetch agents:", error);
     }
   };
 
-  const handleReset = () => {
-    brokerageForm.resetForm();
-    handleClose();
-  };
+  const ActionBtns: FC = () => (
+    <>
+      <Button onClick={onClose} disabled={loading}>
+        Cancel
+      </Button>
+      <Button
+        onClick={() => brokerageForm.handleSubmit()}
+        variant="contained"
+        disabled={loading}
+      >
+        {loading ? (
+          <>
+            <ProgressIndicator color="inherit" size={20} />
+            <Span style={{ marginLeft: "0.5rem" }}>Saving...</Span>
+          </>
+        ) : initialValues ? (
+          "Update"
+        ) : (
+          "Add Brokerage"
+        )}
+      </Button>
+    </>
+  );
 
-  const ActionBtns: FC = () => {
-    return (
-      <>
-        <Button onClick={handleReset} disabled={loading}>
-          Close
-        </Button>
-        <Button
-          onClick={() => brokerageForm.handleSubmit()}
-          type="button"
-          variant="contained"
-          disabled={loading}
-        >
-          {loading ? (
-            <>
-              <ProgressIndicator color="inherit" size={20} />
-              <Span style={{ marginLeft: "0.5rem" }} color="primary">
-                Loading...
-              </Span>
-            </>
-          ) : formType === "Update" ? "Update Brokerage" : "Create Brokerage"}
-        </Button>
-      </>
-    );
-  };
+  if (!showModal) return null;
 
   return (
     <ModalDialog
-      title={formType === "Save" ? "New Brokerage" : "Edit Brokerage"}
-      onClose={handleReset}
+      title={initialValues ? "Edit Brokerage" : "Add Brokerage"}
+      onClose={onClose}
       id={uniqueId()}
       ActionButtons={ActionBtns}
     >
-      <form
-        ref={formRef}
-        onSubmit={(e) => {
-          e.preventDefault();
-          handleSubmit(brokerageForm.values);
-        }}
-      >
-        <Box sx={{ width: "100%" }}>
-          <FormFactory
-            others={{ sx: { marginBottom: "0rem" } }}
-            formikInstance={brokerageForm}
-            formFields={formFields}
-            validationSchema={BrokerageFormValidations()}
-          />
-        </Box>
-      </form>
+      <Box sx={{ width: "100%" }}>
+        <FormFactory
+          formikInstance={brokerageForm}
+          formFields={BrokerageFormFields}
+          validationSchema={BrokerageValidations()}
+        />
+      </Box>
     </ModalDialog>
   );
 };

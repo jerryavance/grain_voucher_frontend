@@ -1,89 +1,82 @@
+// Trades.tsx
 import { Box, Button, Tabs, Tab } from "@mui/material";
 import { useEffect, useState } from "react";
 import { toast } from "react-hot-toast";
 import DeleteIcon from "@mui/icons-material/Delete";
 import EditIcon from "@mui/icons-material/Edit";
 import CheckCircleIcon from "@mui/icons-material/CheckCircle";
-import DoneAllIcon from "@mui/icons-material/DoneAll";
-import AssessmentIcon from "@mui/icons-material/Assessment";
+import CancelIcon from "@mui/icons-material/Cancel";
+import LocalShippingIcon from "@mui/icons-material/LocalShipping";
+import AssignmentIcon from "@mui/icons-material/Assignment";
 import useTitle from "../../hooks/useTitle";
 import { useModalContext } from "../../contexts/ModalDialogContext";
 import { TradeService } from "./Trade.service";
-import { ITradesResults, IBrokeragesResults, ITrade, IBrokerage } from "./Trades.interface";
+import { ITradesResults, ITrade } from "./Trade.interface";
 import { IDropdownAction } from "../../components/UI/DropdownActionBtn";
 import SearchInput from "../../components/SearchInput";
 import CustomTable from "../../components/UI/CustomTable";
 import TradeColumnShape from "./TradeColumnShape";
-import BrokerageColumnShape from "./BrokerageColumnShape";
 import TradeForm from "./TradeForm";
-import BrokerageForm from "./BrokerageForm";
+import TradeDetails from "./TradeDetails";
 import { INITIAL_PAGE_SIZE } from "../../api/constants";
-import useAuth from "../../hooks/useAuth";
+
+interface TabPanelProps {
+  children?: React.ReactNode;
+  index: number;
+  value: number;
+}
+
+function TabPanel(props: TabPanelProps) {
+  const { children, value, index, ...other } = props;
+  return (
+    <div
+      role="tabpanel"
+      hidden={value !== index}
+      id={`trade-tabpanel-${index}`}
+      aria-labelledby={`trade-tab-${index}`}
+      {...other}
+    >
+      {value === index && <Box sx={{ pt: 2 }}>{children}</Box>}
+    </div>
+  );
+}
 
 const Trades = () => {
-  useTitle("Trades & Brokerages");
+  useTitle("Trades");
   const { setShowModal } = useModalContext();
-  const { user } = useAuth();
 
-  const [activeTab, setActiveTab] = useState<"trades" | "brokerages">("trades");
   const [editTrade, setEditTrade] = useState<ITrade | null>(null);
-  const [editBrokerage, setEditBrokerage] = useState<IBrokerage | null>(null);
+  const [selectedTrade, setSelectedTrade] = useState<ITrade | null>(null);
   const [formType, setFormType] = useState<"Save" | "Update">("Save");
   const [searchQuery, setSearchQuery] = useState<string>("");
   const [trades, setTrades] = useState<ITradesResults>();
-  const [brokerages, setBrokerages] = useState<IBrokeragesResults>();
-  const [tradeFilters, setTradeFilters] = useState<any>(null);
-  const [brokerageFilters, setBrokerageFilters] = useState<any>(null);
+  const [filters, setFilters] = useState<any>({ page: 1 });
   const [loading, setLoading] = useState<boolean>(false);
+  const [activeTab, setActiveTab] = useState<number>(0);
 
   useEffect(() => {
-    fetchData();
-  }, [tradeFilters, brokerageFilters, activeTab]);
+    fetchData(filters);
+  }, [filters]);
 
-  const fetchData = async () => {
+  const fetchData = async (params?: any) => {
     try {
       setLoading(true);
-      if (activeTab === "trades") {
-        const resp: ITradesResults = await TradeService.getTrades(tradeFilters);
-        setTrades(resp);
-      } else {
-        const resp: IBrokeragesResults = await TradeService.getBrokerages(brokerageFilters);
-        setBrokerages(resp);
-      }
+      const resp: ITradesResults = await TradeService.getTrades(params);
+      setTrades(resp);
       setLoading(false);
     } catch (error) {
       setLoading(false);
-      toast.error("Error fetching data");
+      console.error("Error fetching Trades:", error);
+      toast.error("Failed to fetch trades");
     }
   };
 
   const handleRefreshData = async () => {
-    try {
-      setLoading(true);
-      if (activeTab === "trades") {
-        const results: ITradesResults = await TradeService.getTrades({ search: searchQuery });
-        setTrades(results);
-      } else {
-        const results: IBrokeragesResults = await TradeService.getBrokerages({ search: searchQuery });
-        setBrokerages(results);
-      }
-      setLoading(false);
-    } catch (error) {
-      setLoading(false);
-      toast.error("Error refreshing data");
-    }
+    await fetchData(filters);
   };
 
-  const handleOpenTradeModal = () => {
+  const handleOpenModal = () => {
     setFormType("Save");
-    setEditTrade(null);
-    setEditBrokerage(null);
-    setShowModal(true);
-  };
-
-  const handleOpenBrokerageModal = () => {
-    setFormType("Save");
-    setEditBrokerage(null);
     setEditTrade(null);
     setShowModal(true);
   };
@@ -91,190 +84,220 @@ const Trades = () => {
   const handleCloseModal = () => {
     setShowModal(false);
     setEditTrade(null);
-    setEditBrokerage(null);
   };
 
   const handleInputChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const value = event.target.value;
     setSearchQuery(value);
+    setFilters({ ...filters, search: value, page: 1 });
   };
 
-  const handleEditTrade = (trade: ITrade) => {
-    setFormType("Update");
-    setEditTrade(trade);
-    setEditBrokerage(null);
-    setShowModal(true);
+  const handleTabChange = (event: React.SyntheticEvent, newValue: number) => {
+    setActiveTab(newValue);
+    setSelectedTrade(null);
+    
+    // Apply status filter based on tab
+    const statusFilters: Record<number, any> = {
+      0: {}, // All trades
+      1: { status: 'draft,pending_approval' },
+      2: { status: 'approved,pending_allocation,allocated' },
+      3: { status: 'in_transit,delivered' },
+      4: { status: 'completed' },
+      5: { status: 'cancelled,rejected' },
+    };
+    
+    setFilters({ ...filters, ...statusFilters[newValue], page: 1 });
   };
 
   const handleDeleteTrade = async (trade: ITrade) => {
+    if (!window.confirm(`Are you sure you want to delete trade ${trade.trade_number}?`)) {
+      return;
+    }
+
     try {
       await TradeService.deleteTrade(trade.id);
       toast.success("Trade deleted successfully");
       handleRefreshData();
     } catch (error: any) {
-      toast.error(error.message || "Error deleting trade");
+      toast.error(error.response?.data?.detail || "Failed to delete trade");
     }
   };
 
-  const handleApproveTrade = async (trade: ITrade) => {
+  const handleEditTrade = (trade: ITrade) => {
+    setFormType("Update");
+    setEditTrade(trade);
+    setTimeout(() => {
+      setShowModal(true);
+    });
+  };
+
+  const handleViewTrade = (trade: ITrade) => {
+    setSelectedTrade(trade);
+  };
+
+  const handleApprove = async (trade: ITrade) => {
     try {
-      await TradeService.approveTrade(trade.id);
+      await TradeService.approveTrade(trade.id, { action: 'approve' });
       toast.success("Trade approved successfully");
       handleRefreshData();
     } catch (error: any) {
-      toast.error(error.message || "Error approving trade");
+      toast.error(error.response?.data?.detail || "Failed to approve trade");
     }
   };
 
-  const handleCompleteTrade = async (trade: ITrade) => {
+  const handleReject = async (trade: ITrade) => {
+    const reason = window.prompt("Enter rejection reason:");
+    if (!reason) return;
+
     try {
-      await TradeService.completeTrade(trade.id);
-      toast.success("Trade completed successfully");
+      await TradeService.rejectTrade(trade.id, { action: 'reject', notes: reason });
+      toast.success("Trade rejected");
       handleRefreshData();
     } catch (error: any) {
-      toast.error(error.message || "Error completing trade");
+      toast.error(error.response?.data?.detail || "Failed to reject trade");
     }
   };
 
-  const handleViewPnl = async (trade: ITrade) => {
-    try {
-      const { pnl } = await TradeService.getTradePnl(trade.id);
-      toast.success(`Trade PNL: ${pnl}`);
-    } catch (error: any) {
-      toast.error(error.message || "Error fetching PNL");
+  const handleAllocateVouchers = async (trade: ITrade) => {
+    if (!window.confirm(`Allocate vouchers for trade ${trade.trade_number}?`)) {
+      return;
     }
-  };
 
-  const handleEditBrokerage = (brokerage: IBrokerage) => {
-    setFormType("Update");
-    setEditBrokerage(brokerage);
-    setEditTrade(null);
-    setShowModal(true);
-  };
-
-  const handleDeleteBrokerage = async (brokerage: IBrokerage) => {
     try {
-      await TradeService.deleteBrokerage(brokerage.id);
-      toast.success("Brokerage deleted successfully");
+      await TradeService.allocateVouchers(trade.id, { auto_allocate: true });
+      toast.success("Vouchers allocated successfully");
       handleRefreshData();
     } catch (error: any) {
-      toast.error(error.message || "Error deleting brokerage");
+      toast.error(error.response?.data?.detail || "Failed to allocate vouchers");
     }
   };
 
-  const tradeTableActions: IDropdownAction[] = [
+  const handleUpdateStatus = async (trade: ITrade, newStatus: string) => {
+    try {
+      await TradeService.updateTradeStatus(trade.id, { status: newStatus });
+      toast.success(`Trade status updated to ${newStatus}`);
+      handleRefreshData();
+    } catch (error: any) {
+      toast.error(error.response?.data?.detail || "Failed to update status");
+    }
+  };
+
+  const tableActions: IDropdownAction[] = [
+    {
+      label: "View Details",
+      icon: <AssignmentIcon color="primary" />,
+      onClick: (trade: ITrade) => handleViewTrade(trade),
+    },
     {
       label: "Edit",
       icon: <EditIcon color="primary" />,
       onClick: (trade: ITrade) => handleEditTrade(trade),
+      condition: (trade: ITrade) => ['draft', 'pending_approval'].includes(trade.status),
+    },
+    {
+      label: "Approve",
+      icon: <CheckCircleIcon color="success" />,
+      onClick: (trade: ITrade) => handleApprove(trade),
+      condition: (trade: ITrade) => trade.status === 'pending_approval',
+    },
+    {
+      label: "Reject",
+      icon: <CancelIcon color="error" />,
+      onClick: (trade: ITrade) => handleReject(trade),
+      condition: (trade: ITrade) => ['pending_approval', 'pending_allocation'].includes(trade.status),
+    },
+    {
+      label: "Allocate Vouchers",
+      icon: <AssignmentIcon color="info" />,
+      onClick: (trade: ITrade) => handleAllocateVouchers(trade),
+      condition: (trade: ITrade) => 
+        ['approved', 'pending_allocation'].includes(trade.status) && !trade.allocation_complete,
+    },
+    {
+      label: "Mark In Transit",
+      icon: <LocalShippingIcon color="info" />,
+      onClick: (trade: ITrade) => handleUpdateStatus(trade, 'in_transit'),
+      condition: (trade: ITrade) => trade.status === 'allocated',
+    },
+    {
+      label: "Mark Delivered",
+      icon: <CheckCircleIcon color="success" />,
+      onClick: (trade: ITrade) => handleUpdateStatus(trade, 'delivered'),
+      condition: (trade: ITrade) => trade.status === 'in_transit',
     },
     {
       label: "Delete",
       icon: <DeleteIcon color="error" />,
       onClick: (trade: ITrade) => handleDeleteTrade(trade),
-    },
-    {
-      label: "Approve",
-      icon: <CheckCircleIcon color="success" />,
-      onClick: (trade: ITrade) => handleApproveTrade(trade),
-    },
-    {
-      label: "Complete",
-      icon: <DoneAllIcon color="success" />,
-      onClick: (trade: ITrade) => handleCompleteTrade(trade),
-    },
-    {
-      label: "View PNL",
-      icon: <AssessmentIcon color="info" />,
-      onClick: (trade: ITrade) => handleViewPnl(trade),
-    },
-  ];
-
-  const brokerageTableActions: IDropdownAction[] = [
-    {
-      label: "Edit",
-      icon: <EditIcon color="primary" />,
-      onClick: (brokerage: IBrokerage) => handleEditBrokerage(brokerage),
-    },
-    {
-      label: "Delete",
-      icon: <DeleteIcon color="error" />,
-      onClick: (brokerage: IBrokerage) => handleDeleteBrokerage(brokerage),
+      condition: (trade: ITrade) => ['draft'].includes(trade.status),
     },
   ];
 
   return (
     <Box pt={2} pb={4}>
-      <Box sx={styles.tablePreHeader}>
-        <SearchInput
-          value={searchQuery}
-          onChange={handleInputChange}
-          type="text"
-          placeholder={`Search ${activeTab === "trades" ? "trades" : "brokerages"}...`}
-        />
-        <Button
-          sx={{ marginLeft: "auto" }}
-          variant="contained"
-          onClick={activeTab === "trades" ? handleOpenTradeModal : handleOpenBrokerageModal}
-        >
-          Create {activeTab === "trades" ? "Trade" : "Brokerage"}
-        </Button>
-      </Box>
-
-      <Tabs
-        value={activeTab}
-        onChange={(_, newValue) => setActiveTab(newValue)}
-        sx={{ mb: 2 }}
-      >
-        <Tab label="Trades" value="trades" />
-        <Tab label="Brokerages" value="brokerages" />
-      </Tabs>
-
-      {activeTab === "trades" ? (
-        <CustomTable
-          columnShape={TradeColumnShape(tradeTableActions)}
-          data={trades?.results || []}
-          dataCount={trades?.count || 0}
-          pageInitialState={{ pageSize: INITIAL_PAGE_SIZE, pageIndex: 0 }}
-          setPageIndex={(page: number) => setTradeFilters({ ...tradeFilters, page })}
-          pageIndex={tradeFilters?.page || 1}
-          setPageSize={(size: number) => setTradeFilters({ ...tradeFilters, page_size: size })}
-          loading={loading}
+      {selectedTrade ? (
+        <TradeDetails
+          trade={selectedTrade}
+          onClose={() => setSelectedTrade(null)}
+          onRefresh={handleRefreshData}
         />
       ) : (
-        <CustomTable
-          columnShape={BrokerageColumnShape(brokerageTableActions)}
-          data={brokerages?.results || []}
-          dataCount={brokerages?.count || 0}
-          pageInitialState={{ pageSize: INITIAL_PAGE_SIZE, pageIndex: 0 }}
-          setPageIndex={(page: number) => setBrokerageFilters({ ...brokerageFilters, page })}
-          pageIndex={brokerageFilters?.page || 1}
-          setPageSize={(size: number) => setBrokerageFilters({ ...brokerageFilters, page_size: size })}
-          loading={loading}
-        />
-      )}
+        <>
+          <Box sx={styles.header}>
+            <SearchInput
+              value={searchQuery}
+              onChange={handleInputChange}
+              type="text"
+              placeholder="Search trades..."
+            />
 
-      {activeTab === "trades" ? (
-        <TradeForm
-          callBack={handleRefreshData}
-          formType={formType}
-          handleClose={handleCloseModal}
-          initialValues={editTrade}
-        />
-      ) : (
-        <BrokerageForm
-          callBack={handleRefreshData}
-          formType={formType}
-          handleClose={handleCloseModal}
-          initialValues={editBrokerage}
-        />
+            <Button
+              sx={{ marginLeft: "auto" }}
+              variant="contained"
+              onClick={handleOpenModal}
+            >
+              Create Trade
+            </Button>
+          </Box>
+
+          <Box sx={{ borderBottom: 1, borderColor: 'divider', mb: 2 }}>
+            <Tabs value={activeTab} onChange={handleTabChange} aria-label="trade tabs">
+              <Tab label="All Trades" />
+              <Tab label="Pending" />
+              <Tab label="Active" />
+              <Tab label="In Transit" />
+              <Tab label="Completed" />
+              <Tab label="Cancelled" />
+            </Tabs>
+          </Box>
+
+          <TabPanel value={activeTab} index={activeTab}>
+            <CustomTable
+              columnShape={TradeColumnShape(tableActions, handleViewTrade)}
+              data={trades?.results || []}
+              dataCount={trades?.count || 0}
+              pageInitialState={{ pageSize: INITIAL_PAGE_SIZE, pageIndex: 0 }}
+              setPageIndex={(page: number) => setFilters({ ...filters, page })}
+              pageIndex={filters?.page || 1}
+              setPageSize={(size: number) => setFilters({ ...filters, page_size: size })}
+              loading={loading}
+            />
+          </TabPanel>
+
+          <TradeForm
+            callBack={handleRefreshData}
+            formType={formType}
+            handleClose={handleCloseModal}
+            initialValues={editTrade}
+          />
+        </>
       )}
     </Box>
   );
 };
 
 const styles = {
-  tablePreHeader: {
+  header: {
     display: "flex",
     alignItems: "center",
     gap: 2,

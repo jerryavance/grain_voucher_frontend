@@ -127,6 +127,11 @@ const routes = [
         requiresAuth: true,
       },
       {
+        path: "trade/:tradeId",
+        element: <LazyLoader.TradeDetails />,
+        requiresAuth: true,
+      },
+      {
         path: "deposit",
         element: <LazyLoader.Deposit />,
         requiresAuth: true,

@@ -1,17 +1,19 @@
+// TradeForm.tsx
 import React, { FC, useEffect, useRef, useState } from "react";
-import { Box, Button } from "@mui/material";
+import { Box, Button, Alert } from "@mui/material";
 import { useFormik } from "formik";
 import ModalDialog from "../../components/UI/Modal/ModalDialog";
 import ProgressIndicator from "../../components/UI/ProgressIndicator";
 import { Span } from "../../components/Typography";
 import FormFactory from "../../components/UI/FormFactory";
-import { toast } from "react-hot-toast";
 import { getInitialValues, patchInitialValues } from "../../utils/form_factory";
 import uniqueId from "../../utils/generateId";
 import { TradeFormFields } from "./TradeFormFields";
-import { TradeService, AccountService, GrainTypeService, HubService } from "./Trade.service";
+import { TradeService } from "./Trade.service";
 import { TradeFormValidations } from "./TradeFormValidations";
-import { ITradeFormProps } from "./Trades.interface";
+import { ITradeFormProps } from "./Trade.interface";
+import { TOption } from "../../@types/common";
+import { toast } from "react-hot-toast";
 
 const TradeForm: FC<ITradeFormProps> = ({
   handleClose,
@@ -21,29 +23,21 @@ const TradeForm: FC<ITradeFormProps> = ({
 }) => {
   const formRef = useRef<HTMLFormElement | null>(null);
   const [loading, setLoading] = useState<boolean>(false);
-  const [buyers, setBuyers] = useState<any[]>([]);
-  const [grainTypes, setGrainTypes] = useState<any[]>([]);
-  const [hubs, setHubs] = useState<any[]>([]);
+  const [warning, setWarning] = useState<string>("");
 
-  useEffect(() => {
-    const fetchOptions = async () => {
-      try {
-        const buyersData = await AccountService.getAccounts({ type: 'customer' });
-        setBuyers(buyersData.map((b: any) => ({ value: b.id, label: b.name })));
-        
-        const grainTypesData = await GrainTypeService.getGrainTypes();
-        setGrainTypes(grainTypesData.map((g: any) => ({ value: g.id, label: g.name })));
-        
-        const hubsData = await HubService.getHubs();
-        setHubs(hubsData.map((h: any) => ({ value: h.id, label: h.name })));
-      } catch (error) {
-        toast.error("Failed to load form options");
-      }
-    };
-    fetchOptions();
-  }, []);
+  // State for dropdown options
+  const [hubs, setHubs] = useState<TOption[]>([]);
+  const [grainTypes, setGrainTypes] = useState<TOption[]>([]);
+  const [qualityGrades, setQualityGrades] = useState<TOption[]>([]);
+  const [buyers, setBuyers] = useState<TOption[]>([]);
 
-  const formFields = TradeFormFields({ buyers, grainTypes, hubs });
+  const formFields = TradeFormFields({
+    hubs,
+    grainTypes,
+    qualityGrades,
+    buyers,
+    isUpdate: formType === "Update",
+  });
 
   const tradeForm = useFormik({
     initialValues: getInitialValues(formFields),
@@ -56,47 +50,99 @@ const TradeForm: FC<ITradeFormProps> = ({
   });
 
   useEffect(() => {
+    fetchDropdownData();
+  }, []);
+
+  useEffect(() => {
     if (formType === "Update" && initialValues) {
-      tradeForm.setValues(
-        patchInitialValues(formFields)({
-          ...initialValues,
-          buyer_id: initialValues.buyer?.id,
-          grain_type_id: initialValues.grain_type?.id,
-          hub_id: initialValues.hub?.id,
-        })
-      );
+      tradeForm.setValues(patchInitialValues(formFields)(initialValues || {}));
     }
-  }, [initialValues, formType]);
+  }, [initialValues, formType, hubs, grainTypes, qualityGrades, buyers]);
+
+  const fetchDropdownData = async () => {
+    try {
+      const [hubsData, grainTypesData, qualityGradesData, buyersData] = await Promise.all([
+        TradeService.getHubs(),
+        TradeService.getGrainTypes(),
+        TradeService.getQualityGrades(),
+        TradeService.getBuyers(),
+      ]);
+
+      setHubs(
+        hubsData.map((h: any) => ({ label: h.name, value: h.id }))
+      );
+      setGrainTypes(
+        grainTypesData.map((g: any) => ({ label: g.name, value: g.id }))
+      );
+      setQualityGrades(
+        qualityGradesData.map((q: any) => ({ label: q.name, value: q.id }))
+      );
+      setBuyers(
+        buyersData.map((b: any) => ({ label: b.name, value: b.id }))
+      );
+    } catch (error: any) {
+      console.error("Error fetching dropdown data:", error);
+      toast.error("Failed to load form data");
+    }
+  };
 
   const handleSubmit = async (values: any) => {
     setLoading(true);
+    setWarning("");
     try {
       if (formType === "Update") {
-        await TradeService.updateTrade(values, initialValues.id);
+        await TradeService.updateTrade(initialValues.id, values);
         toast.success("Trade updated successfully");
-        tradeForm.resetForm();
-        callBack && callBack();
-        handleClose();
       } else {
-        await TradeService.createTrade(values);
-        toast.success("Trade created successfully");
-        tradeForm.resetForm();
-        callBack && callBack();
+        const response = await TradeService.createTrade(values);
+        
+        // Check for inventory warning
+        if (response.warning) {
+          setWarning(response.warning);
+          toast("Trade created with pending allocation", {
+            icon: "⚠️",
+            style: {
+              background: "#fff3cd",
+              color: "#856404",
+            },
+          });
+          
+        } else {
+          toast.success("Trade created successfully");
+        }
+      }
+
+      tradeForm.resetForm();
+      callBack && callBack();
+      
+      // Only close if no warning or if updating
+      if (!warning || formType === "Update") {
         handleClose();
       }
+      
+      setLoading(false);
     } catch (error: any) {
+      setLoading(false);
+
       if (error.response?.data) {
         tradeForm.setErrors(error.response.data);
       }
-      toast.error(error.message || "An error occurred");
-    } finally {
-      setLoading(false);
+      
+      const errorMessage = error.response?.data?.detail || 
+                          error.message || 
+                          "An error occurred";
+      toast.error(errorMessage);
     }
   };
 
   const handleReset = () => {
     tradeForm.resetForm();
+    setWarning("");
     handleClose();
+  };
+
+  const handleButtonClick = () => {
+    tradeForm.handleSubmit();
   };
 
   const ActionBtns: FC = () => {
@@ -106,19 +152,23 @@ const TradeForm: FC<ITradeFormProps> = ({
           Close
         </Button>
         <Button
-          onClick={() => tradeForm.handleSubmit()}
+          onClick={handleButtonClick}
           type="button"
           variant="contained"
           disabled={loading}
         >
           {loading ? (
             <>
-              <ProgressIndicator color="inherit" size={20} />
+              <ProgressIndicator color="inherit" size={20} />{" "}
               <Span style={{ marginLeft: "0.5rem" }} color="primary">
                 Loading...
               </Span>
             </>
-          ) : formType === "Update" ? "Update Trade" : "Create Trade"}
+          ) : formType === "Update" ? (
+            "Update Trade"
+          ) : (
+            "Create Trade"
+          )}
         </Button>
       </>
     );
@@ -130,6 +180,7 @@ const TradeForm: FC<ITradeFormProps> = ({
       onClose={handleReset}
       id={uniqueId()}
       ActionButtons={ActionBtns}
+      maxWidth="lg"
     >
       <form
         ref={formRef}
@@ -139,6 +190,12 @@ const TradeForm: FC<ITradeFormProps> = ({
         }}
       >
         <Box sx={{ width: "100%" }}>
+          {warning && (
+            <Alert severity="warning" sx={{ mb: 2 }}>
+              {warning}
+            </Alert>
+          )}
+
           <FormFactory
             others={{ sx: { marginBottom: "0rem" } }}
             formikInstance={tradeForm}

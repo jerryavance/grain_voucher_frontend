@@ -41,6 +41,8 @@ const RouteLazyLoader = {
 
   Trade: Loadable(lazy(() => import("../pages/Trade/Trades"))),
 
+  TradeDetails: Loadable(lazy(() => import("../pages/Trade/TradeDetails"))),
+
   GrainType: Loadable(lazy(() => import("../pages/GrainType/GrainType"))),
 
   PriceFeed: Loadable(lazy(() => import("../pages/PriceFeed/PriceFeed"))),
