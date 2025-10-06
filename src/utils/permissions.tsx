@@ -30,7 +30,7 @@ export const IsFinance = () => {
 // Check if user can create a deposit (only hub_admin or agent)
 export const CanCreateDeposit = () => {
   const { user } = useAuth();
-  return [ROLE_HUB_ADMIN, ROLE_AGENT].includes(user?.role || '');
+  return [ROLE_HUB_ADMIN, ROLE_AGENT, ROLE_SUPER_ADMIN].includes(user?.role || '');
 };
 
 export const CanMakeTrades = () => {
