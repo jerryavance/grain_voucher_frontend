@@ -19,7 +19,7 @@ export const PaymentFormFields = (props: TPaymentFormProps): IFormField[] => {
 
   return [
     {
-      name: "invoice_id",
+      name: "invoice",
       initailValue: "",
       label: "Invoice",
       type: "select",
