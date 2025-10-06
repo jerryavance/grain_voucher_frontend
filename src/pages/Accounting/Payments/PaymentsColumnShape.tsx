@@ -32,7 +32,7 @@ const PaymentColumnShape = (actions: IDropdownAction[]) => [
   },
   {
     Header: "Invoice",
-    accessor: "invoice.invoice_number",
+    accessor: "invoice_details.invoice_number",
     minWidth: 150,
   },
   {
