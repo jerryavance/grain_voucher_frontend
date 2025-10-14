@@ -68,16 +68,25 @@ export const VoucherColumnShape = (
       ),
     },
     {
-      Header: "Holder Name",
-      accessor: "holder_name",
+        Header: "Holder Name",
+        accessor: "holder", // keep the holder object
+        Cell: ({ row }: any) => {
+          const holder = row.original.holder;
+          return (
+            <span>
+              {holder?.first_name} {holder?.last_name}
+            </span>
+          );
+        },
     },
+      
     {
       Header: "Holder Phone",
-      accessor: "holder_phone",
+      accessor: "holder.phone_number",
     },
     {
       Header: "Holder ID Number",
-      accessor: "holder_id_number",
+      accessor: "holder.id",
     },
     {
       Header: "Verification Status",
