@@ -68,7 +68,7 @@ function TabPanel(props: TabPanelProps) {
 }
 
 const VoucherManagement = () => {
-  useTitle("Voucher Management");
+  useTitle("Voucher/Redemption Management");
 
   const [tabValue, setTabValue] = useState(0);
   const [searchQuery, setSearchQuery] = useState("");

@@ -104,9 +104,6 @@ const VoucherStats: FC<IVoucherStatsProps> = ({ refreshTrigger = 0 }) => {
 
   return (
     <Box sx={{ mb: 3 }}>
-      <Typography variant="h5" gutterBottom sx={{ mb: 2 }}>
-        Overview
-      </Typography>
       <Grid container spacing={3}>
         <Grid item xs={6} sm={6} md={3}>
           <StatCard
