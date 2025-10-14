@@ -72,6 +72,10 @@ const routes = [
         path: "vouchers",
         element: <LazyLoader.VoucherGrid />,
       },
+      {
+        path: "voucher-management",
+        element: <LazyLoader.VoucherManagement />,
+      },
     ],
   },
 

@@ -1,5 +1,6 @@
 import { lazy, Suspense as ReactSuspense } from "react";
 import LoadingScreen from "../components/LoadingScreen";
+import VoucherManagement from "../pages/VoucherManagement/VoucherManagement";
 
 const Suspense: any = ReactSuspense;
 
@@ -30,6 +31,8 @@ const RouteLazyLoader = {
   DepositManangement: Loadable(lazy(() => import("../pages/DepositManagement/DepositManagement"))),
 
   VoucherGrid: Loadable(lazy(() => import("../pages/Voucher/VoucherGrid"))),
+
+  VoucherManagement: Loadable(lazy(() => import("../pages/VoucherManagement/VoucherManagement"))),
 
   QualityGrade: Loadable(lazy(() => import("../pages/QualityGrade/QualityGrade"))),
 

@@ -98,6 +98,12 @@ export const MenuList = (isSuperUser: boolean, CanCreateDeposit: boolean , CanVi
       visible: isSuperUser,
     },
     {
+      title: "Redemptions",
+      Icon: Icons.ConfirmationNumberIcon,   
+      path: "/dashboard/voucher-management",
+      visible: isSuperUser,
+    },
+    {
       title: "Inventories",
       Icon: Icons.InventoryIcon,
       path: "/admin/inventories", 
