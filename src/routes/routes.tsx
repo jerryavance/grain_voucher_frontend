@@ -69,6 +69,10 @@ const routes = [
         element: <LazyLoader.HubList />,
       },
       {
+        path: "invest",
+        element: <LazyLoader.InvestorDashboard />,
+      },
+      {
         path: "vouchers",
         element: <LazyLoader.VoucherGrid />,
       },
@@ -108,6 +112,11 @@ const routes = [
       {
         path: "price-feeds",
         element: <LazyLoader.PriceFeed />,
+        requiresAuth: true,
+      },
+      {
+        path: "investors",
+        element: <LazyLoader.InvestorsAdmin />,
         requiresAuth: true,
       },
       {

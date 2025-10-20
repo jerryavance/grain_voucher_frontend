@@ -1,21 +1,100 @@
-// components/UI/DropdownActionBtn.tsx
+// // components/UI/DropdownActionBtn.tsx
+// import React, { useState } from "react";
+// import { IconButton, Menu, MenuItem } from "@mui/material";
+// import { Span } from "../Typography";
+// import MoreVert from "@mui/icons-material/MoreVert";
+
+// export interface IDropdownAction {
+//   label: string | React.ReactElement;
+//   onClick: (...args: any) => void;
+//   icon?: React.ReactNode;
+//   condition?: (data: any) => boolean; // Add this optional property
+// }
+
+// const DropdownActionBtn: React.FC<{
+//   actions: IDropdownAction[];
+//   metaData: any;
+//   btnColor?: any;
+// }> = ({ actions, metaData, btnColor }) => {
+//   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
+
+//   const handleOpenMenu = (event: React.MouseEvent<HTMLElement>) => {
+//     setAnchorEl(event.currentTarget);
+//   };
+
+//   const handleCloseMenu = () => {
+//     setAnchorEl(null);
+//   };
+
+//   const handleActionClick = (action: any) => {
+//     action && action(metaData);
+//     handleCloseMenu();
+//   };
+
+//   // Filter actions based on condition
+//   const visibleActions = actions.filter((action) => {
+//     // If condition exists, evaluate it; otherwise, show the action
+//     return action.condition ? action.condition(metaData) : true;
+//   });
+
+//   // Don't render the button if no actions are visible
+//   if (visibleActions.length === 0) {
+//     return null;
+//   }
+
+//   return (
+//     <div>
+//       <IconButton size="small" onClick={handleOpenMenu}>
+//         <MoreVert fontSize="small" />
+//       </IconButton>
+//       <Menu
+//         anchorEl={anchorEl}
+//         open={Boolean(anchorEl)}
+//         onClose={handleCloseMenu}
+//       >
+//         {visibleActions.map((action: IDropdownAction, index) => {
+//           return (
+//             <MenuItem
+//               key={index}
+//               onClick={() => handleActionClick(action.onClick)}
+//             >
+//               {action.icon}
+//               <Span sx={{ marginLeft: "0.5rem" }}>{action.label}</Span>
+//             </MenuItem>
+//           );
+//         })}
+//       </Menu>
+//     </div>
+//   );
+// };
+
+// export default DropdownActionBtn;
+
+
+
+
 import React, { useState } from "react";
 import { IconButton, Menu, MenuItem } from "@mui/material";
 import { Span } from "../Typography";
 import MoreVert from "@mui/icons-material/MoreVert";
 
-export interface IDropdownAction {
+// Define IDropdownAction as a generic interface with default type 'any'
+export interface IDropdownAction<T = any> {
   label: string | React.ReactElement;
-  onClick: (...args: any) => void;
+  onClick: (data: T) => void;
   icon?: React.ReactNode;
-  condition?: (data: any) => boolean; // Add this optional property
+  condition?: (data: T) => boolean; // Use generic type T for condition
 }
 
-const DropdownActionBtn: React.FC<{
-  actions: IDropdownAction[];
-  metaData: any;
+const DropdownActionBtn = <T = any>({
+  actions,
+  metaData,
+  btnColor,
+}: {
+  actions: IDropdownAction<T>[];
+  metaData: T;
   btnColor?: any;
-}> = ({ actions, metaData, btnColor }) => {
+}) => {
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
 
   const handleOpenMenu = (event: React.MouseEvent<HTMLElement>) => {
@@ -26,8 +105,8 @@ const DropdownActionBtn: React.FC<{
     setAnchorEl(null);
   };
 
-  const handleActionClick = (action: any) => {
-    action && action(metaData);
+  const handleActionClick = (action: IDropdownAction<T>) => {
+    action.onClick(metaData);
     handleCloseMenu();
   };
 
@@ -52,11 +131,11 @@ const DropdownActionBtn: React.FC<{
         open={Boolean(anchorEl)}
         onClose={handleCloseMenu}
       >
-        {visibleActions.map((action: IDropdownAction, index) => {
+        {visibleActions.map((action: IDropdownAction<T>, index) => {
           return (
             <MenuItem
               key={index}
-              onClick={() => handleActionClick(action.onClick)}
+              onClick={() => handleActionClick(action)}
             >
               {action.icon}
               <Span sx={{ marginLeft: "0.5rem" }}>{action.label}</Span>
@@ -69,144 +148,3 @@ const DropdownActionBtn: React.FC<{
 };
 
 export default DropdownActionBtn;
-
-
-
-
-// import React, { useState } from "react";
-// import { IconButton, Menu, MenuItem } from "@mui/material";
-// import { Span } from "../Typography";
-// import MoreVert from "@mui/icons-material/MoreVert";
-
-// export interface IDropdownAction {
-//   label: string | React.ReactElement;
-//   onClick: (...args: any) => void;
-//   icon?: React.ReactNode;
-//   condition?: (data: any) => boolean;
-//   disabled?: (data: any) => boolean; // Add disabled property
-// }
-
-// const DropdownActionBtn: React.FC<{
-//   actions: IDropdownAction[];
-//   metaData: any;
-//   btnColor?: any;
-// }> = ({ actions, metaData, btnColor }) => {
-//   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
-
-//   const handleOpenMenu = (event: React.MouseEvent<HTMLElement>) => {
-//     setAnchorEl(event.currentTarget);
-//   };
-
-//   const handleCloseMenu = () => {
-//     setAnchorEl(null);
-//   };
-
-//   const handleActionClick = (action: IDropdownAction) => {
-//     action.onClick(metaData);
-//     handleCloseMenu();
-//   };
-
-//   // Filter actions based on condition
-//   const visibleActions = actions.filter((action) => {
-//     // If condition exists, evaluate it; otherwise, show the action
-//     return action.condition ? action.condition(metaData) : true;
-//   });
-
-//   // Don't render the button if no actions are visible
-//   if (visibleActions.length === 0) {
-//     return null;
-//   }
-
-//   return (
-//     <div>
-//       <IconButton size="small" onClick={handleOpenMenu} sx={btnColor ? { color: btnColor } : {}}>
-//         <MoreVert fontSize="small" />
-//       </IconButton>
-//       <Menu
-//         anchorEl={anchorEl}
-//         open={Boolean(anchorEl)}
-//         onClose={handleCloseMenu}
-//       >
-//         {visibleActions.map((action: IDropdownAction, index) => {
-//           const isDisabled = action.disabled ? action.disabled(metaData) : false;
-//           return (
-//             <MenuItem
-//               key={index}
-//               onClick={() => handleActionClick(action)}
-//               disabled={isDisabled}
-//             >
-//               {action.icon}
-//               <Span sx={{ marginLeft: "0.5rem" }}>{action.label}</Span>
-//             </MenuItem>
-//           );
-//         })}
-//       </Menu>
-//     </div>
-//   );
-// };
-
-// export default DropdownActionBtn;
-
-
-
-
-
-
-// import React, { useState } from "react";
-// import { IconButton, Menu, MenuItem } from "@mui/material";
-// import { Span } from "../Typography";
-// import MoreVert from "@mui/icons-material/MoreVert";
-
-// export interface IDropdownAction {
-//   label: string | React.ReactElement;
-//   onClick: (...args: any) => void;
-//   icon?: React.ReactNode;
-// }
-
-// const DropdownActionBtn: React.FC<{
-//   actions: IDropdownAction[];
-//   metaData: any;
-//   btnColor?: any;
-// }> = ({ actions, metaData, btnColor }) => {
-//   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
-
-//   const handleOpenMenu = (event: React.MouseEvent<HTMLElement>) => {
-//     setAnchorEl(event.currentTarget);
-//   };
-
-//   const handleCloseMenu = () => {
-//     setAnchorEl(null);
-//   };
-
-//   const handleActionClick = (action: any) => {
-//     action && action(metaData);
-//     handleCloseMenu();
-//   };
-
-//   return (
-//     <div>
-//       <IconButton size="small" onClick={handleOpenMenu}>
-//         <MoreVert fontSize="small" />
-//       </IconButton>
-//       <Menu
-//         anchorEl={anchorEl}
-//         open={Boolean(anchorEl)}
-//         onClose={handleCloseMenu}
-//       >
-//         {actions.map((action: IDropdownAction, index) => {
-//           return (
-//             <MenuItem
-//               key={index}
-//               onClick={() => handleActionClick(action.onClick)}
-//             >
-//               {action.icon}
-//               <Span sx={{ marginLeft: "0.5rem" }}>{action.label}</Span>
-//             </MenuItem>
-//           );
-//         })}
-//       </Menu>
-//     </div>
-//   );
-// };
-
-// export default DropdownActionBtn;

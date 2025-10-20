@@ -4,7 +4,8 @@ export interface IModalContext {
   showModal: boolean;
   modalId?: string;
   loadingModalContent?: boolean;
-  setModalId: (modalId: string) => void,
+  //setModalId: (modalId: string) => void,
+  setModalId: (modalId: string | undefined) => void; // Updated to allow undefined
   setLoadingModalContent: (loading: boolean) => void;
   setShowModal: (show: boolean) => void;
 }

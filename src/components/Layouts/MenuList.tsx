@@ -24,13 +24,19 @@ export const MenuList = (isSuperUser: boolean, CanCreateDeposit: boolean , CanVi
       path: "/dashboard/vouchers",
       visible: true,
     },
-    // {
-    //   title: "Transactions",
-    //   Icon: Icons.PaidIcon,
-    //   path: "/admin/transactions", 
-    //   // visible: isSuperUser,
-    //   visible: true,
-    // },
+    {
+      title: "Invest",
+      Icon: Icons.GroupsIcon,
+      path: "/dashboard/invest", 
+      visible: true,
+      // visible: isSuperUser,
+    },
+    {
+      title: "Investors",
+      Icon: Icons.GroupsIcon,
+      path: "/admin/investors", 
+      visible: isSuperUser,
+    },
     {
       title: "Hubs",
       Icon: Icons.FactoryIcon,
@@ -55,24 +61,24 @@ export const MenuList = (isSuperUser: boolean, CanCreateDeposit: boolean , CanVi
       path: "/admin/deposit", 
       visible: CanCreateDeposit,
     },
-    {
-      title: "Price Feed",
-      Icon: Icons.PriceChangeIcon,
-      path: "/admin/price-feeds", 
-      visible: isSuperUser,
-    },
-    {
-      title: "Grain Type",
-      Icon: Icons.GrainIcon,
-      path: "/admin/grain-types", 
-      visible: isSuperUser,
-    },
-    {
-      title: "Quality Grade",
-      Icon: Icons.GradeIcon,
-      path: "/admin/quality-grades", 
-      visible: isSuperUser,
-    },
+    // {
+    //   title: "Price Feed",
+    //   Icon: Icons.PriceChangeIcon,
+    //   path: "/admin/price-feeds", 
+    //   visible: isSuperUser,
+    // },
+    // {
+    //   title: "Grain Type",
+    //   Icon: Icons.GrainIcon,
+    //   path: "/admin/grain-types", 
+    //   visible: isSuperUser,
+    // },
+    // {
+    //   title: "Quality Grade",
+    //   Icon: Icons.GradeIcon,
+    //   path: "/admin/quality-grades", 
+    //   visible: isSuperUser,
+    // },
     {
       title: "Trade",
       Icon: Icons.TrendingUpIcon,
@@ -91,12 +97,12 @@ export const MenuList = (isSuperUser: boolean, CanCreateDeposit: boolean , CanVi
       path: "/admin/accounting", 
       visible: isSuperUser,
     },
-    {
-      title: "Payroll",
-      Icon: Icons.PaymentsIcon,
-      path: "/admin/pay-roll", 
-      visible: isSuperUser,
-    },
+    // {
+    //   title: "Payroll",
+    //   Icon: Icons.PaymentsIcon,
+    //   path: "/admin/pay-roll", 
+    //   visible: isSuperUser,
+    // },
     {
       title: "Redemptions",
       Icon: Icons.ConfirmationNumberIcon,   
