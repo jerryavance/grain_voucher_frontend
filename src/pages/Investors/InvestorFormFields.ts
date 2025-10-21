@@ -17,7 +17,7 @@ export const InvestorAccountFormFields = (investorOptions: { label: string; valu
 
 export const DepositFormFields = (investorAccountOptions: { label: string; value: string }[] = []): IFormField[] => [
   {
-    name: 'investor_account',
+    name: 'investor_account_id',
     initailValue: '',
     label: 'Investor Account',
     type: 'select',
@@ -48,7 +48,7 @@ export const DepositFormFields = (investorAccountOptions: { label: string; value
 
 export const ProfitAgreementFormFields = (): IFormField[] => [
   {
-    name: 'investor_account',
+    name: 'investor_account_id',
     initailValue: '',
     label: 'Investor Account',
     type: 'select',

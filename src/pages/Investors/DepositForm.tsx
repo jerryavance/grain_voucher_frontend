@@ -60,7 +60,7 @@ const DepositForm: FC<IDepositFormProps> = ({
   };
 
   const handleSubmit = async (values: any) => {
-    if (!values.investor_account) {
+    if (!values.investor_account_id) {
       toast.error("Please select an investor account");
       return;
     }

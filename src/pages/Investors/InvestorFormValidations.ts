@@ -5,7 +5,7 @@ export const InvestorAccountValidation = Yup.object().shape({
 });
 
 export const DepositValidation = Yup.object().shape({
-  investor_account: Yup.string().required("Investor account is required"),
+  investor_account_id: Yup.string().required("Investor account is required"),
   amount: Yup.number()
     .positive("Amount must be positive")
     .required("Amount is required"),
@@ -21,7 +21,7 @@ export const WithdrawalValidation = Yup.object().shape({
 });
 
 export const ProfitAgreementValidation = Yup.object().shape({
-  investor_account: Yup.string().required("Investor account is required"),
+  investor_account_id: Yup.string().required("Investor account is required"),
   profit_threshold: Yup.number()
     .min(0, "Profit threshold must be at least 0")
     .max(100, "Profit threshold cannot exceed 100%")

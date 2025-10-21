@@ -107,7 +107,6 @@ const InvestorDashboard = () => {
   return (
     <Box pt={2} pb={4}>
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
-        <Typography variant="h4">Investor Dashboard</Typography>
         <Button 
           variant="contained" 
           color="primary"

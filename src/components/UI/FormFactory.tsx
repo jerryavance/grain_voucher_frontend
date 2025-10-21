@@ -103,7 +103,8 @@ const FormTypeFactory = (
       return (
         <SelectInput2
           name={formField.name}
-          value={null}
+          value={formikInstance.values[formField.name] || ""} // Bind to Formik state
+          // value={null}
           options={formField.options || []}
           formControl={formikInstance}
           error={formikInstance.errors?.[formField.name]}
