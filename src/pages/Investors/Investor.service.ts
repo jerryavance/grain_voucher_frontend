@@ -1,4 +1,7 @@
 import instance from "../../api";
+import { 
+  IGoodsReceivedNote
+} from "../Trade/Trade.interface";
 
 export const InvestorService = {
   // Investor Accounts
@@ -143,6 +146,46 @@ export const InvestorService = {
       .delete(`investors/trades/${id}/`)
       .then((response) => response.data);
   },
+
+  // NEW SERVICES
+  async getGRNs(filters?: Record<string, any>): Promise<IGoodsReceivedNote[]> {
+    return instance
+      .get("trade/grns/", { params: filters })
+      .then((response) => response.data.results || response.data);
+  },
+
+  async getHubs(): Promise<any[]> {
+    return instance
+      .get("hubs/")
+      .then((response) => response.data.results || response.data);
+  },
+
+  async getGrainTypes(): Promise<any[]> {
+    return instance
+      .get("vouchers/grain-types/")
+      .then((response) => response.data.results || response.data);
+  },
+
+  async getQualityGrades(): Promise<any[]> {
+    return instance
+      .get("vouchers/quality-grades/")
+      .then((response) => response.data.results || response.data);
+  },
+
+  async getBuyers(): Promise<any[]> {
+    return instance
+      .get("crm/accounts/", { params: { type: 'customer' } })
+      .then((response) => response.data.results || response.data);
+  },
+
+  async getSuppliers(): Promise<any[]> {
+    return instance
+      .get("crm/accounts/", { params: { type: 'customer' } })
+      .then((response) => response.data.results || response.data);
+  },
+  // NEW SERVICES
+
+
 
   // Trade Allocations
   async getTradeAllocations(filters: Record<string, any>) {

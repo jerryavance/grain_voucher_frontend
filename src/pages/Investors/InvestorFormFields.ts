@@ -1,4 +1,5 @@
 import { IFormField } from "../../utils/form_factory";
+import { TOption } from "../../@types/common";
 
 export const InvestorAccountFormFields = (investorOptions: { label: string; value: string }[] = []): IFormField[] => {
   return [
@@ -95,35 +96,53 @@ export const ProfitAgreementFormFields = (): IFormField[] => [
   },
 ];
 
-export const TradeFormFields = (): IFormField[] => [
+
+interface TradeFormFieldsProps {
+  grns?: TOption[];
+  hubs?: TOption[];
+  grainTypes?: TOption[];
+  buyers?: TOption[];
+  suppliers?: TOption[];
+  isUpdate?: boolean;
+}
+
+export const TradeFormFields = ({
+  grns = [],
+  hubs = [],
+  grainTypes = [],
+  buyers = [],
+  suppliers = [],
+  isUpdate = false,
+}: TradeFormFieldsProps): IFormField[] => [
   {
     name: 'grn_number',
     initailValue: '',
     label: 'GRN Number',
-    type: 'text',
-    uiType: 'text',
+    type: 'select',
+    uiType: 'select',
     uiBreakpoints: { xs: 12, sm: 12, md: 6, lg: 6, xl: 6 },
     required: true,
+    options: grns,
   },
   {
     name: 'hub_id',
     initailValue: '',
     label: 'Hub',
     type: 'select',
-    uiType: 'autocomplete',
+    uiType: 'select',
     uiBreakpoints: { xs: 12, sm: 12, md: 6, lg: 6, xl: 6 },
     required: true,
-    options: [],
+    options: hubs,
   },
   {
     name: 'grain_type',
     initailValue: '',
     label: 'Grain Type',
     type: 'select',
-    uiType: 'autocomplete',
+    uiType: 'select',
     uiBreakpoints: { xs: 12, sm: 12, md: 6, lg: 6, xl: 6 },
     required: true,
-    options: [],
+    options: grainTypes,
   },
   {
     name: 'gross_tonnage',
@@ -183,20 +202,20 @@ export const TradeFormFields = (): IFormField[] => [
     initailValue: '',
     label: 'Supplier',
     type: 'select',
-    uiType: 'autocomplete',
+    uiType: 'select',
     uiBreakpoints: { xs: 12, sm: 12, md: 6, lg: 6, xl: 6 },
     required: true,
-    options: [],
+    options: suppliers,
   },
   {
     name: 'buyer_id',
     initailValue: '',
     label: 'Buyer',
     type: 'select',
-    uiType: 'autocomplete',
+    uiType: 'select',
     uiBreakpoints: { xs: 12, sm: 12, md: 6, lg: 6, xl: 6 },
     required: true,
-    options: [],
+    options: buyers,
   },
   {
     name: 'payable_by_buyer',
@@ -278,6 +297,190 @@ export const TradeFormFields = (): IFormField[] => [
     uiBreakpoints: { xs: 12, sm: 12, md: 6, lg: 6, xl: 6 },
   },
 ];
+
+// export const TradeFormFields = (): IFormField[] => [
+//   {
+//     name: 'grn_number',
+//     initailValue: '',
+//     label: 'GRN Number',
+//     type: 'text',
+//     uiType: 'text',
+//     uiBreakpoints: { xs: 12, sm: 12, md: 6, lg: 6, xl: 6 },
+//     required: true,
+//   },
+//   {
+//     name: 'hub_id',
+//     initailValue: '',
+//     label: 'Hub',
+//     type: 'select',
+//     uiType: 'autocomplete',
+//     uiBreakpoints: { xs: 12, sm: 12, md: 6, lg: 6, xl: 6 },
+//     required: true,
+//     options: [],
+//   },
+//   {
+//     name: 'grain_type',
+//     initailValue: '',
+//     label: 'Grain Type',
+//     type: 'select',
+//     uiType: 'autocomplete',
+//     uiBreakpoints: { xs: 12, sm: 12, md: 6, lg: 6, xl: 6 },
+//     required: true,
+//     options: [],
+//   },
+//   {
+//     name: 'gross_tonnage',
+//     initailValue: '',
+//     label: 'Gross Tonnage (MT)',
+//     type: 'number',
+//     uiType: 'number',
+//     uiBreakpoints: { xs: 12, sm: 12, md: 6, lg: 6, xl: 6 },
+//     required: true,
+//   },
+//   {
+//     name: 'net_tonnage',
+//     initailValue: '',
+//     label: 'Net Tonnage (MT)',
+//     type: 'number',
+//     uiType: 'number',
+//     uiBreakpoints: { xs: 12, sm: 12, md: 6, lg: 6, xl: 6 },
+//     required: true,
+//   },
+//   {
+//     name: 'buying_price',
+//     initailValue: '',
+//     label: 'Buying Price (UGX)',
+//     type: 'number',
+//     uiType: 'number',
+//     uiBreakpoints: { xs: 12, sm: 12, md: 6, lg: 6, xl: 6 },
+//     required: true,
+//   },
+//   {
+//     name: 'selling_price',
+//     initailValue: '',
+//     label: 'Selling Price (UGX)',
+//     type: 'number',
+//     uiType: 'number',
+//     uiBreakpoints: { xs: 12, sm: 12, md: 6, lg: 6, xl: 6 },
+//     required: true,
+//   },
+//   {
+//     name: 'other_expenses',
+//     initailValue: '0',
+//     label: 'Other Expenses (UGX)',
+//     type: 'number',
+//     uiType: 'number',
+//     uiBreakpoints: { xs: 12, sm: 12, md: 6, lg: 6, xl: 6 },
+//   },
+//   {
+//     name: 'total_trade_cost',
+//     initailValue: '',
+//     label: 'Total Trade Cost (UGX)',
+//     type: 'number',
+//     uiType: 'number',
+//     uiBreakpoints: { xs: 12, sm: 12, md: 6, lg: 6, xl: 6 },
+//     required: true,
+//   },
+//   {
+//     name: 'supplier_id',
+//     initailValue: '',
+//     label: 'Supplier',
+//     type: 'select',
+//     uiType: 'autocomplete',
+//     uiBreakpoints: { xs: 12, sm: 12, md: 6, lg: 6, xl: 6 },
+//     required: true,
+//     options: [],
+//   },
+//   {
+//     name: 'buyer_id',
+//     initailValue: '',
+//     label: 'Buyer',
+//     type: 'select',
+//     uiType: 'autocomplete',
+//     uiBreakpoints: { xs: 12, sm: 12, md: 6, lg: 6, xl: 6 },
+//     required: true,
+//     options: [],
+//   },
+//   {
+//     name: 'payable_by_buyer',
+//     initailValue: '',
+//     label: 'Payable by Buyer (UGX)',
+//     type: 'number',
+//     uiType: 'number',
+//     uiBreakpoints: { xs: 12, sm: 12, md: 6, lg: 6, xl: 6 },
+//     required: true,
+//   },
+//   {
+//     name: 'payment_status',
+//     initailValue: '',
+//     label: 'Payment Status',
+//     type: 'select',
+//     uiType: 'select',
+//     options: [
+//       { label: 'Paid', value: 'paid' },
+//       { label: 'Pending', value: 'pending' },
+//       { label: 'Overdue', value: 'overdue' },
+//     ],
+//     uiBreakpoints: { xs: 12, sm: 12, md: 6, lg: 6, xl: 6 },
+//     required: true,
+//   },
+//   {
+//     name: 'amount_paid',
+//     initailValue: '0',
+//     label: 'Amount Paid (UGX)',
+//     type: 'number',
+//     uiType: 'number',
+//     uiBreakpoints: { xs: 12, sm: 12, md: 6, lg: 6, xl: 6 },
+//   },
+//   {
+//     name: 'payment_due_date',
+//     initailValue: '',
+//     label: 'Payment Due Date',
+//     type: 'date',
+//     uiType: 'date',
+//     uiBreakpoints: { xs: 12, sm: 12, md: 6, lg: 6, xl: 6 },
+//     required: true,
+//   },
+//   {
+//     name: 'amount_due',
+//     initailValue: '',
+//     label: 'Amount Due (UGX)',
+//     type: 'number',
+//     uiType: 'number',
+//     uiBreakpoints: { xs: 12, sm: 12, md: 6, lg: 6, xl: 6 },
+//     required: true,
+//   },
+//   {
+//     name: 'delivery_date',
+//     initailValue: '',
+//     label: 'Delivery Date',
+//     type: 'date',
+//     uiType: 'date',
+//     uiBreakpoints: { xs: 12, sm: 12, md: 6, lg: 6, xl: 6 },
+//     required: true,
+//   },
+//   {
+//     name: 'delivery_status',
+//     initailValue: '',
+//     label: 'Delivery Status',
+//     type: 'select',
+//     uiType: 'select',
+//     options: [
+//       { label: 'Delivered', value: 'delivered' },
+//       { label: 'Pending', value: 'pending' },
+//     ],
+//     uiBreakpoints: { xs: 12, sm: 12, md: 6, lg: 6, xl: 6 },
+//     required: true,
+//   },
+//   {
+//     name: 'amsaf_fees',
+//     initailValue: '0',
+//     label: 'AMSAF Fees (UGX)',
+//     type: 'number',
+//     uiType: 'number',
+//     uiBreakpoints: { xs: 12, sm: 12, md: 6, lg: 6, xl: 6 },
+//   },
+// ];
 
 export const TradeAllocationFormFields = (): IFormField[] => [
   {
