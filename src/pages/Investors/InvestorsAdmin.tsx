@@ -13,15 +13,11 @@ import {
   IInvestorAccountsResults, 
   IInvestorDepositsResults,
   IInvestorWithdrawalsResults,
-  ITradesResults,
-  ITradeAllocationsResults,
-  ILoansResults,
+  IProfitAgreementsResults,
   IInvestorAccount,
   IInvestorDeposit,
   IInvestorWithdrawal,
-  ITrade,
-  ITradeAllocation,
-  ILoan
+  IProfitSharingAgreement
 } from "./Investor.interface";
 import { IDropdownAction } from "../../components/UI/DropdownActionBtn";
 import SearchInput from "../../components/SearchInput";
@@ -30,17 +26,13 @@ import {
   InvestorAccountColumnShape,
   DepositColumnShape,
   WithdrawalColumnShape,
-  TradeColumnShape,
-  TradeAllocationColumnShape,
-  LoanColumnShape
+  ProfitAgreementColumnShape
 } from "./InvestorColumnShape";
 import { INITIAL_PAGE_SIZE } from "../../api/constants";
 import InvestorAccountForm from "./InvestorAccountForm";
 import DepositForm from "./DepositForm";
 import WithdrawalForm from "./WithdrawalForm";
-import TradeForm from "./TradeForm";
-import TradeAllocationForm from "./TradeAllocationForm";
-import LoanForm from "./LoanForm";
+import ProfitAgreementForm from "./ProfitAgreementForm";
 import InvestorDetailsModal from "./InvestorDetailsModal";
 
 interface TabPanelProps {
@@ -65,7 +57,7 @@ function TabPanel(props: TabPanelProps) {
   );
 }
 
-type FormType = 'account' | 'deposit' | 'withdrawal' | 'trade' | 'allocation' | 'loan' | 'details' | null;
+type FormType = 'account' | 'deposit' | 'withdrawal' | 'profit_agreement' | 'details' | null;
 
 const InvestorsAdmin = () => {
   useTitle("Investors Management");
@@ -78,11 +70,9 @@ const InvestorsAdmin = () => {
   const [accounts, setAccounts] = useState<IInvestorAccountsResults>();
   const [deposits, setDeposits] = useState<IInvestorDepositsResults>();
   const [withdrawals, setWithdrawals] = useState<IInvestorWithdrawalsResults>();
-  const [trades, setTrades] = useState<ITradesResults>();
-  const [allocations, setAllocations] = useState<ITradeAllocationsResults>();
-  const [loans, setLoans] = useState<ILoansResults>();
+  const [profitAgreements, setProfitAgreements] = useState<IProfitAgreementsResults>();
   const [selectedAccount, setSelectedAccount] = useState<IInvestorAccount | null>(null);
-  const [selectedTrade, setSelectedTrade] = useState<ITrade | null>(null);
+  const [selectedProfitAgreement, setSelectedProfitAgreement] = useState<IProfitSharingAgreement | null>(null);
   const [formType, setFormType] = useState<"Save" | "Update">("Save");
   const [activeForm, setActiveForm] = useState<FormType>(null);
 
@@ -106,23 +96,16 @@ const InvestorsAdmin = () => {
           const withdrawalsData = await InvestorService.getInvestorWithdrawals(filters);
           setWithdrawals(withdrawalsData);
           break;
-        case 3: // Trades
-          const tradesData = await InvestorService.getTrades(filters);
-          setTrades(tradesData);
-          break;
-        case 4: // Allocations
-          const allocationsData = await InvestorService.getTradeAllocations(filters);
-          setAllocations(allocationsData);
-          break;
-        case 5: // Loans
-          const loansData = await InvestorService.getLoans(filters);
-          setLoans(loansData);
+        case 3: // Profit Agreements
+          const agreementsData = await InvestorService.getProfitAgreements(filters);
+          setProfitAgreements(agreementsData);
           break;
       }
       setLoading(false);
-    } catch (error) {
+    } catch (error: any) {
       setLoading(false);
       console.error("Error fetching data:", error);
+      toast.error(error.response?.data?.detail || "Failed to load data");
     }
   };
 
@@ -135,6 +118,15 @@ const InvestorsAdmin = () => {
   const handleInputChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const value = event.target.value;
     setSearchQuery(value);
+    // Implement search filtering here if needed
+    // setFilters({ ...filters, search: value });
+  };
+
+  const closeModal = () => {
+    setShowModal(false);
+    setActiveForm(null);
+    setSelectedAccount(null);
+    setSelectedProfitAgreement(null);
   };
 
   // Account Actions
@@ -159,12 +151,15 @@ const InvestorsAdmin = () => {
   };
 
   const handleDeleteAccount = async (account: IInvestorAccount) => {
+    if (!window.confirm(`Are you sure you want to delete the account for ${account.investor.first_name} ${account.investor.last_name}?`)) {
+      return;
+    }
     try {
       await InvestorService.deleteInvestorAccount(account.id);
       toast.success("Account deleted successfully");
       fetchData();
-    } catch (error) {
-      toast.error("Failed to delete account");
+    } catch (error: any) {
+      toast.error(error.response?.data?.detail || "Failed to delete account");
     }
   };
 
@@ -175,12 +170,15 @@ const InvestorsAdmin = () => {
   };
 
   const handleDeleteDeposit = async (deposit: IInvestorDeposit) => {
+    if (!window.confirm(`Are you sure you want to delete this deposit of ${deposit.amount} UGX?`)) {
+      return;
+    }
     try {
       await InvestorService.deleteInvestorDeposit(deposit.id);
       toast.success("Deposit deleted successfully");
       fetchData();
-    } catch (error) {
-      toast.error("Failed to delete deposit");
+    } catch (error: any) {
+      toast.error(error.response?.data?.detail || "Failed to delete deposit");
     }
   };
 
@@ -191,91 +189,60 @@ const InvestorsAdmin = () => {
   };
 
   const handleApproveWithdrawal = async (withdrawal: IInvestorWithdrawal) => {
+    if (!window.confirm(`Are you sure you want to approve withdrawal of ${withdrawal.amount} UGX for ${withdrawal.investor.first_name} ${withdrawal.investor.last_name}?`)) {
+      return;
+    }
     try {
       await InvestorService.approveWithdrawal(withdrawal.id);
       toast.success("Withdrawal approved successfully");
       fetchData();
-    } catch (error) {
-      toast.error("Failed to approve withdrawal");
+    } catch (error: any) {
+      toast.error(error.response?.data?.detail || error.response?.data?.error || "Failed to approve withdrawal");
     }
   };
 
-  const handleRejectWithdrawal = async (withdrawal: IInvestorWithdrawal, notes: string) => {
+  const handleRejectWithdrawal = async (withdrawal: IInvestorWithdrawal) => {
+    const notes = window.prompt('Enter rejection reason:', 'Insufficient funds or invalid request');
+    if (notes === null) return; // User cancelled
+    
     try {
       await InvestorService.rejectWithdrawal(withdrawal.id, notes);
       toast.success("Withdrawal rejected successfully");
       fetchData();
-    } catch (error) {
-      toast.error("Failed to reject withdrawal");
+    } catch (error: any) {
+      toast.error(error.response?.data?.detail || "Failed to reject withdrawal");
     }
   };
-  
 
-  // Trade Actions
-  const handleCreateTrade = () => {
+  // Profit Agreement Actions
+  const handleCreateProfitAgreement = () => {
     setFormType("Save");
-    setSelectedTrade(null);
-    setActiveForm('trade');
+    setSelectedProfitAgreement(null);
+    setActiveForm('profit_agreement');
     setShowModal(true);
   };
 
-  const handleEditTrade = (trade: ITrade) => {
-    setSelectedTrade(trade);
+  const handleEditProfitAgreement = (agreement: IProfitSharingAgreement) => {
+    setSelectedProfitAgreement(agreement);
     setFormType("Update");
-    setActiveForm('trade');
+    setActiveForm('profit_agreement');
     setShowModal(true);
   };
 
-  const handleDeleteTrade = async (trade: ITrade) => {
-    try {
-      await InvestorService.deleteTrade(trade.id);
-      toast.success("Trade deleted successfully");
-      fetchData();
-    } catch (error) {
-      toast.error("Failed to delete trade");
-    }
-  };
-
-  // Allocation Actions
-  const handleCreateAllocation = () => {
-    if (!selectedTrade) {
-      toast.error("Please select a trade first");
+  const handleDeleteProfitAgreement = async (agreement: IProfitSharingAgreement) => {
+    if (!window.confirm('Are you sure you want to delete this profit sharing agreement?')) {
       return;
     }
-    setActiveForm('allocation');
-    setShowModal(true);
-  };
-
-  const handleDeleteAllocation = async (allocation: ITradeAllocation) => {
     try {
-      await InvestorService.deleteTradeAllocation(allocation.id);
-      toast.success("Allocation deleted successfully");
+      await InvestorService.deleteProfitAgreement(agreement.id);
+      toast.success("Profit agreement deleted successfully");
       fetchData();
-    } catch (error) {
-      toast.error("Failed to delete allocation");
+    } catch (error: any) {
+      toast.error(error.response?.data?.detail || "Failed to delete profit agreement");
     }
   };
 
-  // Loan Actions
-  const handleCreateLoan = () => {
-    if (!selectedTrade) {
-      toast.error("Please select a trade first");
-      return;
-    }
-    setActiveForm('loan');
-    setShowModal(true);
-  };
-
-  const handleDeleteLoan = async (loan: ILoan) => {
-    try {
-      await InvestorService.deleteLoan(loan.id);
-      toast.success("Loan deleted successfully");
-      fetchData();
-    } catch (error) {
-      toast.error("Failed to delete loan");
-    }
-  };
-
+  // Action Definitions
   const accountActions: IDropdownAction[] = [
     {
       label: "View",
@@ -308,45 +275,23 @@ const InvestorsAdmin = () => {
       icon: <CheckCircleIcon />,
       onClick: handleApproveWithdrawal,
     },
-    // {
-    //   label: "Reject",
-    //   icon: <CancelIcon />,
-    //   onClick: handleRejectWithdrawal,
-    // },
     {
       label: "Reject",
       icon: <CancelIcon />,
-      onClick: (withdrawal: IInvestorWithdrawal) =>
-        handleRejectWithdrawal(withdrawal, ""),
+      onClick: handleRejectWithdrawal,
     },
   ];
 
-  const tradeActions: IDropdownAction[] = [
+  const profitAgreementActions: IDropdownAction[] = [
     {
       label: "Edit",
       icon: <EditIcon />,
-      onClick: handleEditTrade,
+      onClick: handleEditProfitAgreement,
     },
     {
       label: "Delete",
       icon: <DeleteIcon />,
-      onClick: handleDeleteTrade,
-    },
-  ];
-
-  const allocationActions: IDropdownAction[] = [
-    {
-      label: "Delete",
-      icon: <DeleteIcon />,
-      onClick: handleDeleteAllocation,
-    },
-  ];
-
-  const loanActions: IDropdownAction[] = [
-    {
-      label: "Delete",
-      icon: <DeleteIcon />,
-      onClick: handleDeleteLoan,
+      onClick: handleDeleteProfitAgreement,
     },
   ];
 
@@ -367,33 +312,13 @@ const InvestorsAdmin = () => {
       case 2:
         return (
           <Button variant="contained" onClick={handleCreateWithdrawal}>
-            Create Withdrawal
+            Request Withdrawal
           </Button>
         );
       case 3:
         return (
-          <Button variant="contained" onClick={handleCreateTrade}>
-            Create Trade
-          </Button>
-        );
-      case 4:
-        return (
-          <Button 
-            variant="contained" 
-            onClick={handleCreateAllocation}
-            disabled={!selectedTrade}
-          >
-            Create Allocation
-          </Button>
-        );
-      case 5:
-        return (
-          <Button 
-            variant="contained" 
-            onClick={handleCreateLoan}
-            disabled={!selectedTrade}
-          >
-            Create Loan
+          <Button variant="contained" onClick={handleCreateProfitAgreement}>
+            Create Profit Agreement
           </Button>
         );
       default:
@@ -402,78 +327,47 @@ const InvestorsAdmin = () => {
   };
 
   const renderForm = () => {
+    if (!showModal) return null;
+
     switch (activeForm) {
       case 'account':
         return (
           <InvestorAccountForm
-            handleClose={() => {
-              setShowModal(false);
-              setActiveForm(null);
-            }}
+            handleClose={closeModal}
             formType={formType}
-            initialValues={selectedAccount}
+            initialValues={selectedAccount ?? undefined}
             callBack={fetchData}
           />
         );
       case 'deposit':
         return (
           <DepositForm
-            handleClose={() => {
-              setShowModal(false);
-              setActiveForm(null);
-            } }
-            callBack={fetchData} accountId={""}          />
+            handleClose={closeModal}
+            callBack={fetchData}
+            accountId={selectedAccount?.id ?? ""}
+          />
         );
       case 'withdrawal':
         return (
           <WithdrawalForm
-            handleClose={() => {
-              setShowModal(false);
-              setActiveForm(null);
-            } }
-            callBack={fetchData} accountId={""}          />
+            handleClose={closeModal}
+            callBack={fetchData}
+            accountId={selectedAccount?.id ?? ""}
+          />
         );
-      case 'trade':
+      case 'profit_agreement':
         return (
-          <TradeForm
-            handleClose={() => {
-              setShowModal(false);
-              setActiveForm(null);
-            }}
+          <ProfitAgreementForm
+            handleClose={closeModal}
             formType={formType}
-            initialValues={selectedTrade}
-            callBack={fetchData}
-          />
-        );
-      case 'allocation':
-        return (
-          <TradeAllocationForm
-            handleClose={() => {
-              setShowModal(false);
-              setActiveForm(null);
-            }}
-            tradeId={selectedTrade?.id}
-            callBack={fetchData}
-          />
-        );
-      case 'loan':
-        return (
-          <LoanForm
-            handleClose={() => {
-              setShowModal(false);
-              setActiveForm(null);
-            }}
-            tradeId={selectedTrade?.id}
+            initialValues={selectedProfitAgreement}
             callBack={fetchData}
           />
         );
       case 'details':
         return (
           <InvestorDetailsModal
-            handleClose={() => {
-              setShowModal(false);
-              setActiveForm(null);
-            }}
+            handleClose={closeModal}
             account={selectedAccount as IInvestorAccount}
           />
         );
@@ -484,24 +378,25 @@ const InvestorsAdmin = () => {
 
   return (
     <Box sx={{ p: 3 }}>
-      <Box sx={{ borderBottom: 1, borderColor: "divider" }}>
-        <Tabs value={tabValue} onChange={handleTabChange} aria-label="investor tabs">
-          <Tab label="Accounts" />
-          <Tab label="Deposits" />
-          <Tab label="Withdrawals" />
-          <Tab label="Trades" />
-          <Tab label="Allocations" />
-          <Tab label="Loans" />
-        </Tabs>
+      <Box sx={{ mb: 3 }}>
+        <Box sx={{ borderBottom: 1, borderColor: "divider" }}>
+          <Tabs value={tabValue} onChange={handleTabChange} aria-label="investor tabs">
+            <Tab label="Accounts" />
+            <Tab label="Deposits" />
+            <Tab label="Withdrawals" />
+            <Tab label="Profit Agreements" />
+          </Tabs>
+        </Box>
       </Box>
 
+      {/* Accounts Tab */}
       <TabPanel value={tabValue} index={0}>
         <Box sx={styles.tablePreHeader}>
           <SearchInput
             value={searchQuery}
             onChange={handleInputChange}
             type="text"
-            placeholder="Search accounts..."
+            placeholder="Search accounts by name, phone..."
           />
           {renderCreateButton()}
         </Box>
@@ -518,6 +413,7 @@ const InvestorsAdmin = () => {
         />
       </TabPanel>
 
+      {/* Deposits Tab */}
       <TabPanel value={tabValue} index={1}>
         <Box sx={styles.tablePreHeader}>
           <SearchInput
@@ -540,6 +436,7 @@ const InvestorsAdmin = () => {
         />
       </TabPanel>
 
+      {/* Withdrawals Tab */}
       <TabPanel value={tabValue} index={2}>
         <Box sx={styles.tablePreHeader}>
           <SearchInput
@@ -562,43 +459,21 @@ const InvestorsAdmin = () => {
         />
       </TabPanel>
 
+      {/* Profit Agreements Tab */}
       <TabPanel value={tabValue} index={3}>
         <Box sx={styles.tablePreHeader}>
           <SearchInput
             value={searchQuery}
             onChange={handleInputChange}
             type="text"
-            placeholder="Search trades..."
+            placeholder="Search profit agreements..."
           />
           {renderCreateButton()}
         </Box>
         <CustomTable
-          columnShape={TradeColumnShape(tradeActions)}
-          data={trades?.results || []}
-          dataCount={trades?.count || 0}
-          pageInitialState={{ pageSize: INITIAL_PAGE_SIZE, pageIndex: 0 }}
-          setPageIndex={(page: number) => setFilters({...filters, page})}
-          pageIndex={filters?.page || 1}
-          setPageSize={(size: number) => setFilters({ ...filters, page_size: size })}
-          loading={loading}
-          rowClick={(row: any) => setSelectedTrade(row.original)}
-        />
-      </TabPanel>
-
-      <TabPanel value={tabValue} index={4}>
-        <Box sx={styles.tablePreHeader}>
-          <SearchInput
-            value={searchQuery}
-            onChange={handleInputChange}
-            type="text"
-            placeholder="Search allocations..."
-          />
-          {renderCreateButton()}
-        </Box>
-        <CustomTable
-          columnShape={TradeAllocationColumnShape(allocationActions)}
-          data={allocations?.results || []}
-          dataCount={allocations?.count || 0}
+          columnShape={ProfitAgreementColumnShape(profitAgreementActions)}
+          data={profitAgreements?.results || []}
+          dataCount={profitAgreements?.count || 0}
           pageInitialState={{ pageSize: INITIAL_PAGE_SIZE, pageIndex: 0 }}
           setPageIndex={(page: number) => setFilters({...filters, page})}
           pageIndex={filters?.page || 1}
@@ -607,28 +482,7 @@ const InvestorsAdmin = () => {
         />
       </TabPanel>
 
-      <TabPanel value={tabValue} index={5}>
-        <Box sx={styles.tablePreHeader}>
-          <SearchInput
-            value={searchQuery}
-            onChange={handleInputChange}
-            type="text"
-            placeholder="Search loans..."
-          />
-          {renderCreateButton()}
-        </Box>
-        <CustomTable
-          columnShape={LoanColumnShape(loanActions)}
-          data={loans?.results || []}
-          dataCount={loans?.count || 0}
-          pageInitialState={{ pageSize: INITIAL_PAGE_SIZE, pageIndex: 0 }}
-          setPageIndex={(page: number) => setFilters({...filters, page})}
-          pageIndex={filters?.page || 1}
-          setPageSize={(size: number) => setFilters({ ...filters, page_size: size })}
-          loading={loading}
-        />
-      </TabPanel>
-
+      {/* Render Active Form */}
       {renderForm()}
     </Box>
   );
@@ -638,6 +492,7 @@ const styles = {
   tablePreHeader: {
     display: "flex",
     alignItems: "center",
+    justifyContent: "space-between",
     gap: 2,
     marginBottom: 2,
   },

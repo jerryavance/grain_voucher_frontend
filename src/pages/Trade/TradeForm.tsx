@@ -1,6 +1,6 @@
-// TradeForm.tsx
+// TradeForm.tsx - UPDATED
 import React, { FC, useEffect, useRef, useState } from "react";
-import { Box, Button, Alert } from "@mui/material";
+import { Box, Button, Alert, Typography } from "@mui/material";
 import { useFormik } from "formik";
 import ModalDialog from "../../components/UI/Modal/ModalDialog";
 import ProgressIndicator from "../../components/UI/ProgressIndicator";
@@ -30,12 +30,14 @@ const TradeForm: FC<ITradeFormProps> = ({
   const [grainTypes, setGrainTypes] = useState<TOption[]>([]);
   const [qualityGrades, setQualityGrades] = useState<TOption[]>([]);
   const [buyers, setBuyers] = useState<TOption[]>([]);
+  const [suppliers, setSuppliers] = useState<TOption[]>([]);
 
   const formFields = TradeFormFields({
     hubs,
     grainTypes,
     qualityGrades,
     buyers,
+    suppliers,
     isUpdate: formType === "Update",
   });
 
@@ -55,31 +57,36 @@ const TradeForm: FC<ITradeFormProps> = ({
 
   useEffect(() => {
     if (formType === "Update" && initialValues) {
-      tradeForm.setValues(patchInitialValues(formFields)(initialValues || {}));
+      const patchedValues = {
+        ...initialValues,
+        buyer_id: initialValues.buyer?.id || initialValues.buyer_id,
+        supplier_id: initialValues.supplier?.id || initialValues.supplier_id,
+        hub_id: initialValues.hub?.id || initialValues.hub_id,
+        grain_type_id: initialValues.grain_type?.id || initialValues.grain_type_id,
+        quality_grade_id: initialValues.quality_grade?.id || initialValues.quality_grade_id,
+      };
+      tradeForm.setValues(patchInitialValues(formFields)(patchedValues));
     }
-  }, [initialValues, formType, hubs, grainTypes, qualityGrades, buyers]);
+  }, [initialValues, formType, hubs, grainTypes, qualityGrades, buyers, suppliers]);
 
   const fetchDropdownData = async () => {
     try {
-      const [hubsData, grainTypesData, qualityGradesData, buyersData] = await Promise.all([
+      const [hubsData, grainTypesData, qualityGradesData, buyersData, suppliersData] = await Promise.all([
         TradeService.getHubs(),
         TradeService.getGrainTypes(),
         TradeService.getQualityGrades(),
         TradeService.getBuyers(),
+        TradeService.getSuppliers(),
       ]);
 
-      setHubs(
-        hubsData.map((h: any) => ({ label: h.name, value: h.id }))
-      );
-      setGrainTypes(
-        grainTypesData.map((g: any) => ({ label: g.name, value: g.id }))
-      );
-      setQualityGrades(
-        qualityGradesData.map((q: any) => ({ label: q.name, value: q.id }))
-      );
-      setBuyers(
-        buyersData.map((b: any) => ({ label: b.name, value: b.id }))
-      );
+      setHubs(hubsData.map((h: any) => ({ label: h.name, value: h.id })));
+      setGrainTypes(grainTypesData.map((g: any) => ({ label: g.name, value: g.id })));
+      setQualityGrades(qualityGradesData.map((q: any) => ({ label: q.name, value: q.id })));
+      setBuyers(buyersData.map((b: any) => ({ label: b.name, value: b.id })));
+      setSuppliers(suppliersData.map((s: any) => ({ 
+        label: `${s.first_name} ${s.last_name}`, 
+        value: s.id 
+      })));
     } catch (error: any) {
       console.error("Error fetching dropdown data:", error);
       toast.error("Failed to load form data");
@@ -93,45 +100,51 @@ const TradeForm: FC<ITradeFormProps> = ({
       if (formType === "Update") {
         await TradeService.updateTrade(initialValues.id, values);
         toast.success("Trade updated successfully");
+        tradeForm.resetForm();
+        callBack && callBack();
+        handleClose();
       } else {
         const response = await TradeService.createTrade(values);
         
-        // Check for inventory warning
+        // Check for inventory warning or other messages
         if (response.warning) {
           setWarning(response.warning);
-          toast("Trade created with pending allocation", {
+          toast("Trade created - pending approval", {
             icon: "⚠️",
-            style: {
-              background: "#fff3cd",
-              color: "#856404",
-            },
+            duration: 5000,
           });
-          
         } else {
           toast.success("Trade created successfully");
         }
+
+        tradeForm.resetForm();
+        callBack && callBack();
+        
+        // Auto-close after successful creation
+        setTimeout(() => {
+          handleClose();
+        }, warning ? 2000 : 500);
       }
 
-      tradeForm.resetForm();
-      callBack && callBack();
-      
-      // Only close if no warning or if updating
-      if (!warning || formType === "Update") {
-        handleClose();
-      }
-      
       setLoading(false);
     } catch (error: any) {
       setLoading(false);
 
       if (error.response?.data) {
-        tradeForm.setErrors(error.response.data);
+        // Handle field-level errors
+        const errors = error.response.data;
+        tradeForm.setErrors(errors);
+        
+        // Show first error in toast
+        const firstError = Object.values(errors)[0];
+        if (Array.isArray(firstError)) {
+          toast.error(firstError[0]);
+        } else if (typeof firstError === 'string') {
+          toast.error(firstError);
+        }
+      } else {
+        toast.error(error.message || "An error occurred");
       }
-      
-      const errorMessage = error.response?.data?.detail || 
-                          error.message || 
-                          "An error occurred";
-      toast.error(errorMessage);
     }
   };
 
@@ -159,9 +172,9 @@ const TradeForm: FC<ITradeFormProps> = ({
         >
           {loading ? (
             <>
-              <ProgressIndicator color="inherit" size={20} />{" "}
+              <ProgressIndicator color="inherit" size={20} />
               <Span style={{ marginLeft: "0.5rem" }} color="primary">
-                Loading...
+                {formType === "Update" ? "Updating..." : "Creating..."}
               </Span>
             </>
           ) : formType === "Update" ? (
@@ -193,6 +206,18 @@ const TradeForm: FC<ITradeFormProps> = ({
           {warning && (
             <Alert severity="warning" sx={{ mb: 2 }}>
               {warning}
+              <Typography variant="body2" sx={{ mt: 1 }}>
+                The trade will be created in 'draft' status and will need approval before voucher allocation.
+              </Typography>
+            </Alert>
+          )}
+
+          {formType === "Save" && (
+            <Alert severity="info" sx={{ mb: 2 }}>
+              <Typography variant="body2">
+                <strong>Note:</strong> After creating the trade, it will need to be approved before vouchers can be allocated.
+                {tradeForm.values.requires_financing && " This trade requires investor financing."}
+              </Typography>
             </Alert>
           )}
 

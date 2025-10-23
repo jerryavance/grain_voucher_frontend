@@ -1,4 +1,4 @@
-// Trade.interface.ts
+// Trade.interface.ts - UPDATED
 import { TOption } from "../../@types/common";
 
 export interface IGrainType {
@@ -30,6 +30,7 @@ export interface IUser {
   first_name: string;
   last_name: string;
   email?: string;
+  role?: string;
 }
 
 export interface IVoucher {
@@ -37,6 +38,9 @@ export interface IVoucher {
   voucher_number: string;
   status: string;
   current_value: number;
+  deposit?: {
+    quantity_kg: number;
+  };
 }
 
 export interface ITradeCost {
@@ -59,12 +63,50 @@ export interface IBrokerage {
   created_at: string;
 }
 
+export interface ITradeFinancing {
+  id: string;
+  trade: string;
+  trade_number?: string;
+  investor: IUser;
+  investor_account_id: string;
+  allocated_amount: number;
+  allocation_percentage: number;
+  margin_earned: number;
+  investor_margin: number;
+  amsaf_margin: number;
+  allocation_date: string;
+  notes?: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ITradeLoan {
+  id: string;
+  trade: string;
+  trade_number?: string;
+  investor: IUser;
+  investor_account_id: string;
+  amount: number;
+  interest_rate: number;
+  disbursement_date: string;
+  due_date: string;
+  status: 'pending' | 'active' | 'repaid' | 'defaulted';
+  amount_repaid: number;
+  interest_earned: number;
+  total_due: number;
+  outstanding_balance: number;
+  notes?: string;
+  created_at: string;
+  updated_at: string;
+}
+
 export interface IGoodsReceivedNote {
   id: string;
   grn_number: string;
-  trade_number: string;
-  grain_type: string;
-  quality_grade: string;
+  trade: string;
+  trade_number?: string;
+  grain_type?: string;
+  quality_grade?: string;
   point_of_loading: string;
   loading_date: string;
   delivery_date: string;
@@ -84,14 +126,21 @@ export interface IGoodsReceivedNote {
   received_by_name: string;
   received_by_date: string;
   remarks?: string;
+  reason?: string;
   created_at: string;
+  updated_at: string;
 }
 
 export interface ITrade {
   id: string;
   trade_number: string;
+  grn_number?: string;
+  
+  // Parties
   buyer: IAccount;
   buyer_name?: string;
+  supplier?: IUser;
+  supplier_name?: string;
   grain_type: IGrainType;
   grain_type_name?: string;
   quality_grade: IQualityGrade;
@@ -100,14 +149,15 @@ export interface ITrade {
   hub_name?: string;
   
   // Quantities
+  gross_tonnage: number;
+  net_tonnage: number;
   quantity_kg: number;
-  quantity_mt: number;
   quantity_bags?: number;
   bag_weight_kg: number;
   
   // Pricing
-  purchase_price_per_kg: number;
-  buyer_price_per_kg: number;
+  buying_price: number;
+  selling_price: number;
   
   // Costs
   aflatoxin_qa_cost: number;
@@ -119,20 +169,34 @@ export interface ITrade {
   financing_days: number;
   git_insurance_percentage: number;
   deduction_percentage: number;
-  other_costs: number;
+  other_expenses: number;
+  amsaf_fees: number;
   
   // Calculated totals
-  total_cost_per_kg: number;
-  total_revenue: number;
-  total_cost: number;
-  gross_profit: number;
+  total_trade_cost: number;
+  payable_by_buyer: number;
+  margin: number;
   gross_margin_percentage: number;
   roi_percentage: number;
   total_brokerage_cost?: number;
   total_additional_costs?: number;
   net_profit?: number;
   
-  // Logistics
+  // Payment
+  payment_status: 'pending' | 'partial' | 'paid' | 'overdue';
+  payment_status_display?: string;
+  amount_paid: number;
+  amount_due: number;
+  payment_due_date: string;
+  payment_terms: string;
+  payment_terms_display?: string;
+  payment_terms_days: number;
+  credit_terms_days: number;
+  
+  // Delivery
+  delivery_status: 'pending' | 'in_transit' | 'delivered';
+  delivery_status_display?: string;
+  delivery_date: string;
   delivery_location: string;
   delivery_distance_km?: number;
   expected_delivery_date?: string;
@@ -149,26 +213,30 @@ export interface ITrade {
   tare_weight_kg?: number;
   net_weight_kg?: number;
   
-  // Payment
-  payment_terms: string;
-  payment_terms_display?: string;
-  payment_terms_days: number;
-  credit_terms_days: number;
-  
-  // Status
-  status: string;
+  // Status & Workflow
+  status: 'draft' | 'pending_approval' | 'approved' | 'pending_allocation' | 
+          'allocated' | 'in_transit' | 'delivered' | 'completed' | 
+          'cancelled' | 'rejected';
   status_display?: string;
-  allocation_complete: boolean;
-  
-  // Users
   initiated_by?: IUser;
   initiated_by_name?: string;
   approved_by?: IUser;
   approved_at?: string;
   
-  // Relations
+  // Voucher Allocation
   vouchers_count?: number;
   vouchers_detail?: IVoucher[];
+  allocation_complete: boolean;
+  
+  // Investor Financing (NEW)
+  requires_financing: boolean;
+  financing_complete: boolean;
+  total_financing_allocated?: number;
+  total_loans?: number;
+  financing_allocations?: ITradeFinancing[];
+  loans?: ITradeLoan[];
+  
+  // Relations
   additional_costs?: ITradeCost[];
   brokerages?: IBrokerage[];
   grn?: IGoodsReceivedNote;
@@ -184,7 +252,7 @@ export interface ITrade {
   updated_at: string;
   is_active: boolean;
 
-  // Add warning property
+  // Warnings
   warning?: string;
 }
 
@@ -209,8 +277,7 @@ export interface IInventoryAvailability {
 }
 
 export interface ICostBreakdown {
-  purchase_price_per_kg: number;
-  total_purchase_cost: number;
+  purchase_cost: number;
   aflatoxin_qa_cost: number;
   weighbridge_cost: number;
   offloading_cost: number;
@@ -219,7 +286,8 @@ export interface ICostBreakdown {
   financing_cost: number;
   git_insurance_cost: number;
   deduction_cost: number;
-  other_costs: number;
+  other_expenses: number;
+  amsaf_fees: number;
   brokerage_costs: number;
   additional_costs: number;
   total_costs: number;
@@ -237,17 +305,47 @@ export interface IDashboardStats {
     total_profit: number;
     total_quantity_kg: number;
     avg_roi: number;
-    pending_approval_count: number;
-    approved_count: number;
-    completed_count: number;
-    in_transit_count: number;
+    pending_approval: number;
+    approved: number;
+    completed: number;
+    in_transit: number;
   };
   status_breakdown: Array<{
     status: string;
     count: number;
     total_value: number;
   }>;
-  recent_trades: ITrade[];
+}
+
+export interface IPaymentRecord {
+  amount: number;
+  payment_date: string;
+  payment_method: 'cash' | 'mobile_money' | 'bank_transfer' | 'check';
+  reference_number?: string;
+  notes?: string;
+}
+
+export interface ITradeStatusUpdate {
+  status: string;
+  notes?: string;
+  actual_delivery_date?: string;
+  vehicle_number?: string;
+  driver_name?: string;
+}
+
+export interface ITradeApproval {
+  notes?: string;
+}
+
+export interface IVoucherAllocation {
+  allocation_type: 'auto' | 'manual';
+  voucher_ids?: string[];
+}
+
+export interface IAvailableVouchers {
+  count: number;
+  total_quantity_kg: number;
+  vouchers: IVoucher[];
 }
 
 export type TTradeTableActions = (trade: ITrade) => void;
@@ -264,26 +362,10 @@ export interface ITradeFormContext {
   grainTypes: TOption[];
   qualityGrades: TOption[];
   buyers: TOption[];
+  suppliers: TOption[];
   handleHubSearch?: (value: any) => void;
   handleGrainTypeSearch?: (value: any) => void;
   handleQualityGradeSearch?: (value: any) => void;
   handleBuyerSearch?: (value: any) => void;
-}
-
-export interface ITradeStatusUpdate {
-  status: string;
-  notes?: string;
-  actual_delivery_date?: string;
-  vehicle_number?: string;
-  driver_name?: string;
-}
-
-export interface ITradeApproval {
-  action: 'approve' | 'reject';
-  notes?: string;
-}
-
-export interface ITradeAllocation {
-  auto_allocate: boolean;
-  voucher_ids?: string[];
+  handleSupplierSearch?: (value: any) => void;
 }

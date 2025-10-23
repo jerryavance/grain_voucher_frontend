@@ -1,4 +1,4 @@
-// TradeFormFields.ts
+// TradeFormFields.ts - UPDATED
 import { IFormField } from "../../utils/form_factory";
 import { TOption } from "../../@types/common";
 
@@ -29,11 +29,12 @@ interface ITradeFormFieldsProps {
   grainTypes: TOption[];
   qualityGrades: TOption[];
   buyers: TOption[];
+  suppliers: TOption[];
   isUpdate?: boolean;
 }
 
 export const TradeFormFields = (props: ITradeFormFieldsProps): IFormField[] => {
-  const { hubs, grainTypes, qualityGrades, buyers, isUpdate = false } = props;
+  const { hubs, grainTypes, qualityGrades, buyers, suppliers, isUpdate = false } = props;
 
   const fields: IFormField[] = [
     // Basic Information Section
@@ -44,7 +45,17 @@ export const TradeFormFields = (props: ITradeFormFieldsProps): IFormField[] => {
       type: 'select',
       uiType: 'select',
       options: buyers,
-      uiBreakpoints: { xs: 12, sm: 12, md: 6, lg: 6, xl: 6 },
+      uiBreakpoints: { xs: 12, sm: 12, md: 6 },
+      required: true,
+    },
+    {
+      name: 'supplier_id',
+      initailValue: '',
+      label: 'Primary Supplier/Farmer',
+      type: 'select',
+      uiType: 'select',
+      options: suppliers,
+      uiBreakpoints: { xs: 12, sm: 12, md: 6 },
       required: true,
     },
     {
@@ -54,7 +65,7 @@ export const TradeFormFields = (props: ITradeFormFieldsProps): IFormField[] => {
       type: 'select',
       uiType: 'select',
       options: hubs,
-      uiBreakpoints: { xs: 12, sm: 12, md: 6, lg: 6, xl: 6 },
+      uiBreakpoints: { xs: 12, sm: 12, md: 6 },
       required: true,
     },
     {
@@ -64,7 +75,7 @@ export const TradeFormFields = (props: ITradeFormFieldsProps): IFormField[] => {
       type: 'select',
       uiType: 'select',
       options: grainTypes,
-      uiBreakpoints: { xs: 12, sm: 12, md: 6, lg: 6, xl: 6 },
+      uiBreakpoints: { xs: 12, sm: 12, md: 6 },
       required: true,
     },
     {
@@ -74,18 +85,27 @@ export const TradeFormFields = (props: ITradeFormFieldsProps): IFormField[] => {
       type: 'select',
       uiType: 'select',
       options: qualityGrades,
-      uiBreakpoints: { xs: 12, sm: 12, md: 6, lg: 6, xl: 6 },
+      uiBreakpoints: { xs: 12, sm: 12, md: 12 },
       required: true,
     },
 
     // Quantity Section
     {
-      name: 'quantity_kg',
+      name: 'gross_tonnage',
       initailValue: '',
-      label: 'Quantity (KG)',
+      label: 'Gross Tonnage (MT)',
       type: 'number',
       uiType: 'number',
-      uiBreakpoints: { xs: 12, sm: 12, md: 4, lg: 4, xl: 4 },
+      uiBreakpoints: { xs: 12, sm: 12, md: 4 },
+      required: true,
+    },
+    {
+      name: 'net_tonnage',
+      initailValue: '',
+      label: 'Net Tonnage (MT)',
+      type: 'number',
+      uiType: 'number',
+      uiBreakpoints: { xs: 12, sm: 12, md: 4 },
       required: true,
     },
     {
@@ -94,7 +114,7 @@ export const TradeFormFields = (props: ITradeFormFieldsProps): IFormField[] => {
       label: 'Number of Bags',
       type: 'number',
       uiType: 'number',
-      uiBreakpoints: { xs: 12, sm: 12, md: 4, lg: 4, xl: 4 },
+      uiBreakpoints: { xs: 12, sm: 12, md: 4 },
     },
     {
       name: 'bag_weight_kg',
@@ -102,26 +122,26 @@ export const TradeFormFields = (props: ITradeFormFieldsProps): IFormField[] => {
       label: 'Bag Weight (KG)',
       type: 'number',
       uiType: 'number',
-      uiBreakpoints: { xs: 12, sm: 12, md: 4, lg: 4, xl: 4 },
+      uiBreakpoints: { xs: 12, sm: 12, md: 12 },
     },
 
     // Pricing Section
     {
-      name: 'purchase_price_per_kg',
+      name: 'buying_price',
       initailValue: '',
-      label: 'Purchase Price per KG',
+      label: 'Buying Price per KG (from supplier)',
       type: 'number',
       uiType: 'number',
-      uiBreakpoints: { xs: 12, sm: 12, md: 6, lg: 6, xl: 6 },
+      uiBreakpoints: { xs: 12, sm: 12, md: 6 },
       required: true,
     },
     {
-      name: 'buyer_price_per_kg',
+      name: 'selling_price',
       initailValue: '',
-      label: 'Selling Price per KG',
+      label: 'Selling Price per KG (to buyer)',
       type: 'number',
       uiType: 'number',
-      uiBreakpoints: { xs: 12, sm: 12, md: 6, lg: 6, xl: 6 },
+      uiBreakpoints: { xs: 12, sm: 12, md: 6 },
       required: true,
     },
 
@@ -132,7 +152,7 @@ export const TradeFormFields = (props: ITradeFormFieldsProps): IFormField[] => {
       label: 'Aflatoxin/QA Cost',
       type: 'number',
       uiType: 'number',
-      uiBreakpoints: { xs: 12, sm: 12, md: 6, lg: 6, xl: 6 },
+      uiBreakpoints: { xs: 12, sm: 12, md: 6 },
     },
     {
       name: 'weighbridge_cost',
@@ -140,7 +160,7 @@ export const TradeFormFields = (props: ITradeFormFieldsProps): IFormField[] => {
       label: 'Weighbridge Cost',
       type: 'number',
       uiType: 'number',
-      uiBreakpoints: { xs: 12, sm: 12, md: 6, lg: 6, xl: 6 },
+      uiBreakpoints: { xs: 12, sm: 12, md: 6 },
     },
     {
       name: 'loading_cost',
@@ -148,7 +168,7 @@ export const TradeFormFields = (props: ITradeFormFieldsProps): IFormField[] => {
       label: 'Loading Cost',
       type: 'number',
       uiType: 'number',
-      uiBreakpoints: { xs: 12, sm: 12, md: 6, lg: 6, xl: 6 },
+      uiBreakpoints: { xs: 12, sm: 12, md: 6 },
     },
     {
       name: 'offloading_cost',
@@ -156,7 +176,7 @@ export const TradeFormFields = (props: ITradeFormFieldsProps): IFormField[] => {
       label: 'Offloading Cost',
       type: 'number',
       uiType: 'number',
-      uiBreakpoints: { xs: 12, sm: 12, md: 6, lg: 6, xl: 6 },
+      uiBreakpoints: { xs: 12, sm: 12, md: 6 },
     },
     {
       name: 'transport_cost_per_kg',
@@ -164,15 +184,23 @@ export const TradeFormFields = (props: ITradeFormFieldsProps): IFormField[] => {
       label: 'Transport Cost per KG',
       type: 'number',
       uiType: 'number',
-      uiBreakpoints: { xs: 12, sm: 12, md: 6, lg: 6, xl: 6 },
+      uiBreakpoints: { xs: 12, sm: 12, md: 6 },
     },
     {
-      name: 'other_costs',
+      name: 'other_expenses',
       initailValue: '0.00',
-      label: 'Other Costs',
+      label: 'Other Expenses',
       type: 'number',
       uiType: 'number',
-      uiBreakpoints: { xs: 12, sm: 12, md: 6, lg: 6, xl: 6 },
+      uiBreakpoints: { xs: 12, sm: 12, md: 6 },
+    },
+    {
+      name: 'amsaf_fees',
+      initailValue: '0.00',
+      label: 'AMSAF Fees',
+      type: 'number',
+      uiType: 'number',
+      uiBreakpoints: { xs: 12, sm: 12, md: 12 },
     },
 
     // Percentage-based Costs
@@ -182,7 +210,7 @@ export const TradeFormFields = (props: ITradeFormFieldsProps): IFormField[] => {
       label: 'Financing Fee (%)',
       type: 'number',
       uiType: 'number',
-      uiBreakpoints: { xs: 12, sm: 12, md: 6, lg: 6, xl: 6 },
+      uiBreakpoints: { xs: 12, sm: 12, md: 6 },
     },
     {
       name: 'financing_days',
@@ -190,7 +218,7 @@ export const TradeFormFields = (props: ITradeFormFieldsProps): IFormField[] => {
       label: 'Financing Days',
       type: 'number',
       uiType: 'number',
-      uiBreakpoints: { xs: 12, sm: 12, md: 6, lg: 6, xl: 6 },
+      uiBreakpoints: { xs: 12, sm: 12, md: 6 },
     },
     {
       name: 'git_insurance_percentage',
@@ -198,7 +226,7 @@ export const TradeFormFields = (props: ITradeFormFieldsProps): IFormField[] => {
       label: 'GIT Insurance (%)',
       type: 'number',
       uiType: 'number',
-      uiBreakpoints: { xs: 12, sm: 12, md: 6, lg: 6, xl: 6 },
+      uiBreakpoints: { xs: 12, sm: 12, md: 6 },
     },
     {
       name: 'deduction_percentage',
@@ -206,7 +234,18 @@ export const TradeFormFields = (props: ITradeFormFieldsProps): IFormField[] => {
       label: 'Deductions (%)',
       type: 'number',
       uiType: 'number',
-      uiBreakpoints: { xs: 12, sm: 12, md: 6, lg: 6, xl: 6 },
+      uiBreakpoints: { xs: 12, sm: 12, md: 6 },
+    },
+
+    // Investor Financing (NEW)
+    {
+      name: 'requires_financing',
+      initailValue: false,
+      label: 'Requires Investor Financing',
+      type: 'checkbox',
+      uiType: 'checkbox',
+      uiBreakpoints: { xs: 12, sm: 12, md: 12 },
+      //helperText: 'Check if this trade needs investor financing',
     },
 
     // Logistics & Delivery
@@ -216,7 +255,7 @@ export const TradeFormFields = (props: ITradeFormFieldsProps): IFormField[] => {
       label: 'Delivery Location',
       type: 'text',
       uiType: 'textarea',
-      uiBreakpoints: { xs: 12, sm: 12, md: 12, lg: 12, xl: 12 },
+      uiBreakpoints: { xs: 12, sm: 12, md: 12 },
       required: true,
     },
     {
@@ -225,7 +264,16 @@ export const TradeFormFields = (props: ITradeFormFieldsProps): IFormField[] => {
       label: 'Delivery Distance (KM)',
       type: 'number',
       uiType: 'number',
-      uiBreakpoints: { xs: 12, sm: 12, md: 6, lg: 6, xl: 6 },
+      uiBreakpoints: { xs: 12, sm: 12, md: 6 },
+    },
+    {
+      name: 'delivery_date',
+      initailValue: '',
+      label: 'Delivery Date',
+      type: 'date',
+      uiType: 'date',
+      uiBreakpoints: { xs: 12, sm: 12, md: 6 },
+      required: true,
     },
     {
       name: 'expected_delivery_date',
@@ -233,7 +281,7 @@ export const TradeFormFields = (props: ITradeFormFieldsProps): IFormField[] => {
       label: 'Expected Delivery Date',
       type: 'date',
       uiType: 'date',
-      uiBreakpoints: { xs: 12, sm: 12, md: 6, lg: 6, xl: 6 },
+      uiBreakpoints: { xs: 12, sm: 12, md: 6 },
     },
 
     // Transport Details
@@ -243,7 +291,7 @@ export const TradeFormFields = (props: ITradeFormFieldsProps): IFormField[] => {
       label: 'Vehicle Number',
       type: 'text',
       uiType: 'text',
-      uiBreakpoints: { xs: 12, sm: 12, md: 6, lg: 6, xl: 6 },
+      uiBreakpoints: { xs: 12, sm: 12, md: 6 },
     },
     {
       name: 'driver_name',
@@ -251,7 +299,7 @@ export const TradeFormFields = (props: ITradeFormFieldsProps): IFormField[] => {
       label: 'Driver Name',
       type: 'text',
       uiType: 'text',
-      uiBreakpoints: { xs: 12, sm: 12, md: 6, lg: 6, xl: 6 },
+      uiBreakpoints: { xs: 12, sm: 12, md: 6 },
     },
     {
       name: 'driver_phone',
@@ -259,7 +307,7 @@ export const TradeFormFields = (props: ITradeFormFieldsProps): IFormField[] => {
       label: 'Driver Phone',
       type: 'tel',
       uiType: 'phone',
-      uiBreakpoints: { xs: 12, sm: 12, md: 6, lg: 6, xl: 6 },
+      uiBreakpoints: { xs: 12, sm: 12, md: 6 },
     },
     {
       name: 'driver_id',
@@ -267,7 +315,7 @@ export const TradeFormFields = (props: ITradeFormFieldsProps): IFormField[] => {
       label: 'Driver ID Number',
       type: 'text',
       uiType: 'text',
-      uiBreakpoints: { xs: 12, sm: 12, md: 6, lg: 6, xl: 6 },
+      uiBreakpoints: { xs: 12, sm: 12, md: 6 },
     },
 
     // Payment Terms
@@ -278,7 +326,7 @@ export const TradeFormFields = (props: ITradeFormFieldsProps): IFormField[] => {
       type: 'select',
       uiType: 'select',
       options: PAYMENT_TERMS_OPTIONS,
-      uiBreakpoints: { xs: 12, sm: 12, md: 6, lg: 6, xl: 6 },
+      uiBreakpoints: { xs: 12, sm: 12, md: 4 },
       required: true,
     },
     {
@@ -287,7 +335,16 @@ export const TradeFormFields = (props: ITradeFormFieldsProps): IFormField[] => {
       label: 'Payment Terms (Days)',
       type: 'number',
       uiType: 'number',
-      uiBreakpoints: { xs: 12, sm: 12, md: 6, lg: 6, xl: 6 },
+      uiBreakpoints: { xs: 12, sm: 12, md: 4 },
+    },
+    {
+      name: 'payment_due_date',
+      initailValue: '',
+      label: 'Payment Due Date',
+      type: 'date',
+      uiType: 'date',
+      uiBreakpoints: { xs: 12, sm: 12, md: 4 },
+      required: true,
     },
     {
       name: 'credit_terms_days',
@@ -295,7 +352,7 @@ export const TradeFormFields = (props: ITradeFormFieldsProps): IFormField[] => {
       label: 'Credit Terms (Days)',
       type: 'number',
       uiType: 'number',
-      uiBreakpoints: { xs: 12, sm: 12, md: 6, lg: 6, xl: 6 },
+      uiBreakpoints: { xs: 12, sm: 12, md: 12 },
     },
 
     // Notes
@@ -305,7 +362,7 @@ export const TradeFormFields = (props: ITradeFormFieldsProps): IFormField[] => {
       label: 'Remarks',
       type: 'text',
       uiType: 'textarea',
-      uiBreakpoints: { xs: 12, sm: 12, md: 12, lg: 12, xl: 12 },
+      uiBreakpoints: { xs: 12, sm: 12, md: 12 },
     },
     {
       name: 'internal_notes',
@@ -313,7 +370,7 @@ export const TradeFormFields = (props: ITradeFormFieldsProps): IFormField[] => {
       label: 'Internal Notes',
       type: 'text',
       uiType: 'textarea',
-      uiBreakpoints: { xs: 12, sm: 12, md: 12, lg: 12, xl: 12 },
+      uiBreakpoints: { xs: 12, sm: 12, md: 12 },
     },
     {
       name: 'contract_notes',
@@ -321,7 +378,7 @@ export const TradeFormFields = (props: ITradeFormFieldsProps): IFormField[] => {
       label: 'Contract Terms & Conditions',
       type: 'text',
       uiType: 'textarea',
-      uiBreakpoints: { xs: 12, sm: 12, md: 12, lg: 12, xl: 12 },
+      uiBreakpoints: { xs: 12, sm: 12, md: 12 },
     },
   ];
 

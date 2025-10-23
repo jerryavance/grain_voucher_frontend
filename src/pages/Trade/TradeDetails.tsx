@@ -1,4 +1,4 @@
-// TradeDetails.tsx
+// TradeDetails.tsx - UPDATED with Financing Tab
 import React, { FC, useEffect, useState } from "react";
 import {
   Box,
@@ -19,14 +19,19 @@ import {
   TableHead,
   TableRow,
   IconButton,
+  Alert,
 } from "@mui/material";
 import ArrowBackIcon from "@mui/icons-material/ArrowBack";
 import EditIcon from "@mui/icons-material/Edit";
 import DeleteIcon from "@mui/icons-material/Delete";
 import AddIcon from "@mui/icons-material/Add";
 import DownloadIcon from "@mui/icons-material/Download";
+import CheckCircleIcon from "@mui/icons-material/CheckCircle";
+import AccountBalanceIcon from "@mui/icons-material/AccountBalance";
+import AssignmentIcon from "@mui/icons-material/Assignment";
+import PaymentIcon from "@mui/icons-material/Payment";
 import { toast } from "react-hot-toast";
-import { ITrade, ICostBreakdown, ITradeCost, IBrokerage, IGoodsReceivedNote } from "./Trade.interface";
+import { ITrade, ICostBreakdown, ITradeCost, IBrokerage, IGoodsReceivedNote, ITradeFinancing, ITradeLoan } from "./Trade.interface";
 import { TradeService } from "./Trade.service";
 import { formatDateToDDMMYYYY } from "../../utils/date_formatter";
 import ProgressIndicator from "../../components/UI/ProgressIndicator";
@@ -34,6 +39,9 @@ import TradeCostForm from "./TradeCostForm";
 import BrokerageForm from "./BrokerageForm";
 import GRNForm from "./GRNForm";
 import TradeStatusUpdateForm from "./TradeStatusUpdateForm";
+import TradeFinancingForm from "./TradeFinancingForm";
+import VoucherAllocationForm from "./VoucherAllocationForm";
+import PaymentRecordForm from "./PaymentRecordForm";
 import { useModalContext } from "../../contexts/ModalDialogContext";
 
 interface TabPanelProps {
@@ -66,7 +74,7 @@ const formatCurrency = (amount: number) => {
     style: 'currency',
     currency: 'UGX',
     minimumFractionDigits: 0,
-  }).format(amount);
+  }).format(amount || 0);
 };
 
 const TradeDetails: FC<ITradeDetailsProps> = ({ trade: initialTrade, onClose, onRefresh }) => {
@@ -77,10 +85,16 @@ const TradeDetails: FC<ITradeDetailsProps> = ({ trade: initialTrade, onClose, on
   const [tradeCosts, setTradeCosts] = useState<ITradeCost[]>([]);
   const [brokerages, setBrokerages] = useState<IBrokerage[]>([]);
   const [grns, setGrns] = useState<IGoodsReceivedNote[]>([]);
+  const [financing, setFinancing] = useState<ITradeFinancing[]>([]);
+  const [loans, setLoans] = useState<ITradeLoan[]>([]);
   const [loading, setLoading] = useState(false);
   const [editingCost, setEditingCost] = useState<ITradeCost | null>(null);
   const [editingBrokerage, setEditingBrokerage] = useState<IBrokerage | null>(null);
   const [showStatusUpdateForm, setShowStatusUpdateForm] = useState(false);
+  const [showFinancingForm, setShowFinancingForm] = useState(false);
+  const [showAllocationForm, setShowAllocationForm] = useState(false);
+  const [showPaymentForm, setShowPaymentForm] = useState(false);
+  const [showGRNForm, setShowGRNForm] = useState(false);
 
   useEffect(() => {
     fetchTradeDetails();
@@ -89,12 +103,14 @@ const TradeDetails: FC<ITradeDetailsProps> = ({ trade: initialTrade, onClose, on
   const fetchTradeDetails = async () => {
     setLoading(true);
     try {
-      const [tradeData, breakdown, costs, brokerage, grnData] = await Promise.all([
+      const [tradeData, breakdown, costs, brokerage, grnData, financingData, loansData] = await Promise.all([
         TradeService.getTradeDetails(initialTrade.id),
-        TradeService.getCostBreakdown(initialTrade.id),
+        TradeService.getCostBreakdown(initialTrade.id).catch(() => null),
         TradeService.getTradeCosts(initialTrade.id),
         TradeService.getBrokerages({ trade: initialTrade.id }),
         TradeService.getGRNs({ trade: initialTrade.id }),
+        TradeService.getTradeFinancing({ trade: initialTrade.id }).catch(() => []),
+        TradeService.getTradeLoans({ trade: initialTrade.id }).catch(() => []),
       ]);
 
       setTrade(tradeData);
@@ -102,6 +118,8 @@ const TradeDetails: FC<ITradeDetailsProps> = ({ trade: initialTrade, onClose, on
       setTradeCosts(costs);
       setBrokerages(brokerage);
       setGrns(grnData);
+      setFinancing(financingData);
+      setLoans(loansData);
     } catch (error: any) {
       toast.error("Failed to fetch trade details");
     } finally {
@@ -111,6 +129,42 @@ const TradeDetails: FC<ITradeDetailsProps> = ({ trade: initialTrade, onClose, on
 
   const handleTabChange = (event: React.SyntheticEvent, newValue: number) => {
     setActiveTab(newValue);
+  };
+
+  const handleApprove = async () => {
+    const notes = window.prompt("Approval notes (optional):");
+    if (notes === null) return;
+
+    try {
+      await TradeService.approveTrade(trade.id, { notes });
+      toast.success("Trade approved successfully");
+      fetchTradeDetails();
+      onRefresh();
+    } catch (error: any) {
+      toast.error(error.response?.data?.detail || "Failed to approve trade");
+    }
+  };
+
+  const handleReject = async () => {
+    const reason = window.prompt("Enter rejection reason:");
+    if (!reason) {
+      toast.error("Rejection reason is required");
+      return;
+    }
+
+    try {
+      await TradeService.rejectTrade(trade.id, { notes: reason });
+      toast.success("Trade rejected");
+      fetchTradeDetails();
+      onRefresh();
+    } catch (error: any) {
+      toast.error(error.response?.data?.detail || "Failed to reject trade");
+    }
+  };
+
+  const handleAllocateVouchers = () => {
+    setShowAllocationForm(true);
+    setShowModal(true);
   };
 
   const handleAddCost = () => {
@@ -179,26 +233,117 @@ const TradeDetails: FC<ITradeDetailsProps> = ({ trade: initialTrade, onClose, on
     );
   }
 
+  const canApprove = trade.status === 'pending_approval';
+  const canAllocateFinancing = trade.status === 'approved' && trade.requires_financing && !trade.financing_complete;
+  const canAllocateVouchers = ['approved', 'pending_allocation'].includes(trade.status) && !trade.allocation_complete;
+  const canRecordPayment = ['delivered', 'completed'].includes(trade.status) && trade.amount_due > 0;
+  const canCreateGRN = trade.status === 'in_transit';
+
   return (
     <Box>
-      <Box sx={{ mb: 3, display: "flex", alignItems: "center", gap: 2 }}>
+      <Box sx={{ mb: 3, display: "flex", alignItems: "center", gap: 2, flexWrap: 'wrap' }}>
         <IconButton onClick={onClose}>
           <ArrowBackIcon />
         </IconButton>
         <Typography variant="h4">Trade Details</Typography>
-        <Chip label={trade.status_display} color="primary" sx={{ ml: 2 }} />
+        <Chip label={trade.status_display} color="primary" />
         
-        {!['completed', 'cancelled'].includes(trade.status) && (
-          <Button
-            variant="outlined"
-            startIcon={<EditIcon />}
-            onClick={() => setShowStatusUpdateForm(true)}
-            sx={{ ml: 'auto' }}
-          >
-            Update Status
-          </Button>
+        {trade.requires_financing && (
+          <Chip 
+            label={trade.financing_complete ? "Financing Complete" : "Requires Financing"} 
+            color={trade.financing_complete ? "success" : "warning"}
+            size="small"
+          />
         )}
+        
+        {trade.allocation_complete && (
+          <Chip label="Vouchers Allocated" color="success" size="small" />
+        )}
+        
+        <Box sx={{ ml: 'auto', display: 'flex', gap: 1, flexWrap: 'wrap' }}>
+          {canApprove && (
+            <>
+              <Button
+                variant="contained"
+                color="success"
+                startIcon={<CheckCircleIcon />}
+                onClick={handleApprove}
+              >
+                Approve
+              </Button>
+              <Button
+                variant="outlined"
+                color="error"
+                onClick={handleReject}
+              >
+                Reject
+              </Button>
+            </>
+          )}
+          
+          {canAllocateFinancing && (
+            <Button
+              variant="contained"
+              color="info"
+              startIcon={<AccountBalanceIcon />}
+              onClick={() => {
+                setShowFinancingForm(true);
+                setShowModal(true);
+              }}
+            >
+              Allocate Financing
+            </Button>
+          )}
+          
+          {canAllocateVouchers && (
+            <Button
+              variant="contained"
+              color="primary"
+              startIcon={<AssignmentIcon />}
+              onClick={handleAllocateVouchers}
+            >
+              Allocate Vouchers
+            </Button>
+          )}
+          
+          {canRecordPayment && (
+            <Button
+              variant="contained"
+              color="success"
+              startIcon={<PaymentIcon />}
+              onClick={() => {
+                setShowPaymentForm(true);
+                setShowModal(true);
+              }}
+            >
+              Record Payment
+            </Button>
+          )}
+          
+          {!['completed', 'cancelled'].includes(trade.status) && (
+            <Button
+              variant="outlined"
+              startIcon={<EditIcon />}
+              onClick={() => setShowStatusUpdateForm(true)}
+            >
+              Update Status
+            </Button>
+          )}
+        </Box>
       </Box>
+
+      {/* Workflow Status Alert */}
+      {trade.requires_financing && !trade.financing_complete && (
+        <Alert severity="warning" sx={{ mb: 2 }}>
+          This trade requires investor financing before vouchers can be allocated.
+        </Alert>
+      )}
+
+      {!trade.inventory_available && trade.status === 'approved' && (
+        <Alert severity="warning" sx={{ mb: 2 }}>
+          Insufficient inventory available for this trade. Voucher allocation may fail.
+        </Alert>
+      )}
 
       <Paper sx={{ p: 3, mb: 3 }}>
         <Grid container spacing={3}>
@@ -207,8 +352,18 @@ const TradeDetails: FC<ITradeDetailsProps> = ({ trade: initialTrade, onClose, on
             <Typography variant="h6">{trade.trade_number}</Typography>
           </Grid>
           <Grid item xs={12} md={6}>
+            <Typography variant="subtitle2" color="text.secondary">GRN Number</Typography>
+            <Typography variant="h6">{trade.grn_number || "Not generated"}</Typography>
+          </Grid>
+          <Grid item xs={12} md={6}>
             <Typography variant="subtitle2" color="text.secondary">Buyer</Typography>
             <Typography variant="h6">{trade.buyer?.name || trade.buyer_name}</Typography>
+          </Grid>
+          <Grid item xs={12} md={6}>
+            <Typography variant="subtitle2" color="text.secondary">Supplier</Typography>
+            <Typography variant="h6">
+              {trade.supplier ? `${trade.supplier.first_name} ${trade.supplier.last_name}` : "N/A"}
+            </Typography>
           </Grid>
           <Grid item xs={12} md={3}>
             <Typography variant="subtitle2" color="text.secondary">Grain Type</Typography>
@@ -220,7 +375,9 @@ const TradeDetails: FC<ITradeDetailsProps> = ({ trade: initialTrade, onClose, on
           </Grid>
           <Grid item xs={12} md={3}>
             <Typography variant="subtitle2" color="text.secondary">Quantity</Typography>
-            <Typography>{Number(trade.quantity_mt).toFixed(2)} MT ({Number(trade.quantity_kg).toFixed(0)} kg)</Typography>
+            <Typography>
+              {Number(trade.net_tonnage).toFixed(2)} MT ({Number(trade.quantity_kg).toFixed(0)} kg)
+            </Typography>
           </Grid>
           <Grid item xs={12} md={3}>
             <Typography variant="subtitle2" color="text.secondary">Hub</Typography>
@@ -233,14 +390,17 @@ const TradeDetails: FC<ITradeDetailsProps> = ({ trade: initialTrade, onClose, on
         <Tabs value={activeTab} onChange={handleTabChange}>
           <Tab label="Overview" />
           <Tab label="Financials" />
+          <Tab label="Financing" />
           <Tab label="Costs" />
           <Tab label="Brokerage" />
           <Tab label="Logistics" />
           <Tab label="Vouchers" />
           <Tab label="GRN" />
+          <Tab label="Payments" />
         </Tabs>
       </Box>
 
+      {/* Overview Tab */}
       <TabPanel value={activeTab} index={0}>
         <Grid container spacing={3}>
           <Grid item xs={12} md={6}>
@@ -250,16 +410,16 @@ const TradeDetails: FC<ITradeDetailsProps> = ({ trade: initialTrade, onClose, on
                 <Divider sx={{ mb: 2 }} />
                 <Grid container spacing={2}>
                   <Grid item xs={6}>
-                    <Typography variant="caption" color="text.secondary">Purchase Price/kg</Typography>
-                    <Typography variant="h6">{formatCurrency(trade.purchase_price_per_kg)}</Typography>
+                    <Typography variant="caption" color="text.secondary">Buying Price/kg</Typography>
+                    <Typography variant="h6">{formatCurrency(trade.buying_price)}</Typography>
                   </Grid>
                   <Grid item xs={6}>
                     <Typography variant="caption" color="text.secondary">Selling Price/kg</Typography>
-                    <Typography variant="h6">{formatCurrency(trade.buyer_price_per_kg)}</Typography>
+                    <Typography variant="h6">{formatCurrency(trade.selling_price)}</Typography>
                   </Grid>
                   <Grid item xs={12}>
                     <Typography variant="caption" color="text.secondary">Total Revenue</Typography>
-                    <Typography variant="h5" color="primary">{formatCurrency(trade.total_revenue)}</Typography>
+                    <Typography variant="h5" color="primary">{formatCurrency(trade.payable_by_buyer)}</Typography>
                   </Grid>
                 </Grid>
               </CardContent>
@@ -274,7 +434,7 @@ const TradeDetails: FC<ITradeDetailsProps> = ({ trade: initialTrade, onClose, on
                 <Grid container spacing={2}>
                   <Grid item xs={6}>
                     <Typography variant="caption" color="text.secondary">Gross Profit</Typography>
-                    <Typography variant="h6" color="success.main">{formatCurrency(trade.gross_profit)}</Typography>
+                    <Typography variant="h6" color="success.main">{formatCurrency(trade.margin)}</Typography>
                   </Grid>
                   <Grid item xs={6}>
                     <Typography variant="caption" color="text.secondary">ROI</Typography>
@@ -288,122 +448,212 @@ const TradeDetails: FC<ITradeDetailsProps> = ({ trade: initialTrade, onClose, on
               </CardContent>
             </Card>
           </Grid>
-
-          <Grid item xs={12}>
-            <Card>
-              <CardContent>
-                <Typography variant="h6" gutterBottom>Trade Information</Typography>
-                <Divider sx={{ mb: 2 }} />
-                <Grid container spacing={2}>
-                  <Grid item xs={12} md={4}>
-                    <Typography variant="caption" color="text.secondary">Initiated By</Typography>
-                    <Typography>{trade.initiated_by_name || "N/A"}</Typography>
-                  </Grid>
-                  <Grid item xs={12} md={4}>
-                    <Typography variant="caption" color="text.secondary">Created Date</Typography>
-                    <Typography>{formatDateToDDMMYYYY(trade.created_at)}</Typography>
-                  </Grid>
-                  <Grid item xs={12} md={4}>
-                    <Typography variant="caption" color="text.secondary">Expected Delivery</Typography>
-                    <Typography>
-                      {trade.expected_delivery_date ? formatDateToDDMMYYYY(trade.expected_delivery_date) : "N/A"}
-                    </Typography>
-                  </Grid>
-                  {trade.remarks && (
-                    <Grid item xs={12}>
-                      <Typography variant="caption" color="text.secondary">Remarks</Typography>
-                      <Typography>{trade.remarks}</Typography>
-                    </Grid>
-                  )}
-                </Grid>
-              </CardContent>
-            </Card>
-          </Grid>
         </Grid>
       </TabPanel>
 
+      {/* Financials Tab */}
       <TabPanel value={activeTab} index={1}>
         {costBreakdown && (
-          <Grid container spacing={3}>
-            <Grid item xs={12}>
-              <Card>
-                <CardContent>
-                  <Typography variant="h6" gutterBottom>Cost Breakdown</Typography>
-                  <Divider sx={{ mb: 2 }} />
-                  <TableContainer>
-                    <Table size="small">
-                      <TableBody>
-                        <TableRow>
-                          <TableCell>Purchase Cost</TableCell>
-                          <TableCell align="right">{formatCurrency(costBreakdown.total_purchase_cost)}</TableCell>
-                        </TableRow>
-                        <TableRow>
-                          <TableCell>Aflatoxin/QA Cost</TableCell>
-                          <TableCell align="right">{formatCurrency(costBreakdown.aflatoxin_qa_cost)}</TableCell>
-                        </TableRow>
-                        <TableRow>
-                          <TableCell>Weighbridge Cost</TableCell>
-                          <TableCell align="right">{formatCurrency(costBreakdown.weighbridge_cost)}</TableCell>
-                        </TableRow>
-                        <TableRow>
-                          <TableCell>Loading Cost</TableCell>
-                          <TableCell align="right">{formatCurrency(costBreakdown.loading_cost)}</TableCell>
-                        </TableRow>
-                        <TableRow>
-                          <TableCell>Offloading Cost</TableCell>
-                          <TableCell align="right">{formatCurrency(costBreakdown.offloading_cost)}</TableCell>
-                        </TableRow>
-                        <TableRow>
-                          <TableCell>Transport Cost</TableCell>
-                          <TableCell align="right">{formatCurrency(costBreakdown.transport_cost_total)}</TableCell>
-                        </TableRow>
-                        <TableRow>
-                          <TableCell>Financing Cost</TableCell>
-                          <TableCell align="right">{formatCurrency(costBreakdown.financing_cost)}</TableCell>
-                        </TableRow>
-                        <TableRow>
-                          <TableCell>GIT Insurance</TableCell>
-                          <TableCell align="right">{formatCurrency(costBreakdown.git_insurance_cost)}</TableCell>
-                        </TableRow>
-                        <TableRow>
-                          <TableCell>Deductions</TableCell>
-                          <TableCell align="right">{formatCurrency(costBreakdown.deduction_cost)}</TableCell>
-                        </TableRow>
-                        <TableRow>
-                          <TableCell>Other Costs</TableCell>
-                          <TableCell align="right">{formatCurrency(costBreakdown.other_costs)}</TableCell>
-                        </TableRow>
-                        <TableRow>
-                          <TableCell>Brokerage Costs</TableCell>
-                          <TableCell align="right">{formatCurrency(costBreakdown.brokerage_costs)}</TableCell>
-                        </TableRow>
-                        <TableRow>
-                          <TableCell>Additional Costs</TableCell>
-                          <TableCell align="right">{formatCurrency(costBreakdown.additional_costs)}</TableCell>
-                        </TableRow>
-                        <TableRow>
-                          <TableCell><strong>Total Costs</strong></TableCell>
-                          <TableCell align="right"><strong>{formatCurrency(costBreakdown.total_costs)}</strong></TableCell>
-                        </TableRow>
-                        <TableRow>
-                          <TableCell><strong>Total Revenue</strong></TableCell>
-                          <TableCell align="right"><strong>{formatCurrency(costBreakdown.total_revenue)}</strong></TableCell>
-                        </TableRow>
-                        <TableRow sx={{ bgcolor: 'success.light' }}>
-                          <TableCell><strong>Net Profit</strong></TableCell>
-                          <TableCell align="right"><strong>{formatCurrency(costBreakdown.net_profit)}</strong></TableCell>
-                        </TableRow>
-                      </TableBody>
-                    </Table>
-                  </TableContainer>
-                </CardContent>
-              </Card>
-            </Grid>
-          </Grid>
+          <Card>
+            <CardContent>
+              <Typography variant="h6" gutterBottom>Cost Breakdown</Typography>
+              <Divider sx={{ mb: 2 }} />
+              <TableContainer>
+                <Table size="small">
+                  <TableBody>
+                    <TableRow>
+                      <TableCell>Purchase Cost</TableCell>
+                      <TableCell align="right">{formatCurrency(costBreakdown.purchase_cost)}</TableCell>
+                    </TableRow>
+                    <TableRow>
+                      <TableCell>Aflatoxin/QA</TableCell>
+                      <TableCell align="right">{formatCurrency(costBreakdown.aflatoxin_qa_cost)}</TableCell>
+                    </TableRow>
+                    <TableRow>
+                      <TableCell>Weighbridge</TableCell>
+                      <TableCell align="right">{formatCurrency(costBreakdown.weighbridge_cost)}</TableCell>
+                    </TableRow>
+                    <TableRow>
+                      <TableCell>Loading</TableCell>
+                      <TableCell align="right">{formatCurrency(costBreakdown.loading_cost)}</TableCell>
+                    </TableRow>
+                    <TableRow>
+                      <TableCell>Offloading</TableCell>
+                      <TableCell align="right">{formatCurrency(costBreakdown.offloading_cost)}</TableCell>
+                    </TableRow>
+                    <TableRow>
+                      <TableCell>Transport</TableCell>
+                      <TableCell align="right">{formatCurrency(costBreakdown.transport_cost_total)}</TableCell>
+                    </TableRow>
+                    <TableRow>
+                      <TableCell>Financing</TableCell>
+                      <TableCell align="right">{formatCurrency(costBreakdown.financing_cost)}</TableCell>
+                    </TableRow>
+                    <TableRow>
+                      <TableCell>GIT Insurance</TableCell>
+                      <TableCell align="right">{formatCurrency(costBreakdown.git_insurance_cost)}</TableCell>
+                    </TableRow>
+                    <TableRow>
+                      <TableCell>Deductions</TableCell>
+                      <TableCell align="right">{formatCurrency(costBreakdown.deduction_cost)}</TableCell>
+                    </TableRow>
+                    <TableRow>
+                      <TableCell>Other Expenses</TableCell>
+                      <TableCell align="right">{formatCurrency(costBreakdown.other_expenses)}</TableCell>
+                    </TableRow>
+                    <TableRow>
+                      <TableCell>AMSAF Fees</TableCell>
+                      <TableCell align="right">{formatCurrency(costBreakdown.amsaf_fees)}</TableCell>
+                    </TableRow>
+                    <TableRow>
+                      <TableCell>Brokerage</TableCell>
+                      <TableCell align="right">{formatCurrency(costBreakdown.brokerage_costs)}</TableCell>
+                    </TableRow>
+                    <TableRow>
+                      <TableCell>Additional Costs</TableCell>
+                      <TableCell align="right">{formatCurrency(costBreakdown.additional_costs)}</TableCell>
+                    </TableRow>
+                    <TableRow>
+                      <TableCell><strong>Total Costs</strong></TableCell>
+                      <TableCell align="right"><strong>{formatCurrency(costBreakdown.total_costs)}</strong></TableCell>
+                    </TableRow>
+                    <TableRow>
+                      <TableCell><strong>Total Revenue</strong></TableCell>
+                      <TableCell align="right"><strong>{formatCurrency(costBreakdown.total_revenue)}</strong></TableCell>
+                    </TableRow>
+                    <TableRow sx={{ bgcolor: 'success.light' }}>
+                      <TableCell><strong>Net Profit</strong></TableCell>
+                      <TableCell align="right"><strong>{formatCurrency(costBreakdown.net_profit)}</strong></TableCell>
+                    </TableRow>
+                  </TableBody>
+                </Table>
+              </TableContainer>
+            </CardContent>
+          </Card>
         )}
       </TabPanel>
 
+      {/* Financing Tab (NEW) */}
       <TabPanel value={activeTab} index={2}>
+        <Box sx={{ mb: 2 }}>
+          <Alert severity={trade.requires_financing ? "info" : "success"}>
+            {trade.requires_financing ? (
+              <>
+                This trade requires investor financing.
+                {trade.financing_complete ? " Financing is complete." : " Financing allocation pending."}
+              </>
+            ) : (
+              "This trade is self-financed and does not require investor allocation."
+            )}
+          </Alert>
+        </Box>
+
+        {trade.requires_financing && (
+          <>
+            <Card sx={{ mb: 3 }}>
+              <CardContent>
+                <Typography variant="h6" gutterBottom>Financing Summary</Typography>
+                <Divider sx={{ mb: 2 }} />
+                <Grid container spacing={2}>
+                  <Grid item xs={6}>
+                    <Typography variant="caption" color="text.secondary">Total Trade Cost</Typography>
+                    <Typography variant="h6">{formatCurrency(trade.total_trade_cost)}</Typography>
+                  </Grid>
+                  <Grid item xs={6}>
+                    <Typography variant="caption" color="text.secondary">Allocated Financing</Typography>
+                    <Typography variant="h6" color={trade.financing_complete ? "success.main" : "warning.main"}>
+                      {formatCurrency(trade.total_financing_allocated || 0)}
+                    </Typography>
+                  </Grid>
+                </Grid>
+              </CardContent>
+            </Card>
+
+            {financing.length > 0 && (
+              <Paper sx={{ mb: 3 }}>
+                <Box sx={{ p: 2 }}>
+                  <Typography variant="h6" gutterBottom>Investor Financing Allocations</Typography>
+                  <Divider sx={{ mb: 2 }} />
+                </Box>
+                <TableContainer>
+                  <Table>
+                    <TableHead>
+                      <TableRow>
+                        <TableCell>Investor</TableCell>
+                        <TableCell align="right">Allocated Amount</TableCell>
+                        <TableCell align="right">Percentage</TableCell>
+                        <TableCell align="right">Margin Earned</TableCell>
+                        <TableCell align="right">Investor Share</TableCell>
+                        <TableCell align="right">AMSAF Share</TableCell>
+                        <TableCell>Date</TableCell>
+                      </TableRow>
+                    </TableHead>
+                    <TableBody>
+                      {financing.map((fin) => (
+                        <TableRow key={fin.id}>
+                          <TableCell>
+                            {fin.investor ? `${fin.investor.first_name} ${fin.investor.last_name}` : 'N/A'}
+                          </TableCell>
+                          <TableCell align="right">{formatCurrency(fin.allocated_amount)}</TableCell>
+                          <TableCell align="right">{Number(fin.allocation_percentage).toFixed(2)}%</TableCell>
+                          <TableCell align="right">{formatCurrency(fin.margin_earned)}</TableCell>
+                          <TableCell align="right">{formatCurrency(fin.investor_margin)}</TableCell>
+                          <TableCell align="right">{formatCurrency(fin.amsaf_margin)}</TableCell>
+                          <TableCell>{formatDateToDDMMYYYY(fin.allocation_date)}</TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </TableContainer>
+              </Paper>
+            )}
+
+            {loans.length > 0 && (
+              <Paper>
+                <Box sx={{ p: 2 }}>
+                  <Typography variant="h6" gutterBottom>Trade Loans</Typography>
+                  <Divider sx={{ mb: 2 }} />
+                </Box>
+                <TableContainer>
+                  <Table>
+                    <TableHead>
+                      <TableRow>
+                        <TableCell>Investor</TableCell>
+                        <TableCell align="right">Amount</TableCell>
+                        <TableCell align="right">Interest Rate</TableCell>
+                        <TableCell align="right">Amount Repaid</TableCell>
+                        <TableCell align="right">Outstanding</TableCell>
+                        <TableCell>Due Date</TableCell>
+                        <TableCell>Status</TableCell>
+                      </TableRow>
+                    </TableHead>
+                    <TableBody>
+                      {loans.map((loan) => (
+                        <TableRow key={loan.id}>
+                          <TableCell>
+                            {loan.investor ? `${loan.investor.first_name} ${loan.investor.last_name}` : 'N/A'}
+                          </TableCell>
+                          <TableCell align="right">{formatCurrency(loan.amount)}</TableCell>
+                          <TableCell align="right">{Number(loan.interest_rate).toFixed(2)}%</TableCell>
+                          <TableCell align="right">{formatCurrency(loan.amount_repaid)}</TableCell>
+                          <TableCell align="right">{formatCurrency(loan.outstanding_balance)}</TableCell>
+                          <TableCell>{formatDateToDDMMYYYY(loan.due_date)}</TableCell>
+                          <TableCell>
+                            <Chip label={loan.status} size="small" color={loan.status === 'repaid' ? 'success' : 'warning'} />
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </TableContainer>
+              </Paper>
+            )}
+          </>
+        )}
+      </TabPanel>
+
+      {/* Costs Tab */}
+      <TabPanel value={activeTab} index={3}>
         <Box sx={{ mb: 2, display: "flex", justifyContent: "flex-end" }}>
           <Button variant="contained" startIcon={<AddIcon />} onClick={handleAddCost}>
             Add Cost
@@ -449,22 +699,25 @@ const TradeDetails: FC<ITradeDetailsProps> = ({ trade: initialTrade, onClose, on
           </Table>
         </TableContainer>
 
-        <TradeCostForm
-          tradeId={trade.id}
-          initialValues={editingCost}
-          onClose={() => {
-            setShowModal(false);
-            setEditingCost(null);
-          }}
-          onSuccess={() => {
-            setShowModal(false);
-            setEditingCost(null);
-            fetchTradeDetails();
-          }}
-        />
+        {editingCost !== null && (
+          <TradeCostForm
+            tradeId={trade.id}
+            initialValues={editingCost}
+            onClose={() => {
+              setShowModal(false);
+              setEditingCost(null);
+            }}
+            onSuccess={() => {
+              setShowModal(false);
+              setEditingCost(null);
+              fetchTradeDetails();
+            }}
+          />
+        )}
       </TabPanel>
 
-      <TabPanel value={activeTab} index={3}>
+      {/* Brokerage Tab */}
+      <TabPanel value={activeTab} index={4}>
         <Box sx={{ mb: 2, display: "flex", justifyContent: "flex-end" }}>
           <Button variant="contained" startIcon={<AddIcon />} onClick={handleAddBrokerage}>
             Add Brokerage
@@ -512,22 +765,25 @@ const TradeDetails: FC<ITradeDetailsProps> = ({ trade: initialTrade, onClose, on
           </Table>
         </TableContainer>
 
-        <BrokerageForm
-          tradeId={trade.id}
-          initialValues={editingBrokerage}
-          onClose={() => {
-            setShowModal(false);
-            setEditingBrokerage(null);
-          }}
-          onSuccess={() => {
-            setShowModal(false);
-            setEditingBrokerage(null);
-            fetchTradeDetails();
-          }}
-        />
+        {editingBrokerage !== null && (
+          <BrokerageForm
+            tradeId={trade.id}
+            initialValues={editingBrokerage}
+            onClose={() => {
+              setShowModal(false);
+              setEditingBrokerage(null);
+            }}
+            onSuccess={() => {
+              setShowModal(false);
+              setEditingBrokerage(null);
+              fetchTradeDetails();
+            }}
+          />
+        )}
       </TabPanel>
 
-      <TabPanel value={activeTab} index={4}>
+      {/* Logistics Tab */}
+      <TabPanel value={activeTab} index={5}>
         <Grid container spacing={3}>
           <Grid item xs={12} md={6}>
             <Card>
@@ -614,7 +870,8 @@ const TradeDetails: FC<ITradeDetailsProps> = ({ trade: initialTrade, onClose, on
         </Grid>
       </TabPanel>
 
-      <TabPanel value={activeTab} index={5}>
+      {/* Vouchers Tab */}
+      <TabPanel value={activeTab} index={6}>
         <Card>
           <CardContent>
             <Typography variant="h6" gutterBottom>Allocated Vouchers</Typography>
@@ -631,7 +888,7 @@ const TradeDetails: FC<ITradeDetailsProps> = ({ trade: initialTrade, onClose, on
                         <TableRow>
                           <TableCell>Voucher Number</TableCell>
                           <TableCell>Status</TableCell>
-                          <TableCell align="right">Value</TableCell>
+                          <TableCell align="right">Quantity (kg)</TableCell>
                         </TableRow>
                       </TableHead>
                       <TableBody>
@@ -641,7 +898,9 @@ const TradeDetails: FC<ITradeDetailsProps> = ({ trade: initialTrade, onClose, on
                             <TableCell>
                               <Chip label={voucher.status} size="small" />
                             </TableCell>
-                            <TableCell align="right">{formatCurrency(voucher.current_value)}</TableCell>
+                            <TableCell align="right">
+                              {voucher.deposit?.quantity_kg?.toFixed(2) || 'N/A'}
+                            </TableCell>
                           </TableRow>
                         ))}
                       </TableBody>
@@ -652,21 +911,28 @@ const TradeDetails: FC<ITradeDetailsProps> = ({ trade: initialTrade, onClose, on
                 )}
               </>
             ) : (
-              <Typography color="text.secondary">
-                Vouchers not yet allocated. Trade must be approved before allocation.
-              </Typography>
+              <Alert severity="warning">
+                Vouchers not yet allocated. 
+                {trade.requires_financing && !trade.financing_complete 
+                  ? " Complete financing allocation first." 
+                  : " Trade must be approved before allocation."}
+              </Alert>
             )}
           </CardContent>
         </Card>
       </TabPanel>
 
-      <TabPanel value={activeTab} index={6}>
+      {/* GRN Tab */}
+      <TabPanel value={activeTab} index={7}>
         <Box sx={{ mb: 2, display: "flex", justifyContent: "flex-end" }}>
           <Button 
             variant="contained" 
             startIcon={<AddIcon />} 
-            onClick={() => setShowModal(true)}
-            disabled={trade.status !== 'in_transit'}
+            onClick={() => {
+              setShowGRNForm(true);
+              setShowModal(true);
+            }}
+            disabled={!canCreateGRN}
           >
             Create GRN
           </Button>
@@ -675,6 +941,7 @@ const TradeDetails: FC<ITradeDetailsProps> = ({ trade: initialTrade, onClose, on
           <Paper sx={{ p: 3, textAlign: "center" }}>
             <Typography color="text.secondary">
               No Goods Received Note created yet
+              {canCreateGRN && " - Create one to document delivery"}
             </Typography>
           </Paper>
         ) : (
@@ -726,30 +993,122 @@ const TradeDetails: FC<ITradeDetailsProps> = ({ trade: initialTrade, onClose, on
             ))}
           </Grid>
         )}
-
-        <GRNForm
-          trade={trade}
-          onClose={() => setShowModal(false)}
-          onSuccess={() => {
-            setShowModal(false);
-            fetchTradeDetails();
-          }}
-        />
       </TabPanel>
 
-    {showStatusUpdateForm && (
-    <TradeStatusUpdateForm
-        trade={trade}
-        onClose={() => setShowStatusUpdateForm(false)}
-        onSuccess={() => {
-        setShowStatusUpdateForm(false);
-        fetchTradeDetails();
-        onRefresh();
-        }}
-    />
-    )}
-</Box>
-);
+      {/* Payments Tab (NEW) */}
+      <TabPanel value={activeTab} index={8}>
+        <Card>
+          <CardContent>
+            <Typography variant="h6" gutterBottom>Payment Status</Typography>
+            <Divider sx={{ mb: 2 }} />
+            <Grid container spacing={2}>
+              <Grid item xs={12} md={3}>
+                <Typography variant="caption" color="text.secondary">Total Amount</Typography>
+                <Typography variant="h6">{formatCurrency(trade.payable_by_buyer)}</Typography>
+              </Grid>
+              <Grid item xs={12} md={3}>
+                <Typography variant="caption" color="text.secondary">Amount Paid</Typography>
+                <Typography variant="h6" color="success.main">{formatCurrency(trade.amount_paid)}</Typography>
+              </Grid>
+              <Grid item xs={12} md={3}>
+                <Typography variant="caption" color="text.secondary">Amount Due</Typography>
+                <Typography variant="h6" color="error.main">{formatCurrency(trade.amount_due)}</Typography>
+              </Grid>
+              <Grid item xs={12} md={3}>
+                <Typography variant="caption" color="text.secondary">Payment Status</Typography>
+                <Chip label={trade.payment_status_display || trade.payment_status} color="primary" />
+              </Grid>
+              <Grid item xs={12} md={6}>
+                <Typography variant="caption" color="text.secondary">Payment Terms</Typography>
+                <Typography>{trade.payment_terms_display || trade.payment_terms}</Typography>
+              </Grid>
+              <Grid item xs={12} md={6}>
+                <Typography variant="caption" color="text.secondary">Payment Due Date</Typography>
+                <Typography>{formatDateToDDMMYYYY(trade.payment_due_date)}</Typography>
+              </Grid>
+            </Grid>
+          </CardContent>
+        </Card>
+      </TabPanel>
+
+      {/* Modal Forms */}
+      {showStatusUpdateForm && (
+        <TradeStatusUpdateForm
+          trade={trade}
+          onClose={() => setShowStatusUpdateForm(false)}
+          onSuccess={() => {
+            setShowStatusUpdateForm(false);
+            fetchTradeDetails();
+            onRefresh();
+          }}
+        />
+      )}
+
+      {showFinancingForm && (
+        <TradeFinancingForm
+          trade={trade}
+          onClose={() => {
+            setShowFinancingForm(false);
+            setShowModal(false);
+          }}
+          onSuccess={() => {
+            setShowFinancingForm(false);
+            setShowModal(false);
+            fetchTradeDetails();
+            onRefresh();
+          }}
+        />
+      )}
+
+      {showAllocationForm && (
+        <VoucherAllocationForm
+          trade={trade}
+          onClose={() => {
+            setShowAllocationForm(false);
+            setShowModal(false);
+          }}
+          onSuccess={() => {
+            setShowAllocationForm(false);
+            setShowModal(false);
+            fetchTradeDetails();
+            onRefresh();
+          }}
+        />
+      )}
+
+      {showPaymentForm && (
+        <PaymentRecordForm
+          trade={trade}
+          onClose={() => {
+            setShowPaymentForm(false);
+            setShowModal(false);
+          }}
+          onSuccess={() => {
+            setShowPaymentForm(false);
+            setShowModal(false);
+            fetchTradeDetails();
+            onRefresh();
+          }}
+        />
+      )}
+
+      {showGRNForm && (
+        <GRNForm
+          trade={trade}
+          onClose={() => {
+            setShowGRNForm(false);
+            setShowModal(false);
+          }}
+          onSuccess={() => {
+            setShowGRNForm(false);
+            setShowModal(false);
+            fetchTradeDetails();
+            onRefresh();
+          }}
+        />
+      )}
+    </Box>
+  );
 };
 
 export default TradeDetails;

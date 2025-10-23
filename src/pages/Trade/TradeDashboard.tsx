@@ -130,7 +130,7 @@ const TradeDashboard: FC = () => {
                 Pending Approval
               </Typography>
               <Typography variant="h4">
-                {stats.summary.pending_approval_count}
+                {stats.summary.pending_approval}
               </Typography>
             </CardContent>
           </Card>
@@ -142,7 +142,7 @@ const TradeDashboard: FC = () => {
               <Typography color="text.secondary" gutterBottom>
                 Approved
               </Typography>
-              <Typography variant="h4">{stats.summary.approved_count}</Typography>
+              <Typography variant="h4">{stats.summary.approved}</Typography>
             </CardContent>
           </Card>
         </Grid>
@@ -154,7 +154,7 @@ const TradeDashboard: FC = () => {
                 In Transit
               </Typography>
               <Typography variant="h4">
-                {stats.summary.in_transit_count}
+                {stats.summary.in_transit}
               </Typography>
             </CardContent>
           </Card>
@@ -166,7 +166,7 @@ const TradeDashboard: FC = () => {
               <Typography color="text.secondary" gutterBottom>
                 Completed
               </Typography>
-              <Typography variant="h4">{stats.summary.completed_count}</Typography>
+              <Typography variant="h4">{stats.summary.completed}</Typography>
             </CardContent>
           </Card>
         </Grid>
@@ -221,11 +221,11 @@ const TradeDashboard: FC = () => {
                   </TableRow>
                 </TableHead>
                 <TableBody>
-                  {stats.recent_trades.map((trade) => (
+                  {(stats as any)?.recent_trades?.map((trade: any) => (
                     <TableRow key={trade.id}>
                       <TableCell>{trade.trade_number}</TableCell>
                       <TableCell>
-                        {trade.buyer_name || trade.buyer?.name}
+                        {trade.buyer_name ?? trade.buyer?.name}
                       </TableCell>
                       <TableCell align="right">
                         {formatCurrency(trade.total_revenue)}

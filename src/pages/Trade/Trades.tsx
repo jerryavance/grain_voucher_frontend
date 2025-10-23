@@ -1,5 +1,5 @@
-// Trades.tsx
-import { Box, Button, Tabs, Tab } from "@mui/material";
+// Trades.tsx - UPDATED with new workflow
+import { Box, Button, Tabs, Tab, Chip } from "@mui/material";
 import { useEffect, useState } from "react";
 import { toast } from "react-hot-toast";
 import DeleteIcon from "@mui/icons-material/Delete";
@@ -8,6 +8,9 @@ import CheckCircleIcon from "@mui/icons-material/CheckCircle";
 import CancelIcon from "@mui/icons-material/Cancel";
 import LocalShippingIcon from "@mui/icons-material/LocalShipping";
 import AssignmentIcon from "@mui/icons-material/Assignment";
+import PaymentIcon from "@mui/icons-material/Payment";
+import AccountBalanceIcon from "@mui/icons-material/AccountBalance";
+import AssignmentTurnedInIcon from "@mui/icons-material/AssignmentTurnedIn";
 import useTitle from "../../hooks/useTitle";
 import { useModalContext } from "../../contexts/ModalDialogContext";
 import { TradeService } from "./Trade.service";
@@ -18,6 +21,9 @@ import CustomTable from "../../components/UI/CustomTable";
 import TradeColumnShape from "./TradeColumnShape";
 import TradeForm from "./TradeForm";
 import TradeDetails from "./TradeDetails";
+import TradeFinancingForm from "./TradeFinancingForm";
+import VoucherAllocationForm from "./VoucherAllocationForm";
+import PaymentRecordForm from "./PaymentRecordForm";
 import { INITIAL_PAGE_SIZE } from "../../api/constants";
 
 interface TabPanelProps {
@@ -47,6 +53,9 @@ const Trades = () => {
 
   const [editTrade, setEditTrade] = useState<ITrade | null>(null);
   const [selectedTrade, setSelectedTrade] = useState<ITrade | null>(null);
+  const [tradeForFinancing, setTradeForFinancing] = useState<ITrade | null>(null);
+  const [tradeForAllocation, setTradeForAllocation] = useState<ITrade | null>(null);
+  const [tradeForPayment, setTradeForPayment] = useState<ITrade | null>(null);
   const [formType, setFormType] = useState<"Save" | "Update">("Save");
   const [searchQuery, setSearchQuery] = useState<string>("");
   const [trades, setTrades] = useState<ITradesResults>();
@@ -135,9 +144,29 @@ const Trades = () => {
     setSelectedTrade(trade);
   };
 
-  const handleApprove = async (trade: ITrade) => {
+  const handleSubmitForApproval = async (trade: ITrade) => {
+    if (!window.confirm(`Submit trade ${trade.trade_number} for approval?`)) {
+      return;
+    }
+
     try {
-      await TradeService.approveTrade(trade.id, { action: 'approve' });
+      await TradeService.updateTradeStatus(trade.id, { 
+        status: 'pending_approval',
+        notes: 'Submitted for approval'
+      });
+      toast.success("Trade submitted for approval");
+      handleRefreshData();
+    } catch (error: any) {
+      toast.error(error.response?.data?.detail || "Failed to submit trade");
+    }
+  };
+
+  const handleApprove = async (trade: ITrade) => {
+    const notes = window.prompt("Approval notes (optional):");
+    if (notes === null) return; // User cancelled
+
+    try {
+      await TradeService.approveTrade(trade.id, { notes });
       toast.success("Trade approved successfully");
       handleRefreshData();
     } catch (error: any) {
@@ -147,10 +176,13 @@ const Trades = () => {
 
   const handleReject = async (trade: ITrade) => {
     const reason = window.prompt("Enter rejection reason:");
-    if (!reason) return;
+    if (!reason) {
+      toast.error("Rejection reason is required");
+      return;
+    }
 
     try {
-      await TradeService.rejectTrade(trade.id, { action: 'reject', notes: reason });
+      await TradeService.rejectTrade(trade.id, { notes: reason });
       toast.success("Trade rejected");
       handleRefreshData();
     } catch (error: any) {
@@ -158,18 +190,33 @@ const Trades = () => {
     }
   };
 
-  const handleAllocateVouchers = async (trade: ITrade) => {
-    if (!window.confirm(`Allocate vouchers for trade ${trade.trade_number}?`)) {
+  const handleAllocateFinancing = (trade: ITrade) => {
+    setTradeForFinancing(trade);
+    setShowModal(true);
+  };
+
+  const handleAllocateVouchers = (trade: ITrade) => {
+    setTradeForAllocation(trade);
+    setShowModal(true);
+  };
+
+  const handleDeallocateVouchers = async (trade: ITrade) => {
+    if (!window.confirm(`Deallocate vouchers from trade ${trade.trade_number}?`)) {
       return;
     }
 
     try {
-      await TradeService.allocateVouchers(trade.id, { auto_allocate: true });
-      toast.success("Vouchers allocated successfully");
+      await TradeService.deallocateVouchers(trade.id);
+      toast.success("Vouchers deallocated successfully");
       handleRefreshData();
     } catch (error: any) {
-      toast.error(error.response?.data?.detail || "Failed to allocate vouchers");
+      toast.error(error.response?.data?.detail || "Failed to deallocate vouchers");
     }
+  };
+
+  const handleRecordPayment = (trade: ITrade) => {
+    setTradeForPayment(trade);
+    setShowModal(true);
   };
 
   const handleUpdateStatus = async (trade: ITrade, newStatus: string) => {
@@ -192,7 +239,13 @@ const Trades = () => {
       label: "Edit",
       icon: <EditIcon color="primary" />,
       onClick: (trade: ITrade) => handleEditTrade(trade),
-      condition: (trade: ITrade) => ['draft', 'pending_approval'].includes(trade.status),
+      condition: (trade: ITrade) => ['draft'].includes(trade.status),
+    },
+    {
+      label: "Submit for Approval",
+      icon: <AssignmentTurnedInIcon color="info" />,
+      onClick: (trade: ITrade) => handleSubmitForApproval(trade),
+      condition: (trade: ITrade) => trade.status === 'draft',
     },
     {
       label: "Approve",
@@ -207,11 +260,30 @@ const Trades = () => {
       condition: (trade: ITrade) => ['pending_approval', 'pending_allocation'].includes(trade.status),
     },
     {
+      label: "Allocate Financing",
+      icon: <AccountBalanceIcon color="info" />,
+      onClick: (trade: ITrade) => handleAllocateFinancing(trade),
+      condition: (trade: ITrade) => 
+        trade.status === 'approved' && 
+        trade.requires_financing && 
+        !trade.financing_complete,
+    },
+    {
       label: "Allocate Vouchers",
       icon: <AssignmentIcon color="info" />,
       onClick: (trade: ITrade) => handleAllocateVouchers(trade),
       condition: (trade: ITrade) => 
-        ['approved', 'pending_allocation'].includes(trade.status) && !trade.allocation_complete,
+        ['approved', 'pending_allocation'].includes(trade.status) && 
+        !trade.allocation_complete &&
+        (!trade.requires_financing || trade.financing_complete),
+    },
+    {
+      label: "Deallocate Vouchers",
+      icon: <CancelIcon color="warning" />,
+      onClick: (trade: ITrade) => handleDeallocateVouchers(trade),
+      condition: (trade: ITrade) => 
+        trade.status === 'allocated' && 
+        trade.allocation_complete,
     },
     {
       label: "Mark In Transit",
@@ -226,12 +298,34 @@ const Trades = () => {
       condition: (trade: ITrade) => trade.status === 'in_transit',
     },
     {
+      label: "Record Payment",
+      icon: <PaymentIcon color="primary" />,
+      onClick: (trade: ITrade) => handleRecordPayment(trade),
+      condition: (trade: ITrade) => 
+        ['delivered', 'completed'].includes(trade.status) && 
+        trade.amount_due > 0,
+    },
+    {
       label: "Delete",
       icon: <DeleteIcon color="error" />,
       onClick: (trade: ITrade) => handleDeleteTrade(trade),
       condition: (trade: ITrade) => ['draft'].includes(trade.status),
     },
   ];
+
+  const getTabCounts = () => {
+    if (!trades) return {};
+    return {
+      all: trades.count,
+      pending: trades.results.filter(t => ['draft', 'pending_approval'].includes(t.status)).length,
+      active: trades.results.filter(t => ['approved', 'pending_allocation', 'allocated'].includes(t.status)).length,
+      transit: trades.results.filter(t => ['in_transit', 'delivered'].includes(t.status)).length,
+      completed: trades.results.filter(t => t.status === 'completed').length,
+      cancelled: trades.results.filter(t => ['cancelled', 'rejected'].includes(t.status)).length,
+    };
+  };
+
+  const tabCounts = getTabCounts();
 
   return (
     <Box pt={2} pb={4}>
@@ -262,12 +356,12 @@ const Trades = () => {
 
           <Box sx={{ borderBottom: 1, borderColor: 'divider', mb: 2 }}>
             <Tabs value={activeTab} onChange={handleTabChange} aria-label="trade tabs">
-              <Tab label="All Trades" />
-              <Tab label="Pending" />
-              <Tab label="Active" />
-              <Tab label="In Transit" />
-              <Tab label="Completed" />
-              <Tab label="Cancelled" />
+              <Tab label={`All Trades ${tabCounts.all ? `(${tabCounts.all})` : ''}`} />
+              <Tab label={`Pending ${tabCounts.pending ? `(${tabCounts.pending})` : ''}`} />
+              <Tab label={`Active ${tabCounts.active ? `(${tabCounts.active})` : ''}`} />
+              <Tab label={`In Transit ${tabCounts.transit ? `(${tabCounts.transit})` : ''}`} />
+              <Tab label={`Completed ${tabCounts.completed ? `(${tabCounts.completed})` : ''}`} />
+              <Tab label={`Cancelled ${tabCounts.cancelled ? `(${tabCounts.cancelled})` : ''}`} />
             </Tabs>
           </Box>
 
@@ -290,6 +384,51 @@ const Trades = () => {
             handleClose={handleCloseModal}
             initialValues={editTrade}
           />
+
+          {tradeForFinancing && (
+            <TradeFinancingForm
+              trade={tradeForFinancing}
+              onClose={() => {
+                setTradeForFinancing(null);
+                setShowModal(false);
+              }}
+              onSuccess={() => {
+                setTradeForFinancing(null);
+                setShowModal(false);
+                handleRefreshData();
+              }}
+            />
+          )}
+
+          {tradeForAllocation && (
+            <VoucherAllocationForm
+              trade={tradeForAllocation}
+              onClose={() => {
+                setTradeForAllocation(null);
+                setShowModal(false);
+              }}
+              onSuccess={() => {
+                setTradeForAllocation(null);
+                setShowModal(false);
+                handleRefreshData();
+              }}
+            />
+          )}
+
+          {tradeForPayment && (
+            <PaymentRecordForm
+              trade={tradeForPayment}
+              onClose={() => {
+                setTradeForPayment(null);
+                setShowModal(false);
+              }}
+              onSuccess={() => {
+                setTradeForPayment(null);
+                setShowModal(false);
+                handleRefreshData();
+              }}
+            />
+          )}
         </>
       )}
     </Box>

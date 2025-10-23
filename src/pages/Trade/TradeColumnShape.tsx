@@ -107,7 +107,7 @@ const TradeColumnShape = (actions: IDropdownAction[], onTradeClick: (trade: any)
           <Span sx={{ fontSize: 13, fontWeight: 600 }}>
             {Number(quantity_mt || 0).toFixed(2)} MT
           </Span>
-          <Span sx={{ fontSize: 11, display: "block", color: "text.secondary" }}>
+          <Span sx={{ fontSize: 11, display: "block", color: "text.primary" }}>
             ({Number(quantity_kg || 0).toFixed(0)} kg)
           </Span>
         </Box>
@@ -158,7 +158,7 @@ const TradeColumnShape = (actions: IDropdownAction[], onTradeClick: (trade: any)
           >
             {formatCurrency(gross_profit || 0)}
           </Span>
-          <Span sx={{ fontSize: 11, display: "block", color: "text.secondary" }}>
+          <Span sx={{ fontSize: 11, display: "block", color: "text.primary" }}>
             ROI: {Number(roi_percentage || 0).toFixed(2)}%
           </Span>
         </Box>
