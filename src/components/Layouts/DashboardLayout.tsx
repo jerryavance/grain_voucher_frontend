@@ -8,6 +8,10 @@ import styled from "styled-components";
 const DashboardLayout: FC = ({ children }) => {
   const [showMobileSideBar, setShowMobileSideBar] = useState(false);
 
+  const toggleMobileSideBar = () => {
+    setShowMobileSideBar((prev) => !prev);
+  };
+
   return (
     <>
       <ModalProvider>
@@ -15,10 +19,11 @@ const DashboardLayout: FC = ({ children }) => {
           <DashboardSidebar
             showMobileSideBar={showMobileSideBar}
             closeMobileSideBar={() => setShowMobileSideBar(false)}
+            toggleMobileSideBar={toggleMobileSideBar}
           />
 
           <Wrapper className="x100">
-            <DashboardNavbar />
+            <DashboardNavbar toggleMobileSideBar={toggleMobileSideBar} />
             <ContentWrapper>{children || <Outlet />}</ContentWrapper>
           </Wrapper>
         </Fragment>
@@ -42,6 +47,6 @@ const ContentWrapper = styled.div`
   height: calc(100% - 60px);
   overflow: auto;
   @media (max-width: 960px) {
-    height: calc(100% - 116px);
+    height: calc(100% - 60px);
   }
 `;

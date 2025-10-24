@@ -5,12 +5,25 @@ import NotificationsPopover from "./popovers/NotificationsPopover";
 import ProfilePopover from "./popovers/ProfilePopover";
 import LanguagePopover from "./popovers/LanguagePopover";
 import { LogoSVG } from "../../assets/svg/SvgIcons";
+import { IconButton } from "@mui/material";
+import MenuIcon from "@mui/icons-material/Menu";
 
-const DashboardNavbar = () => {
+interface DashboardNavbarProps {
+  toggleMobileSideBar: () => void;
+}
+
+const DashboardNavbar = ({ toggleMobileSideBar }: DashboardNavbarProps) => {
   const { title } = useContext(TitleContext);
 
   return (
     <Wrapper className="whiteBg flexNullCenter x100">
+      {/* HAMBURGER FOR MOBILE */}
+      <IconButton
+        sx={{ display: { xs: "block", md: "none" }, mr: 1 }}
+        onClick={toggleMobileSideBar}
+      >
+        <MenuIcon />
+      </IconButton>
       {/* LOGO */}
       <LogoSVG width={50} height={40} />
       {/* TITLE */}
