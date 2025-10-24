@@ -105,10 +105,10 @@ const TradeColumnShape = (actions: IDropdownAction[], onTradeClick: (trade: any)
       return (
         <Box>
           <Span sx={{ fontSize: 13, fontWeight: 600 }}>
-            {Number(quantity_mt || 0).toFixed(2)} MT
+            {Number(quantity_kg || 0).toFixed(2)} Kg
           </Span>
           <Span sx={{ fontSize: 11, display: "block", color: "text.primary" }}>
-            ({Number(quantity_kg || 0).toFixed(0)} kg)
+            ({Number(quantity_mt || 0).toFixed(0)} MT)
           </Span>
         </Box>
       );

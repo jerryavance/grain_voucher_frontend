@@ -62,6 +62,14 @@ export const InvoiceFormFields = (props: TInvoiceFormProps): IFormField[] => {
       uiBreakpoints: { xs: 12, sm: 12, md: 6, lg: 6, xl: 6 },
     },
     {
+      name: "amount",
+      initailValue: 0,
+      label: "Amount",
+      type: "number",
+      uiType: "number",
+      uiBreakpoints: { xs: 12, sm: 12, md: 6, lg: 6, xl: 6 },
+    },
+    {
       name: "tax_rate",
       initailValue: 0,
       label: "Tax Rate (%)",

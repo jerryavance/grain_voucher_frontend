@@ -7,6 +7,7 @@ export interface IInvoiceLineItem {
   unit_price: number;
   unit: string;
   subtotal: number;
+  amount: number;
   grain_type?: any;
   quality_grade?: string;
   created_at: string;

@@ -11,6 +11,7 @@ export const InvoiceFormValidations = () => {
         return schema.min(issue_date, "Due date must be after issue date");
       }),
     subtotal: Yup.number().min(0, "Subtotal must be >= 0").required(),
+    amount: Yup.number().min(0, "Amount must be >= 0").required(),
     tax_rate: Yup.number().min(0, "Tax rate must be >= 0"),
     discount_amount: Yup.number().min(0, "Discount must be >= 0"),
     status: Yup.string().required("Status is required"),
