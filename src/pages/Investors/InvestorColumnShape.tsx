@@ -4,6 +4,7 @@ import { useNavigate } from "react-router-dom";
 import { formatDateToDDMMYYYY } from "../../utils/date_formatter";
 import DropdownActionBtn, { IDropdownAction } from "../../components/UI/DropdownActionBtn";
 import { Span } from "../../components/Typography";
+import { IInvestorAccount } from "./Investor.interface";
 
 const styledTypography = {
   cursor: "pointer",
@@ -13,24 +14,25 @@ const styledTypography = {
   },
 };
 
-export const InvestorDetailsLink: FC<{ id: string; name: string }> = ({
-  id,
-  name,
-}) => {
-  const navigate = useNavigate();
+export const InvestorDetailsLink: FC<{
+  id: string;
+  name: string;
+  onView: (account: IInvestorAccount) => void;
+  account: IInvestorAccount;
+}> = ({ name, onView, account }) => {
   return (
     <Typography
       sx={styledTypography}
       color="primary"
       variant="h6"
-      onClick={() => navigate(`/investors/details/${id}`)}
+      onClick={() => onView(account)}
     >
       {name}
     </Typography>
   );
 };
 
-export const InvestorAccountColumnShape = (actions: IDropdownAction[]) => [
+export const InvestorAccountColumnShape = (actions: IDropdownAction[], onView: (account: IInvestorAccount) => void) => [
   {
     Header: "Investor Name",
     accessor: "investor.first_name",
@@ -38,12 +40,14 @@ export const InvestorAccountColumnShape = (actions: IDropdownAction[]) => [
     Cell: ({ row }: any) => {
       const { investor, id } = row.original;
       return (
-        <InvestorDetailsLink 
-          id={id} 
-          name={`${investor.first_name} ${investor.last_name}`} 
+        <InvestorDetailsLink
+          id={id}
+          name={`${investor.first_name} ${investor.last_name}`}
+          onView={onView}
+          account={row.original}
         />
       );
-    }
+    },
   },
   {
     Header: "Phone Number",

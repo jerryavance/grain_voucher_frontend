@@ -277,6 +277,10 @@ export interface IInventoryAvailability {
 }
 
 export interface ICostBreakdown {
+  transport_cost: number;
+  margin: number;
+  payable_by_buyer: number;
+  total_trade_cost: number;
   purchase_cost: number;
   aflatoxin_qa_cost: number;
   weighbridge_cost: number;

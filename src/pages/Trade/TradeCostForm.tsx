@@ -75,7 +75,7 @@ const TradeCostForm: FC<ITradeCostFormProps> = ({
     onSubmit: async (values: any) => {
       setLoading(true);
       try {
-        const payload = { ...values, trade_id: tradeId };
+        const payload = { ...values, trade: tradeId };
         
         if (initialValues) {
           await TradeService.updateTradeCost(initialValues.id, payload);

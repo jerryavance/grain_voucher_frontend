@@ -91,6 +91,8 @@ const TradeDetails: FC<ITradeDetailsProps> = ({ trade: initialTrade, onClose, on
   const [editingCost, setEditingCost] = useState<ITradeCost | null>(null);
   const [editingBrokerage, setEditingBrokerage] = useState<IBrokerage | null>(null);
   const [showStatusUpdateForm, setShowStatusUpdateForm] = useState(false);
+  const [showCostForm, setShowCostForm] = useState(false);  // ✅ ADD
+  const [showBrokerageForm, setShowBrokerageForm] = useState(false);  // ✅ ADD
   const [showFinancingForm, setShowFinancingForm] = useState(false);
   const [showAllocationForm, setShowAllocationForm] = useState(false);
   const [showPaymentForm, setShowPaymentForm] = useState(false);
@@ -169,11 +171,13 @@ const TradeDetails: FC<ITradeDetailsProps> = ({ trade: initialTrade, onClose, on
 
   const handleAddCost = () => {
     setEditingCost(null);
+    setShowCostForm(true);  // ✅ ADD
     setShowModal(true);
   };
 
   const handleEditCost = (cost: ITradeCost) => {
     setEditingCost(cost);
+    setShowCostForm(true);  // ✅ ADD
     setShowModal(true);
   };
 
@@ -191,11 +195,13 @@ const TradeDetails: FC<ITradeDetailsProps> = ({ trade: initialTrade, onClose, on
 
   const handleAddBrokerage = () => {
     setEditingBrokerage(null);
+    setShowBrokerageForm(true);  // ✅ ADD
     setShowModal(true);
   };
 
   const handleEditBrokerage = (brokerage: IBrokerage) => {
     setEditingBrokerage(brokerage);
+    setShowBrokerageForm(true);  // ✅ ADD
     setShowModal(true);
   };
 
@@ -483,7 +489,7 @@ const TradeDetails: FC<ITradeDetailsProps> = ({ trade: initialTrade, onClose, on
                     </TableRow>
                     <TableRow>
                       <TableCell>Transport</TableCell>
-                      <TableCell align="right">{formatCurrency(costBreakdown.transport_cost_total)}</TableCell>
+                      <TableCell align="right">{formatCurrency(costBreakdown.transport_cost)}</TableCell>
                     </TableRow>
                     <TableRow>
                       <TableCell>Financing</TableCell>
@@ -505,21 +511,55 @@ const TradeDetails: FC<ITradeDetailsProps> = ({ trade: initialTrade, onClose, on
                       <TableCell>AMSAF Fees</TableCell>
                       <TableCell align="right">{formatCurrency(costBreakdown.amsaf_fees)}</TableCell>
                     </TableRow>
+
+                    {/* Brokerage Costs */}
+                    {Array.isArray(costBreakdown.brokerage_costs) && costBreakdown.brokerage_costs.length > 0 && (
+                      <>
+                        <TableRow>
+                          <TableCell colSpan={2}><strong>Brokerage</strong></TableCell>
+                        </TableRow>
+                        {costBreakdown.brokerage_costs.map((b, index) => (
+                          <TableRow key={`broker-${index}`}>
+                            <TableCell sx={{ pl: 4 }}>
+                              {b.agent} ({b.commission_type})
+                              {b.notes && <Typography variant="caption" display="block">{b.notes}</Typography>}
+                            </TableCell>
+                            <TableCell align="right">{formatCurrency(b.amount)}</TableCell>
+                          </TableRow>
+                        ))}
+                      </>
+                    )}
+
+                    {/* Additional Costs */}
+                    {Array.isArray(costBreakdown.additional_costs) && costBreakdown.additional_costs.length > 0 && (
+                      <>
+                        <TableRow>
+                          <TableCell colSpan={2}><strong>Additional Costs</strong></TableCell>
+                        </TableRow>
+                        {costBreakdown.additional_costs.map((a, index) => (
+                          <TableRow key={`addcost-${index}`}>
+                            <TableCell sx={{ pl: 4 }}>
+                              {a.cost_type}
+                              {a.description && <Typography variant="caption" display="block">{a.description}</Typography>}
+                            </TableCell>
+                            <TableCell align="right">{formatCurrency(a.total)}</TableCell>
+                          </TableRow>
+                        ))}
+                      </>
+                    )}
+
+                    {/* Totals */}
                     <TableRow>
-                      <TableCell>Brokerage</TableCell>
-                      <TableCell align="right">{formatCurrency(costBreakdown.brokerage_costs)}</TableCell>
+                      <TableCell><strong>Total Trade Cost</strong></TableCell>
+                      <TableCell align="right"><strong>{formatCurrency(costBreakdown.total_trade_cost)}</strong></TableCell>
                     </TableRow>
                     <TableRow>
-                      <TableCell>Additional Costs</TableCell>
-                      <TableCell align="right">{formatCurrency(costBreakdown.additional_costs)}</TableCell>
+                      <TableCell><strong>Payable by Buyer</strong></TableCell>
+                      <TableCell align="right"><strong>{formatCurrency(costBreakdown.payable_by_buyer)}</strong></TableCell>
                     </TableRow>
                     <TableRow>
-                      <TableCell><strong>Total Costs</strong></TableCell>
-                      <TableCell align="right"><strong>{formatCurrency(costBreakdown.total_costs)}</strong></TableCell>
-                    </TableRow>
-                    <TableRow>
-                      <TableCell><strong>Total Revenue</strong></TableCell>
-                      <TableCell align="right"><strong>{formatCurrency(costBreakdown.total_revenue)}</strong></TableCell>
+                      <TableCell><strong>Margin</strong></TableCell>
+                      <TableCell align="right"><strong>{formatCurrency(costBreakdown.margin)}</strong></TableCell>
                     </TableRow>
                     <TableRow sx={{ bgcolor: 'success.light' }}>
                       <TableCell><strong>Net Profit</strong></TableCell>
@@ -532,6 +572,7 @@ const TradeDetails: FC<ITradeDetailsProps> = ({ trade: initialTrade, onClose, on
           </Card>
         )}
       </TabPanel>
+
 
       {/* Financing Tab (NEW) */}
       <TabPanel value={activeTab} index={2}>
@@ -899,7 +940,10 @@ const TradeDetails: FC<ITradeDetailsProps> = ({ trade: initialTrade, onClose, on
                               <Chip label={voucher.status} size="small" />
                             </TableCell>
                             <TableCell align="right">
-                              {voucher.deposit?.quantity_kg?.toFixed(2) || 'N/A'}
+                              {/* ✅ FIXED: Convert to Number before calling toFixed */}
+                              {voucher.deposit?.quantity_kg
+                                ? Number(voucher.deposit.quantity_kg).toFixed(2)
+                                : 'N/A'}
                             </TableCell>
                           </TableRow>
                         ))}
@@ -1104,6 +1148,44 @@ const TradeDetails: FC<ITradeDetailsProps> = ({ trade: initialTrade, onClose, on
             setShowModal(false);
             fetchTradeDetails();
             onRefresh();
+          }}
+        />
+      )}
+
+      {/* ✅ FIXED: Cost Form */}
+      {showCostForm && (
+        <TradeCostForm
+          tradeId={trade.id}
+          initialValues={editingCost}
+          onClose={() => {
+            setShowModal(false);
+            setShowCostForm(false);
+            setEditingCost(null);
+          }}
+          onSuccess={() => {
+            setShowModal(false);
+            setShowCostForm(false);
+            setEditingCost(null);
+            fetchTradeDetails();
+          }}
+        />
+      )}
+
+      {/* ✅ FIXED: Brokerage Form */}
+      {showBrokerageForm && (
+        <BrokerageForm
+          tradeId={trade.id}
+          initialValues={editingBrokerage}
+          onClose={() => {
+            setShowModal(false);
+            setShowBrokerageForm(false);
+            setEditingBrokerage(null);
+          }}
+          onSuccess={() => {
+            setShowModal(false);
+            setShowBrokerageForm(false);
+            setEditingBrokerage(null);
+            fetchTradeDetails();
           }}
         />
       )}

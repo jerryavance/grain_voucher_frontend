@@ -30,63 +30,98 @@ export const DepositDetailsLink: FC<{ id: string, grnNumber?: string }> = ({ id,
 }
 
 const DepositColumnShape = (actions: IDropdownAction[], id: string) => [
-// const DepositColumnShape = (ViewAction: FC<{ id: string }>) => [
-  {
-    Header: "GRN Number",
-    accessor: "grn_number",
-    minWidth: 120,
-    Cell: ({ row }: any) => {
-      const { grn_number, id } = row.original;
-      return <DepositDetailsLink id={id} grnNumber={grn_number} />;
-    }
-  },
   {
     Header: "Farmer",
     accessor: "farmer",
-    minWidth: 150,
+    minWidth: 180,
     Cell: ({ row }: any) => {
       const { farmer } = row.original;
-      const farmerName = typeof farmer === 'object' ? farmer.name : farmer;
-      return <Typography variant="body1">{farmerName || "N/A"}</Typography>;
+      if (!farmer) return <Typography color="text.primary">Unknown</Typography>;
+
+      const name = `${farmer.first_name || ""} ${farmer.last_name || ""}`.trim();
+      return (
+        <Typography variant="body1">
+          {name || "N/A"} <br />
+          <Typography variant="body2" color="text.primary">
+            {farmer.phone_number}
+          </Typography>
+        </Typography>
+      );
     }
   },
   {
     Header: "Hub",
     accessor: "hub",
-    minWidth: 120,
+    minWidth: 160,
     Cell: ({ row }: any) => {
       const { hub } = row.original;
-      const hubName = typeof hub === 'object' ? hub.name : hub;
-      return <Typography variant="body1">{hubName || "N/A"}</Typography>;
+      if (!hub) return "N/A";
+      return (
+        <Typography variant="body1">
+          {hub.name} <br />
+          <Typography variant="body2" color="text.primary">
+            {hub.location || "—"}
+          </Typography>
+        </Typography>
+      );
     }
   },
   {
     Header: "Grain Type",
-    accessor: "grain_type",
+    accessor: "grain_type_details",
     minWidth: 100,
     Cell: ({ row }: any) => {
-      const { grain_type } = row.original;
-      const grainTypeName = typeof grain_type === 'object' ? grain_type.name : grain_type;
-      return <Typography variant="body1">{grainTypeName || "N/A"}</Typography>;
+      const { grain_type_details } = row.original;
+      return (
+        <Typography variant="body1">
+          {grain_type_details?.name || "N/A"}
+        </Typography>
+      );
+    }
+  },
+  {
+    Header: "Quality Grade",
+    accessor: "quality_grade_details",
+    minWidth: 100,
+    Cell: ({ row }: any) => {
+      const { quality_grade_details } = row.original;
+      return (
+        <Typography variant="body1">
+          {quality_grade_details?.name || "N/A"}
+        </Typography>
+      );
     }
   },
   {
     Header: "Quantity (KG)",
     accessor: "quantity_kg",
-    minWidth: 100,
+    minWidth: 130,
     Cell: ({ row }: any) => {
       const { quantity_kg } = row.original;
-      return <Typography variant="body1">{quantity_kg ? `${Number(quantity_kg).toLocaleString()} kg` : "N/A"}</Typography>;
+      return (
+        <Typography variant="body1">
+          {quantity_kg
+            ? `${Number(quantity_kg).toLocaleString()} kg`
+            : "N/A"}
+        </Typography>
+      );
     }
   },
   {
-    Header: "Quality Grade",
-    accessor: "quality_grade",
-    minWidth: 120,
+    Header: "Value (UGX)",
+    accessor: "value",
+    minWidth: 140,
     Cell: ({ row }: any) => {
-      const { quality_grade } = row.original;
-      const gradeName = typeof quality_grade === 'object' ? quality_grade.name : quality_grade;
-      return <Typography variant="body1">{gradeName || "N/A"}</Typography>;
+      const { value } = row.original;
+      return (
+        <Typography variant="body1" fontWeight="medium">
+          {value
+            ? `${Number(value).toLocaleString("en-UG", {
+                minimumFractionDigits: 0,
+              })}`
+            : "N/A"}
+        </Typography>
+      );
     }
   },
   {
@@ -95,47 +130,26 @@ const DepositColumnShape = (actions: IDropdownAction[], id: string) => [
     minWidth: 100,
     Cell: ({ row }: any) => {
       const { moisture_level } = row.original;
-      return <Typography variant="body1">{moisture_level ? `${moisture_level}%` : "N/A"}</Typography>;
+      return (
+        <Typography variant="body1">
+          {moisture_level ? `${moisture_level}%` : "N/A"}
+        </Typography>
+      );
     }
   },
   {
     Header: "Deposit Date",
     accessor: "deposit_date",
     minWidth: 120,
-    Cell: ({ row }: any) => formatDateToDDMMYYYY(row.original.deposit_date)
-  },
-  {
-    Header: "Agent",
-    accessor: "agent",
-    minWidth: 120,
-    Cell: ({ row }: any) => {
-      const { agent } = row.original;
-      if (!agent) return <Typography variant="body1" color="text.secondary">No Agent</Typography>;
-      
-      const agentName = typeof agent === 'object' ? agent.name : agent;
-      return <Typography variant="body1">{agentName}</Typography>;
-    }
-  },
-  {
-    Header: "Calculated Value",
-    accessor: "calculated_value",
-    minWidth: 120,
-    Cell: ({ row }: any) => {
-      const { calculated_value } = row.original;
-      return (
-        <Typography variant="body1" fontWeight="medium">
-          {calculated_value ? `$${Number(calculated_value).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : "N/A"}
-        </Typography>
-      );
-    }
+    Cell: ({ row }: any) =>
+      formatDateToDDMMYYYY(row.original.deposit_date)
   },
   {
     Header: "Validation Status",
     accessor: "validated",
-    minWidth: 100,
+    minWidth: 120,
     Cell: ({ row }: any) => {
       const { validated } = row.original;
-      
       return (
         <Chip
           label={validated ? "Validated" : "Pending"}
@@ -149,33 +163,52 @@ const DepositColumnShape = (actions: IDropdownAction[], id: string) => [
   {
     Header: "Notes",
     accessor: "notes",
-    minWidth: 150,
+    minWidth: 200,
     Cell: ({ row }: any) => {
       const { notes } = row.original;
-      if (!notes) return <Typography variant="body2" color="text.secondary">No notes</Typography>;
-      
-      const truncatedNotes = notes.length > 50 ? `${notes.substring(0, 47)}...` : notes;
+      if (!notes)
+        return (
+          <Typography variant="body2" color="text.primary">
+            No notes
+          </Typography>
+        );
+
+      const truncated =
+        notes.length > 50 ? `${notes.slice(0, 47)}...` : notes;
+
       return (
-        <Typography 
-          variant="body2" 
+        <Typography
+          variant="body2"
           title={notes}
-          sx={{ cursor: notes.length > 50 ? 'help' : 'default' }}
+          sx={{ cursor: notes.length > 50 ? "help" : "default" }}
         >
-          {truncatedNotes}
+          {truncated}
         </Typography>
       );
     }
   },
   {
-    Header: "Action",
-    accessor: "action",
-    minWidth: 50,
-    maxWidth: 50,
+    Header: "GRN Number",
+    accessor: "grn_number",
+    minWidth: 250,
     Cell: ({ row }: any) => {
-      const data = row.original;
-      return <DropdownActionBtn key={row.id} actions={actions} metaData={data}/>
+      const { grn_number, id } = row.original;
+      return <DepositDetailsLink id={id} grnNumber={grn_number} />;
     }
   },
+  {
+    Header: "Action",
+    accessor: "action",
+    minWidth: 60,
+    maxWidth: 60,
+    Cell: ({ row }: any) => {
+      const data = row.original;
+      return (
+        <DropdownActionBtn key={row.id} actions={actions} metaData={data} />
+      );
+    }
+  }
 ];
+
 
 export default DepositColumnShape;

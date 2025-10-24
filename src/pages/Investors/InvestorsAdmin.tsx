@@ -400,17 +400,18 @@ const InvestorsAdmin = () => {
           />
           {renderCreateButton()}
         </Box>
+
         <CustomTable
-          columnShape={InvestorAccountColumnShape(accountActions)}
+          columnShape={InvestorAccountColumnShape(accountActions, handleViewAccount)}
           data={accounts?.results || []}
           dataCount={accounts?.count || 0}
           pageInitialState={{ pageSize: INITIAL_PAGE_SIZE, pageIndex: 0 }}
-          setPageIndex={(page: number) => setFilters({...filters, page})}
+          setPageIndex={(page: number) => setFilters({ ...filters, page })}
           pageIndex={filters?.page || 1}
           setPageSize={(size: number) => setFilters({ ...filters, page_size: size })}
           loading={loading}
-          rowClick={(row) => setSelectedAccount((row as any).original)}
         />
+        
       </TabPanel>
 
       {/* Deposits Tab */}
