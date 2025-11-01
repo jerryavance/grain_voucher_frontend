@@ -39,6 +39,14 @@ const RouteLazyLoader = {
 
   Accounting: Loadable(lazy(() => import("../pages/Accounting/Accounting"))),
 
+
+  // Add these to RouteLazyLoader object
+  Invoices: Loadable(lazy(() => import("../pages/Accounting/Invoices/Invoices"))),
+  InvoiceDetails: Loadable(lazy(() => import("../pages/Accounting/Invoices/InvoiceDetails"))),
+  InvoiceAgingReport: Loadable(lazy(() => import("../pages/Accounting/Invoices/InvoiceAgingReport"))),
+
+
+
   CRM: Loadable(lazy(() => import("../pages/CRM/CRM"))),
 
   Trade: Loadable(lazy(() => import("../pages/Trade/Trades"))),

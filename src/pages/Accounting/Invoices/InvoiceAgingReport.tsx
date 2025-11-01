@@ -45,7 +45,7 @@ const InvoiceAgingReport = () => {
   };
 
   const handleBack = () => {
-    navigate("/accounting/invoices");
+    navigate("/admin/accounting/invoices");
   };
 
   const columns = [
@@ -57,7 +57,7 @@ const InvoiceAgingReport = () => {
         <Typography
           sx={{ cursor: "pointer", "&:hover": { textDecoration: "underline", fontWeight: "bold" } }}
           color="primary"
-          onClick={() => navigate(`/accounting/invoices/details/${row.original.id}`)}
+          onClick={() => navigate(`/admin/accounting/invoices/details/${row.original.id}`)}
         >
           {row.original.invoice_number}
         </Typography>

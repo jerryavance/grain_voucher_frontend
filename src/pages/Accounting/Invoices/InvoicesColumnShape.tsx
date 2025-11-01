@@ -17,7 +17,7 @@ const styledTypography = {
 export const InvoiceDetailsLink: FC<{ id: string; number: string }> = ({ id, number }) => {
   const navigate = useNavigate();
   return (
-    <Typography sx={styledTypography} color="primary" variant="h6" onClick={() => navigate(`/accounting/invoices/details/${id}`)}>
+    <Typography sx={styledTypography} color="primary" variant="h6" onClick={() => navigate(`/admin/accounting/invoices/details/${id}`)}>
       {number}
     </Typography>
   );

@@ -2,7 +2,8 @@
 
 import { createTheme } from "@mui/material";
 
-export const primaryColor = "#1F5A2D";
+export const primaryColor = "#004F71";//MTN MOMO BLUE
+// export const primaryColor = "#1F5A2D";
 export const primaryColor50 = "#3f7c500d";
 export const secondaryColor = "#f1ab1e";
 export const darkColor = "#212631";
