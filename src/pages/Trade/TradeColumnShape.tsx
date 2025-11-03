@@ -115,38 +115,51 @@ const TradeColumnShape = (actions: IDropdownAction[], onTradeClick: (trade: any)
     },
   },
   {
-    Header: "Price/kg",
-    accessor: "buyer_price_per_kg",
+    Header: "Buying Price",
+    accessor: "buying_price",
     minWidth: 100,
     Cell: ({ row }: any) => {
-      const { buyer_price_per_kg } = row.original;
+      const { buying_price } = row.original;
       return (
         <Span sx={{ fontSize: 13 }}>
-          {formatCurrency(buyer_price_per_kg || 0)}
+          {formatCurrency(buying_price || 0)}
+        </Span>
+      );
+    },
+  },
+  {
+    Header: "Selling Price",
+    accessor: "selling_price",
+    minWidth: 100,
+    Cell: ({ row }: any) => {
+      const { selling_price } = row.original;
+      return (
+        <Span sx={{ fontSize: 13 }}>
+          {formatCurrency(selling_price || 0)}
         </Span>
       );
     },
   },
   {
     Header: "Revenue",
-    accessor: "total_revenue",
+    accessor: "payable_by_buyer",
     minWidth: 120,
     Cell: ({ row }: any) => {
-      const { total_revenue } = row.original;
+      const { payable_by_buyer } = row.original;
       return (
         <Span sx={{ fontSize: 13, fontWeight: 600 }}>
-          {formatCurrency(total_revenue || 0)}
+          {formatCurrency(payable_by_buyer || 0)}
         </Span>
       );
     },
   },
   {
-    Header: "Profit",
-    accessor: "gross_profit",
+    Header: "Margin",
+    accessor: "margin",
     minWidth: 120,
     Cell: ({ row }: any) => {
-      const { gross_profit, roi_percentage } = row.original;
-      const isPositive = gross_profit >= 0;
+      const { margin, roi_percentage } = row.original;
+      const isPositive = margin >= 0;
       return (
         <Box>
           <Span 
@@ -156,7 +169,7 @@ const TradeColumnShape = (actions: IDropdownAction[], onTradeClick: (trade: any)
               color: isPositive ? "success.main" : "error.main" 
             }}
           >
-            {formatCurrency(gross_profit || 0)}
+            {formatCurrency(margin || 0)}
           </Span>
           <Span sx={{ fontSize: 11, display: "block", color: "text.primary" }}>
             ROI: {Number(roi_percentage || 0).toFixed(2)}%
@@ -226,13 +239,13 @@ const TradeColumnShape = (actions: IDropdownAction[], onTradeClick: (trade: any)
   },
   {
     Header: "Delivery Date",
-    accessor: "expected_delivery_date",
+    accessor: "delivery_date",
     minWidth: 100,
     Cell: ({ row }: any) => {
-      const { expected_delivery_date } = row.original;
+      const { delivery_date } = row.original;
       return (
         <Span sx={{ fontSize: 12 }}>
-          {expected_delivery_date ? formatDateToDDMMYYYY(expected_delivery_date) : "N/A"}
+          {delivery_date ? formatDateToDDMMYYYY(delivery_date) : "N/A"}
         </Span>
       );
     },

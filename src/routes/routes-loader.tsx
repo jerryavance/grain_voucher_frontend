@@ -1,5 +1,6 @@
 import { lazy, Suspense as ReactSuspense } from "react";
 import LoadingScreen from "../components/LoadingScreen";
+import JournalEntries from "../pages/Accounting/JournalEntries/JournalEntries";
 
 const Suspense: any = ReactSuspense;
 
@@ -46,6 +47,17 @@ const RouteLazyLoader = {
   InvoiceAgingReport: Loadable(lazy(() => import("../pages/Accounting/Invoices/InvoiceAgingReport"))),
 
 
+
+  Payments: Loadable(lazy(() => import("../pages/Accounting/Payments/Payments"))),
+  PaymentDetails: Loadable(lazy(() => import("../pages/Accounting/Payments/PaymentDetails"))),
+
+
+  JournalEntries: Loadable(lazy(() => import("../pages/Accounting/JournalEntries/JournalEntries"))),
+  JournalEntriesDetails: Loadable(lazy(() => import("../pages/Accounting/JournalEntries/JournalEntryDetails"))),
+
+
+  Budgets: Loadable(lazy(() => import("../pages/Accounting/Budgets/Budgets"))),
+  BudgetDetails: Loadable(lazy(() => import("../pages/Accounting/Budgets/BudgetDetails"))),
 
   CRM: Loadable(lazy(() => import("../pages/CRM/CRM"))),
 

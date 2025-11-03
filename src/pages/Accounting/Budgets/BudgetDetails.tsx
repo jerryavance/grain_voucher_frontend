@@ -35,7 +35,7 @@ const BudgetDetails = () => {
   };
 
   const handleBack = () => {
-    navigate("/accounting/budgets");
+    navigate("/admin/accounting/budgets");
   };
 
   if (loading) {
@@ -59,6 +59,15 @@ const BudgetDetails = () => {
     );
   }
 
+  const formatCurrency = (value: any) => {
+    const num = parseFloat(value || "0");
+    return num.toLocaleString("en-UG", {
+      style: "currency",
+      currency: "UGX",
+      minimumFractionDigits: 2,
+    });
+  };
+
   return (
     <Box sx={{ p: 4, maxWidth: 800, mx: "auto" }}>
       <Button variant="outlined" onClick={handleBack} sx={{ mb: 2 }}>
@@ -71,35 +80,69 @@ const BudgetDetails = () => {
         <Divider sx={{ mb: 2 }} />
         <Box sx={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 2 }}>
           <Box>
-            <Typography variant="subtitle1" fontWeight="bold">Hub</Typography>
+            <Typography variant="subtitle1" fontWeight="bold">
+              Hub
+            </Typography>
             <Typography>{budget.hub?.name || "N/A"}</Typography>
           </Box>
+
           <Box>
-            <Typography variant="subtitle1" fontWeight="bold">Grain Type</Typography>
+            <Typography variant="subtitle1" fontWeight="bold">
+              Hub Admin
+            </Typography>
+            <Typography>
+              {budget.hub?.hub_admin
+                ? `${budget.hub.hub_admin.first_name} ${budget.hub.hub_admin.last_name}`
+                : "N/A"}
+            </Typography>
+          </Box>
+
+          <Box>
+            <Typography variant="subtitle1" fontWeight="bold">
+              Grain Type
+            </Typography>
             <Typography>{budget.grain_type?.name || "N/A"}</Typography>
           </Box>
+
           <Box>
-            <Typography variant="subtitle1" fontWeight="bold">Budgeted Amount</Typography>
-            <Typography>${budget.budgeted_amount.toFixed(2)}</Typography>
+            <Typography variant="subtitle1" fontWeight="bold">
+              Budgeted Amount
+            </Typography>
+            <Typography>{formatCurrency(budget.budgeted_amount)}</Typography>
           </Box>
+
           <Box>
-            <Typography variant="subtitle1" fontWeight="bold">Actual Amount</Typography>
-            <Typography>${budget.actual_amount.toFixed(2)}</Typography>
+            <Typography variant="subtitle1" fontWeight="bold">
+              Actual Amount
+            </Typography>
+            <Typography>{formatCurrency(budget.actual_amount)}</Typography>
           </Box>
+
           <Box>
-            <Typography variant="subtitle1" fontWeight="bold">Variance</Typography>
-            <Typography>${budget.variance.toFixed(2)}</Typography>
+            <Typography variant="subtitle1" fontWeight="bold">
+              Variance
+            </Typography>
+            <Typography>{formatCurrency(budget.variance)}</Typography>
           </Box>
+
           <Box>
-            <Typography variant="subtitle1" fontWeight="bold">Variance Percentage</Typography>
-            <Typography>{budget.variance_percentage.toFixed(2)}%</Typography>
+            <Typography variant="subtitle1" fontWeight="bold">
+              Variance Percentage
+            </Typography>
+            <Typography>{budget.variance_percentage?.toFixed(2)}%</Typography>
           </Box>
+
           <Box>
-            <Typography variant="subtitle1" fontWeight="bold">Over Budget</Typography>
+            <Typography variant="subtitle1" fontWeight="bold">
+              Over Budget
+            </Typography>
             <Typography>{budget.is_over_budget ? "Yes" : "No"}</Typography>
           </Box>
+
           <Box>
-            <Typography variant="subtitle1" fontWeight="bold">Created At</Typography>
+            <Typography variant="subtitle1" fontWeight="bold">
+              Created At
+            </Typography>
             <Typography>{formatDateToDDMMYYYY(budget.created_at)}</Typography>
           </Box>
         </Box>

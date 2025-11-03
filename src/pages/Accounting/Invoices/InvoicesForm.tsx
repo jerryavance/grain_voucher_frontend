@@ -34,7 +34,7 @@ const InvoiceForm: FC<IInvoiceFormProps> = ({ handleClose, formType = "Save", in
 
   const formFields = InvoiceFormFields({
       accounts, trades,
-      grainTypes: []
+      // grainTypes: []
   });
 
   const newInvoiceForm = useFormik({

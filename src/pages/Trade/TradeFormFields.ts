@@ -18,7 +18,7 @@ export const STATUS_OPTIONS: TOption[] = [
   { label: 'Pending Allocation', value: 'pending_allocation' },
   { label: 'Allocated', value: 'allocated' },
   { label: 'In Transit', value: 'in_transit' },
-  { label: 'Delivered', value: 'delivered' },
+  { label: 'Delivered (Ensure GRN created first)', value: 'delivered' },
   { label: 'Completed', value: 'completed' },
   { label: 'Cancelled', value: 'cancelled' },
   { label: 'Rejected', value: 'rejected' },

@@ -146,6 +146,46 @@ const routes = [
         element: <LazyLoader.InvoiceDetails />,
         requiresAuth: true,
       },
+
+
+
+      {
+        path: "accounting/payments",
+        element: <LazyLoader.Payments />,
+        requiresAuth: true,
+      },
+      {
+        path: "accounting/payments/details/:id",  // ✅ Matches your navigation path
+        element: <LazyLoader.PaymentDetails />,
+        requiresAuth: true,
+      },
+
+
+      {
+        path: "accounting/journal-entries",
+        element: <LazyLoader.JournalEntries />,
+        requiresAuth: true,
+      },
+      {
+        path: "accounting/journal-entries/details/:id",  // ✅ Matches your navigation path
+        element: <LazyLoader.JournalEntriesDetails />,
+        requiresAuth: true,
+      },
+
+
+      {
+        path: "accounting/budgets",
+        element: <LazyLoader.Budgets />,
+        requiresAuth: true,
+      },
+      {
+        path: "accounting/budgets/details/:id",  // ✅ Matches your navigation path
+        element: <LazyLoader.BudgetDetails />,
+        requiresAuth: true,
+      },
+
+
+
       // Continue with other routes...
       {
         path: "crm",
@@ -188,7 +228,7 @@ const routes = [
         requiresAuth: true,
       },
       {
-        path: "ledger-entries",
+        path: "accounting/ledger-entries",
         element: <LazyLoader.LedgerEntries />,
         requiresAuth: true,
       },

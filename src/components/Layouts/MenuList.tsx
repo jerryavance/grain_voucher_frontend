@@ -170,9 +170,27 @@ export const MenuList = (
           visible: isSuperUser,
         },
         {
+          title: "Payments",
+          Icon: Icons.PaymentsIcon,
+          path: "/admin/accounting/payments",
+          visible: isSuperUser,
+        },
+        {
+          title: "Journal Entries",
+          Icon: Icons.LibraryBooksIcon,
+          path: "/admin/accounting/journal-entries",
+          visible: isSuperUser,
+        },
+        {
+          title: "Budgets",
+          Icon: Icons.AutoStoriesIcon,
+          path: "/admin/accounting/budgets",
+          visible: isSuperUser,
+        },
+        {
           title: "Ledger Entries",
           Icon: Icons.AccountTreeIcon,
-          path: "/admin/ledger-entries",
+          path: "/admin/accounting/ledger-entries",
           visible: isSuperUser,
         },
       ],

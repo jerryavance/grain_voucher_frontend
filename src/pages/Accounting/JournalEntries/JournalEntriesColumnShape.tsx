@@ -17,7 +17,7 @@ const styledTypography = {
 export const JournalEntryDetailsLink: FC<{ id: string; number: string }> = ({ id, number }) => {
   const navigate = useNavigate();
   return (
-    <Typography sx={styledTypography} color="primary" variant="h6" onClick={() => navigate(`/accounting/journal-entries/details/${id}`)}>
+    <Typography sx={styledTypography} color="primary" variant="h6" onClick={() => navigate(`/admin/accounting/journal-entries/details/${id}`)}>
       {number}
     </Typography>
   );
@@ -37,7 +37,7 @@ const JournalEntryColumnShape = (actions: IDropdownAction[]) => [
   },
   {
     Header: "Date",
-    accessor: "date",
+    accessor: "entry_date",
     minWidth: 120,
     Cell: ({ value }: any) => formatDateToDDMMYYYY(value),
   },

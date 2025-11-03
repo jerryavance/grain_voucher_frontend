@@ -17,7 +17,7 @@ const styledTypography = {
 export const BudgetDetailsLink: FC<{ id: string; period: string }> = ({ id, period }) => {
   const navigate = useNavigate();
   return (
-    <Typography sx={styledTypography} color="primary" variant="h6" onClick={() => navigate(`/accounting/budgets/details/${id}`)}>
+    <Typography sx={styledTypography} color="primary" variant="h6" onClick={() => navigate(`/admin/accounting/budgets/details/${id}`)}>
       {formatDateToDDMMYYYY(period)}
     </Typography>
   );

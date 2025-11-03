@@ -5,12 +5,18 @@ import { TPaymentFormProps } from "./Payments.interface";
 const PAYMENT_METHOD_CHOICES = [
   { value: "cash", label: "Cash" },
   { value: "bank_transfer", label: "Bank Transfer" },
+  { value: "mobile_money", label: "Mobile Money" },
+  { value: "cheque", label: "Cheque" },
+  { value: "credit_card", label: "Credit Card" },
+  { value: "other", label: "Other" },
+
   // Add more from backend
 ];
 
 const STATUS_CHOICES = [
   { value: "pending", label: "Pending" },
-  { value: "processed", label: "Processed" },
+  { value: "completed", label: "Completed" },
+  { value: "cancelled", label: "Cancelled" },
   // Add more
 ];
 

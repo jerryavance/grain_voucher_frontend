@@ -1,10 +1,19 @@
 import React, { useEffect, useState } from "react";
-import { Box, Button, Typography, Paper, Divider } from "@mui/material";
+import {
+  Box,
+  Button,
+  Typography,
+  Paper,
+  Divider,
+  Grid,
+  Card,
+  CardContent,
+  Chip,
+} from "@mui/material";
 import { useParams, useNavigate } from "react-router-dom";
 import { toast } from "react-hot-toast";
 import useTitle from "../../../hooks/useTitle";
 import { PaymentService } from "./Payments.service";
-import { IPayment } from "./Payments.interface";
 import { formatDateToDDMMYYYY } from "../../../utils/date_formatter";
 import ProgressIndicator from "../../../components/UI/ProgressIndicator";
 
@@ -12,13 +21,11 @@ const PaymentDetails = () => {
   useTitle("Payment Details");
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const [payment, setPayment] = useState<IPayment | null>(null);
+  const [payment, setPayment] = useState<any>(null);
   const [loading, setLoading] = useState<boolean>(true);
 
   useEffect(() => {
-    if (id) {
-      fetchPaymentDetails(id);
-    }
+    if (id) fetchPaymentDetails(id);
   }, [id]);
 
   const fetchPaymentDetails = async (paymentId: string) => {
@@ -34,9 +41,7 @@ const PaymentDetails = () => {
     }
   };
 
-  const handleBack = () => {
-    navigate("/accounting/payments");
-  };
+  const handleBack = () => navigate("/admin/accounting/payments");
 
   if (loading) {
     return (
@@ -59,75 +64,134 @@ const PaymentDetails = () => {
     );
   }
 
+  const invoice = payment.invoice_details;
+  const account = payment.account;
+
   return (
-    <Box sx={{ p: 4, maxWidth: 800, mx: "auto" }}>
-      <Button variant="outlined" onClick={handleBack} sx={{ mb: 2 }}>
+    <Box sx={{ p: 4, maxWidth: 1000, mx: "auto" }}>
+      <Button variant="outlined" onClick={handleBack} sx={{ mb: 3 }}>
         Back to Payments
       </Button>
-      <Paper sx={{ p: 3 }}>
-        <Typography variant="h4" gutterBottom>
-          Payment #{payment.payment_number}
-        </Typography>
-        <Divider sx={{ mb: 2 }} />
-        <Box sx={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 2 }}>
-          <Box>
-            <Typography variant="subtitle1" fontWeight="bold">Invoice</Typography>
-            <Typography>{payment.invoice?.invoice_number || "N/A"}</Typography>
-          </Box>
-          <Box>
-            <Typography variant="subtitle1" fontWeight="bold">Account</Typography>
-            <Typography>{payment.account?.name || "N/A"}</Typography>
-          </Box>
-          <Box>
-            <Typography variant="subtitle1" fontWeight="bold">Amount</Typography>
-            <Typography>${payment.amount.toFixed(2)}</Typography>
-          </Box>
-          <Box>
-            <Typography variant="subtitle1" fontWeight="bold">Payment Date</Typography>
-            <Typography>{formatDateToDDMMYYYY(payment.payment_date)}</Typography>
-          </Box>
-          <Box>
-            <Typography variant="subtitle1" fontWeight="bold">Payment Method</Typography>
-            <Typography>{payment.payment_method_display}</Typography>
-          </Box>
-          <Box>
-            <Typography variant="subtitle1" fontWeight="bold">Reference Number</Typography>
-            <Typography>{payment.reference_number || "N/A"}</Typography>
-          </Box>
-          <Box>
-            <Typography variant="subtitle1" fontWeight="bold">Status</Typography>
-            <Typography>{payment.status_display}</Typography>
-          </Box>
-          <Box>
-            <Typography variant="subtitle1" fontWeight="bold">Reconciled</Typography>
-            <Typography>{payment.reconciled ? "Yes" : "No"}</Typography>
-          </Box>
-          <Box>
-            <Typography variant="subtitle1" fontWeight="bold">Reconciled Date</Typography>
-            <Typography>{payment.reconciled_date ? formatDateToDDMMYYYY(payment.reconciled_date) : "N/A"}</Typography>
-          </Box>
-          <Box>
-            <Typography variant="subtitle1" fontWeight="bold">Reconciled By</Typography>
-            <Typography>{payment.reconciled_by?.username || "N/A"}</Typography>
-          </Box>
-        </Box>
-        <Box sx={{ mt: 3 }}>
-          <Typography variant="subtitle1" fontWeight="bold">Notes</Typography>
-          <Typography>{payment.notes || "N/A"}</Typography>
-        </Box>
-        <Box sx={{ mt: 2 }}>
-          <Typography variant="subtitle1" fontWeight="bold">Internal Notes</Typography>
-          <Typography>{payment.internal_notes || "N/A"}</Typography>
-        </Box>
-        <Box sx={{ mt: 2 }}>
-          <Typography variant="subtitle1" fontWeight="bold">Created By</Typography>
-          <Typography>{payment.created_by?.username || "N/A"}</Typography>
-        </Box>
-        <Box sx={{ mt: 2 }}>
-          <Typography variant="subtitle1" fontWeight="bold">Created At</Typography>
-          <Typography>{formatDateToDDMMYYYY(payment.created_at)}</Typography>
-        </Box>
-      </Paper>
+
+      <Typography variant="h4" fontWeight="bold" gutterBottom>
+        Payment #{payment.payment_number}
+      </Typography>
+
+      <Grid container spacing={3}>
+        {/* --- Payment Summary --- */}
+        <Grid item xs={12} md={6}>
+          <Card variant="outlined" sx={{ borderRadius: 2 }}>
+            <CardContent>
+              <Typography variant="h6" gutterBottom>
+                Payment Summary
+              </Typography>
+              <Divider sx={{ mb: 2 }} />
+              <Typography><strong>Amount:</strong> UGX {payment.amount.toLocaleString()}</Typography>
+              <Typography><strong>Date:</strong> {formatDateToDDMMYYYY(payment.payment_date)}</Typography>
+              <Typography><strong>Method:</strong> {payment.payment_method_display}</Typography>
+              <Typography><strong>Reference:</strong> {payment.reference_number || "N/A"}</Typography>
+              <Typography><strong>Transaction ID:</strong> {payment.transaction_id || "N/A"}</Typography>
+              <Typography sx={{ mt: 1 }}>
+                <strong>Status:</strong>{" "}
+                <Chip
+                  label={payment.status_display}
+                  color={payment.status === "completed" ? "success" : "warning"}
+                  size="small"
+                />
+              </Typography>
+              <Typography><strong>Reconciled:</strong> {payment.reconciled ? "Yes" : "No"}</Typography>
+              {payment.reconciled && (
+                <Typography>
+                  <strong>Reconciled Date:</strong>{" "}
+                  {formatDateToDDMMYYYY(payment.reconciled_date)}
+                </Typography>
+              )}
+            </CardContent>
+          </Card>
+        </Grid>
+
+        {/* --- Linked Invoice --- */}
+        <Grid item xs={12} md={6}>
+          <Card variant="outlined" sx={{ borderRadius: 2 }}>
+            <CardContent>
+              <Typography variant="h6" gutterBottom>
+                Linked Invoice
+              </Typography>
+              <Divider sx={{ mb: 2 }} />
+              <Typography><strong>Invoice #:</strong> {invoice?.invoice_number}</Typography>
+              <Typography><strong>Status:</strong> {invoice?.status_display}</Typography>
+              <Typography><strong>Amount Due:</strong> UGX {invoice?.amount_due.toLocaleString()}</Typography>
+              <Typography><strong>Total Amount:</strong> UGX {invoice?.total_amount.toLocaleString()}</Typography>
+              <Typography><strong>Issue Date:</strong> {formatDateToDDMMYYYY(invoice?.issue_date)}</Typography>
+              <Typography><strong>Due Date:</strong> {formatDateToDDMMYYYY(invoice?.due_date)}</Typography>
+              <Typography sx={{ mt: 1 }}>
+                <strong>Beneficiary:</strong> {invoice?.beneficiary_name} ({invoice?.beneficiary_bank})
+              </Typography>
+              <Typography>
+                <strong>Account:</strong> {invoice?.beneficiary_account}, {invoice?.beneficiary_branch}
+              </Typography>
+            </CardContent>
+          </Card>
+        </Grid>
+
+        {/* --- Account Info --- */}
+        <Grid item xs={12} md={12}>
+          <Card variant="outlined" sx={{ borderRadius: 2 }}>
+            <CardContent>
+              <Typography variant="h6" gutterBottom>
+                Account Information
+              </Typography>
+              <Divider sx={{ mb: 2 }} />
+              <Grid container spacing={2}>
+                <Grid item xs={12} md={6}>
+                  <Typography><strong>Account Name:</strong> {account?.name}</Typography>
+                  <Typography><strong>Type:</strong> {account?.type}</Typography>
+                  <Typography><strong>Credit Terms:</strong> {account?.credit_terms_days} days</Typography>
+                </Grid>
+                <Grid item xs={12} md={6}>
+                  <Typography><strong>Hub:</strong> {account?.hub?.name}</Typography>
+                  <Typography><strong>Location:</strong> {account?.hub?.location}</Typography>
+                  <Typography><strong>Hub Admin:</strong> {account?.hub?.hub_admin?.first_name} {account?.hub?.hub_admin?.last_name}</Typography>
+                </Grid>
+              </Grid>
+            </CardContent>
+          </Card>
+        </Grid>
+
+        {/* --- Notes --- */}
+        <Grid item xs={12}>
+          <Card variant="outlined" sx={{ borderRadius: 2 }}>
+            <CardContent>
+              <Typography variant="h6" gutterBottom>
+                Notes
+              </Typography>
+              <Divider sx={{ mb: 2 }} />
+              <Typography><strong>Public Notes:</strong> {payment.notes || "N/A"}</Typography>
+              <Typography><strong>Internal Notes:</strong> {payment.internal_notes || "N/A"}</Typography>
+            </CardContent>
+          </Card>
+        </Grid>
+
+        {/* --- Audit Trail --- */}
+        <Grid item xs={12}>
+          <Card variant="outlined" sx={{ borderRadius: 2, backgroundColor: "#fafafa" }}>
+            <CardContent>
+              <Typography variant="h6" gutterBottom>
+                Audit Trail
+              </Typography>
+              <Divider sx={{ mb: 2 }} />
+              <Typography><strong>Created By:</strong> {payment.created_by?.first_name} {payment.created_by?.last_name}</Typography>
+              <Typography><strong>Created At:</strong> {formatDateToDDMMYYYY(payment.created_at)}</Typography>
+              {payment.reconciled && (
+                <Typography>
+                  <strong>Reconciled By:</strong> {payment.reconciled_by?.first_name} {payment.reconciled_by?.last_name}
+                </Typography>
+              )}
+              <Typography><strong>Last Updated:</strong> {formatDateToDDMMYYYY(payment.updated_at)}</Typography>
+            </CardContent>
+          </Card>
+        </Grid>
+      </Grid>
     </Box>
   );
 };

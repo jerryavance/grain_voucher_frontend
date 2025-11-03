@@ -17,11 +17,12 @@ const styledTypography = {
 export const PaymentDetailsLink: FC<{ id: string; number: string }> = ({ id, number }) => {
   const navigate = useNavigate();
   return (
-    <Typography sx={styledTypography} color="primary" variant="h6" onClick={() => navigate(`/accounting/payments/details/${id}`)}>
+    <Typography sx={styledTypography} color="primary" variant="h6" onClick={() => navigate(`/admin/accounting/payments/details/${id}`)}>
       {number}
     </Typography>
   );
 };
+
 
 const PaymentColumnShape = (actions: IDropdownAction[]) => [
   {

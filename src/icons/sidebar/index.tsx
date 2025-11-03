@@ -61,6 +61,8 @@ import ReceiptIcon from '@mui/icons-material/Receipt';
 import TrendingUpIcon from '@mui/icons-material/TrendingUp';
 import DashboardCustomizeIcon from '@mui/icons-material/DashboardCustomize';
 import FolderSharedIcon from '@mui/icons-material/FolderShared';
+import LibraryBooksIcon from '@mui/icons-material/LibraryBooks';
+import AutoStoriesIcon from '@mui/icons-material/AutoStories';
 
 // eslint-disable-next-line import/no-anonymous-default-export
 export default {
@@ -121,6 +123,8 @@ export default {
   TrendingUpIcon,
   DashboardCustomizeIcon,
   FolderSharedIcon,
+  LibraryBooksIcon,
+  AutoStoriesIcon,
 
 };
 
