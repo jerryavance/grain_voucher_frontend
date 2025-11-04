@@ -355,9 +355,8 @@ const VoucherGrid: FC = () => {
           open={detailsDialogOpen}
           onClose={() => setDetailsDialogOpen(false)}
           onRedeem={handleRedeem}
-          onDownloadPDF={handleDownloadPDF}
         />
-
+        
         <TradeDialog
           voucher={selectedVoucher}
           open={tradeDialogOpen}
@@ -392,60 +391,3 @@ const VoucherGrid: FC = () => {
   };
 
 export default VoucherGrid;
-
-
-
-// import { Box, Grid } from "@mui/material";
-// import { FC, useEffect, useState } from "react";
-// import { useNavigate } from "react-router-dom";
-// import SearchInput from "../../components/SearchInput";
-// import VoucherCard from "./VoucherCard";
-// import { VoucherService } from "./Voucher.service";
-// import { IVoucher } from "./Voucher.interface";
-// import useTitle from "../../hooks/useTitle";
-
-// const VoucherGrid: FC = () => {
-//   useTitle("Vouchers");
-//   const navigate = useNavigate();
-//   const [VoucherList, setVoucherList] = useState<IVoucher[]>([]);
-
-//   useEffect(() => {
-//     async function fetchVouchers() {
-//       try {
-//         // const { results } = await VoucherService.getVoucher({});
-//         const { results } = await VoucherService.getMyVouchers({}) || { results: [] };
-//         setVoucherList(results);
-//       } catch (error) {
-//         console.error("Error fetching Vouchers:", error);
-//       }
-//     }
-//     fetchVouchers();
-//   }, []);
-
-//   return (
-//     <Box pt={2} pb={4}>
-//       <Box mt={2} mb={4}>
-//         <SearchInput placeholder="Search Voucher..." />
-//       </Box>
-//       <Grid container spacing={3}>
-//         {/* {VoucherList.map((Voucher) => (
-//           <Grid item key={Voucher.id} md={4} sm={6} xs={12}>
-//             <VoucherCard Voucher={Voucher} />
-//           </Grid>
-//         ))} */}
-
-//           {VoucherList?.length > 0 ? (
-//             VoucherList.map((voucher) => (
-//               <Grid item key={voucher.id} md={4} sm={6} xs={12}>
-//                 <VoucherCard Voucher={{ ...voucher, type: voucher.type ?? "" }} />
-//               </Grid>
-//             ))
-//           ) : (
-//             <p>No Vouchers available</p>
-//           )}
-//       </Grid>
-//     </Box>
-//   );
-// };
-
-// export default VoucherGrid;
