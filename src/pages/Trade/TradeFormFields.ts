@@ -1,61 +1,57 @@
-// TradeFormFields.ts - UPDATED
+// TradeFormFields.ts - UPDATED with clearer invoice information
 import { IFormField } from "../../utils/form_factory";
 import { TOption } from "../../@types/common";
 
-// export const PAYMENT_TERMS_OPTIONS: TOption[] = [
-//   { label: 'Cash on Delivery', value: 'cash_on_delivery' },
-//   { label: '24 Hours', value: '24_hours' },
-//   { label: '7 Days', value: '7_days' },
-//   { label: '14 Days', value: '14_days' },
-//   { label: '30 Days', value: '30_days' },
-//   { label: 'Custom Terms', value: 'custom' },
-// ];
-
 export const PAYMENT_TERMS_OPTIONS = [
   { 
-    label: 'Cash on Delivery', 
+    label: 'Cash on Delivery (Invoice: Immediate)', 
     value: 'cash_on_delivery',
     days: 0,
     invoiceType: 'immediate',
-    description: 'Payment due immediately on delivery'
+    invoiceSchedule: 'Generated immediately on GRN submission',
+    description: 'Payment due immediately on delivery. Invoice created instantly when GRN is submitted.'
   },
   { 
-    label: '24 Hours', 
+    label: '24 Hours (Invoice: Immediate)', 
     value: '24_hours',
     days: 1,
     invoiceType: 'immediate',
-    description: 'Invoice generated immediately, payment due in 1 day'
+    invoiceSchedule: 'Generated immediately on GRN submission',
+    description: 'Payment due in 1 day. Invoice created instantly when GRN is submitted.'
   },
   { 
-    label: '7 Days', 
+    label: '7 Days (Invoice: Immediate)', 
     value: '7_days',
     days: 7,
     invoiceType: 'immediate',
-    description: 'Invoice generated immediately, payment due in 7 days'
+    invoiceSchedule: 'Generated immediately on GRN submission',
+    description: 'Payment due in 7 days. Invoice created instantly when GRN is submitted.'
   },
   { 
-    label: '14 Days', 
+    label: '14 Days (Invoice: Twice Weekly - Wed & Sun)', 
     value: '14_days',
     days: 14,
     invoiceType: 'twice_weekly',
-    description: 'Invoice consolidated twice weekly, payment due in 14 days'
+    invoiceSchedule: 'Consolidated twice weekly (Mon-Wed, Thu-Sun periods)',
+    description: 'Payment due in 14 days. Invoices consolidated and generated Wed 6PM & Sun 6PM.'
   },
   { 
-    label: '30 Days', 
+    label: '30 Days (Invoice: Weekly - Every Saturday)', 
     value: '30_days',
     days: 30,
     invoiceType: 'weekly',
-    description: 'Invoice consolidated weekly, payment due in 30 days'
+    invoiceSchedule: 'Consolidated weekly (Sun-Sat period)',
+    description: 'Payment due in 30 days. Invoices consolidated and generated every Saturday at 6PM.'
   },
   { 
-    label: 'Custom Terms', 
+    label: 'Custom Terms (Invoice: Monthly)', 
     value: 'custom',
     days: null,
     invoiceType: 'custom',
-    description: 'Custom payment terms with monthly invoicing'
+    invoiceSchedule: 'Consolidated monthly (End of month)',
+    description: 'Custom payment terms. Invoices consolidated and generated at end of each month.'
   },
 ];
-
 
 export const STATUS_OPTIONS: TOption[] = [
   { label: 'Draft', value: 'draft' },
@@ -64,7 +60,7 @@ export const STATUS_OPTIONS: TOption[] = [
   { label: 'Pending Allocation', value: 'pending_allocation' },
   { label: 'Allocated', value: 'allocated' },
   { label: 'In Transit', value: 'in_transit' },
-  { label: 'Delivered (Ensure GRN created first)', value: 'delivered' },
+  { label: 'Delivered', value: 'delivered' },
   { label: 'Completed', value: 'completed' },
   { label: 'Cancelled', value: 'cancelled' },
   { label: 'Rejected', value: 'rejected' },
@@ -283,7 +279,7 @@ export const TradeFormFields = (props: ITradeFormFieldsProps): IFormField[] => {
       uiBreakpoints: { xs: 12, sm: 12, md: 6 },
     },
 
-    // Investor Financing (NEW)
+    // Investor Financing
     {
       name: 'requires_financing',
       initailValue: false,
@@ -291,7 +287,6 @@ export const TradeFormFields = (props: ITradeFormFieldsProps): IFormField[] => {
       type: 'checkbox',
       uiType: 'checkbox',
       uiBreakpoints: { xs: 12, sm: 12, md: 12 },
-      //helperText: 'Check if this trade needs investor financing',
     },
 
     // Logistics & Delivery
@@ -364,24 +359,26 @@ export const TradeFormFields = (props: ITradeFormFieldsProps): IFormField[] => {
       uiBreakpoints: { xs: 12, sm: 12, md: 6 },
     },
 
-    // Payment Terms
+    // Payment Terms - THIS IS THE KEY SECTION
     {
       name: 'payment_terms',
       initailValue: '24_hours',
-      label: 'Payment Terms',
+      label: 'Payment Terms & Invoice Schedule (This determines when and how invoices will be generated after delivery)',
       type: 'select',
       uiType: 'select',
       options: PAYMENT_TERMS_OPTIONS,
-      uiBreakpoints: { xs: 12, sm: 12, md: 4 },
+      uiBreakpoints: { xs: 12, sm: 12, md: 12 },
       required: true,
+      // helperText: 'This determines when and how invoices will be generated after delivery'
     },
     {
       name: 'payment_terms_days',
       initailValue: '1',
-      label: 'Payment Terms (Days)',
+      label: 'Payment Terms (Days) (Auto-filled based on payment terms selected)',
       type: 'number',
       uiType: 'number',
-      uiBreakpoints: { xs: 12, sm: 12, md: 4 },
+      uiBreakpoints: { xs: 12, sm: 12, md: 6 },
+      // helperText: 'Auto-filled based on payment terms selected'
     },
     {
       name: 'payment_due_date',
@@ -389,7 +386,7 @@ export const TradeFormFields = (props: ITradeFormFieldsProps): IFormField[] => {
       label: 'Payment Due Date',
       type: 'date',
       uiType: 'date',
-      uiBreakpoints: { xs: 12, sm: 12, md: 4 },
+      uiBreakpoints: { xs: 12, sm: 12, md: 6 },
       required: true,
     },
     {
@@ -429,4 +426,10 @@ export const TradeFormFields = (props: ITradeFormFieldsProps): IFormField[] => {
   ];
 
   return fields;
+};
+
+// Helper function to get invoice info from payment terms
+export const getInvoiceInfoFromPaymentTerms = (paymentTermsValue: string) => {
+  const option = PAYMENT_TERMS_OPTIONS.find(opt => opt.value === paymentTermsValue);
+  return option || PAYMENT_TERMS_OPTIONS[1]; // Default to 24_hours
 };

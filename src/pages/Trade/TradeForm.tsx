@@ -1,6 +1,14 @@
-// TradeForm.tsx - UPDATED
+// TradeForm.tsx - UPDATED with Invoice Information Display
 import React, { FC, useEffect, useRef, useState } from "react";
-import { Box, Button, Alert, Typography } from "@mui/material";
+import { 
+  Box, 
+  Button, 
+  Alert, 
+  Typography, 
+  Paper,
+  Divider 
+} from "@mui/material";
+import InfoIcon from '@mui/icons-material/Info';
 import { useFormik } from "formik";
 import ModalDialog from "../../components/UI/Modal/ModalDialog";
 import ProgressIndicator from "../../components/UI/ProgressIndicator";
@@ -8,7 +16,7 @@ import { Span } from "../../components/Typography";
 import FormFactory from "../../components/UI/FormFactory";
 import { getInitialValues, patchInitialValues } from "../../utils/form_factory";
 import uniqueId from "../../utils/generateId";
-import { TradeFormFields } from "./TradeFormFields";
+import { TradeFormFields, getInvoiceInfoFromPaymentTerms, PAYMENT_TERMS_OPTIONS } from "./TradeFormFields";
 import { TradeService } from "./Trade.service";
 import { TradeFormValidations } from "./TradeFormValidations";
 import { ITradeFormProps } from "./Trade.interface";
@@ -31,6 +39,9 @@ const TradeForm: FC<ITradeFormProps> = ({
   const [qualityGrades, setQualityGrades] = useState<TOption[]>([]);
   const [buyers, setBuyers] = useState<TOption[]>([]);
   const [suppliers, setSuppliers] = useState<TOption[]>([]);
+
+  // State for invoice info display
+  const [invoiceInfo, setInvoiceInfo] = useState<any>(null);
 
   const formFields = TradeFormFields({
     hubs,
@@ -69,6 +80,28 @@ const TradeForm: FC<ITradeFormProps> = ({
     }
   }, [initialValues, formType, hubs, grainTypes, qualityGrades, buyers, suppliers]);
 
+  // Watch for payment terms changes
+  useEffect(() => {
+    const paymentTerms = tradeForm.values.payment_terms;
+    if (paymentTerms) {
+      const info = getInvoiceInfoFromPaymentTerms(paymentTerms);
+      setInvoiceInfo(info);
+      
+      // Auto-fill payment_terms_days
+      if (info.days !== null) {
+        tradeForm.setFieldValue('payment_terms_days', info.days);
+      }
+      
+      // Auto-calculate payment due date if delivery date is set
+      const deliveryDate = tradeForm.values.delivery_date;
+      if (deliveryDate && info.days !== null) {
+        const dueDate = new Date(deliveryDate);
+        dueDate.setDate(dueDate.getDate() + info.days);
+        tradeForm.setFieldValue('payment_due_date', dueDate.toISOString().split('T')[0]);
+      }
+    }
+  }, [tradeForm.values.payment_terms, tradeForm.values.delivery_date]);
+
   const fetchDropdownData = async () => {
     try {
       const [hubsData, grainTypesData, qualityGradesData, buyersData, suppliersData] = await Promise.all([
@@ -106,7 +139,6 @@ const TradeForm: FC<ITradeFormProps> = ({
       } else {
         const response = await TradeService.createTrade(values);
         
-        // Check for inventory warning or other messages
         if (response.warning) {
           setWarning(response.warning);
           toast("Trade created - pending approval", {
@@ -120,7 +152,6 @@ const TradeForm: FC<ITradeFormProps> = ({
         tradeForm.resetForm();
         callBack && callBack();
         
-        // Auto-close after successful creation
         setTimeout(() => {
           handleClose();
         }, warning ? 2000 : 500);
@@ -131,11 +162,9 @@ const TradeForm: FC<ITradeFormProps> = ({
       setLoading(false);
 
       if (error.response?.data) {
-        // Handle field-level errors
         const errors = error.response.data;
         tradeForm.setErrors(errors);
         
-        // Show first error in toast
         const firstError = Object.values(errors)[0];
         if (Array.isArray(firstError)) {
           toast.error(firstError[0]);
@@ -215,10 +244,54 @@ const TradeForm: FC<ITradeFormProps> = ({
           {formType === "Save" && (
             <Alert severity="info" sx={{ mb: 2 }}>
               <Typography variant="body2">
-                <strong>Note:</strong> After creating the trade, it will need to be approved before vouchers can be allocated.
-                {tradeForm.values.requires_financing && " This trade requires investor financing."}
+                <strong>Trade Creation Flow:</strong> After creating the trade, it will go through approval → voucher allocation → delivery → GRN submission → Invoice generation.
+                {tradeForm.values.requires_financing && " This trade requires investor financing before voucher allocation."}
               </Typography>
             </Alert>
+          )}
+
+          {/* Invoice Information Display */}
+          {invoiceInfo && (
+            <Paper 
+              elevation={0} 
+              sx={{ 
+                p: 2, 
+                mb: 2, 
+                bgcolor: 'info.lighter',
+                border: '1px solid',
+                borderColor: 'info.main'
+              }}
+            >
+              <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 1 }}>
+                <InfoIcon color="info" />
+                <Box sx={{ flex: 1 }}>
+                  <Typography variant="subtitle2" color="info.dark" gutterBottom>
+                    📄 Invoice Generation Schedule
+                  </Typography>
+                  <Divider sx={{ my: 1 }} />
+                  <Typography variant="body2" sx={{ mb: 1 }}>
+                    <strong>Payment Terms:</strong> {invoiceInfo.label}
+                  </Typography>
+                  <Typography variant="body2" sx={{ mb: 1 }}>
+                    <strong>Invoice Type:</strong> {invoiceInfo.invoiceType === 'immediate' ? '✅ Immediate' : '📅 Consolidated'}
+                  </Typography>
+                  <Typography variant="body2" sx={{ mb: 1 }}>
+                    <strong>Invoice Schedule:</strong> {invoiceInfo.invoiceSchedule}
+                  </Typography>
+                  <Typography variant="body2" color="text.secondary">
+                    {invoiceInfo.description}
+                  </Typography>
+                  
+                  {invoiceInfo.invoiceType !== 'immediate' && (
+                    <Alert severity="info" sx={{ mt: 2 }} icon={false}>
+                      <Typography variant="caption">
+                        <strong>Note:</strong> Multiple deliveries (GRNs) within the same period will be combined into one invoice for this customer.
+                      </Typography>
+                    </Alert>
+                  )}
+                </Box>
+              </Box>
+            </Paper>
           )}
 
           <FormFactory
