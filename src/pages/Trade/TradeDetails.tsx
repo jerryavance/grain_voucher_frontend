@@ -44,6 +44,14 @@ import VoucherAllocationForm from "./VoucherAllocationForm";
 import PaymentRecordForm from "./PaymentRecordForm";
 import { useModalContext } from "../../contexts/ModalDialogContext";
 
+
+
+// Add this to TradeDetails.tsx in the Payments Tab section
+import InvoiceInfoDisplay from './InvoiceInfoDisplay';
+import { getInvoiceInfoFromPaymentTerms } from './TradeFormFields';
+
+
+
 interface TabPanelProps {
   children?: React.ReactNode;
   index: number;
@@ -97,6 +105,14 @@ const TradeDetails: FC<ITradeDetailsProps> = ({ trade: initialTrade, onClose, on
   const [showAllocationForm, setShowAllocationForm] = useState(false);
   const [showPaymentForm, setShowPaymentForm] = useState(false);
   const [showGRNForm, setShowGRNForm] = useState(false);
+
+
+
+  // Inside the component, add:
+  const invoiceInfo = getInvoiceInfoFromPaymentTerms(trade.payment_terms);
+
+
+
 
   useEffect(() => {
     fetchTradeDetails();
@@ -1073,6 +1089,16 @@ const TradeDetails: FC<ITradeDetailsProps> = ({ trade: initialTrade, onClose, on
             </Grid>
           </CardContent>
         </Card>
+
+        <Box sx={{ mt: 2 }}>
+          <InvoiceInfoDisplay 
+            invoiceInfo={invoiceInfo}
+            variant="compact"
+            showDetailedFlow={false}
+          />
+        </Box>
+
+
       </TabPanel>
 
       {/* Modal Forms */}
