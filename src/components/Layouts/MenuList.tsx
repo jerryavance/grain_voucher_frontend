@@ -164,8 +164,8 @@ export const MenuList = (
       isHeader: true,
       subMenu: [
         {
-          title: "Accounting",
-          Icon: Icons.CalculateIcon,
+          title: "Invoice",
+          Icon: Icons.ReceiptIcon,
           path: "/admin/accounting",
           visible: isSuperUser,
         },
