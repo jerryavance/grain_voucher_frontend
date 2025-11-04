@@ -2,14 +2,60 @@
 import { IFormField } from "../../utils/form_factory";
 import { TOption } from "../../@types/common";
 
-export const PAYMENT_TERMS_OPTIONS: TOption[] = [
-  { label: 'Cash on Delivery', value: 'cash_on_delivery' },
-  { label: '24 Hours', value: '24_hours' },
-  { label: '7 Days', value: '7_days' },
-  { label: '14 Days', value: '14_days' },
-  { label: '30 Days', value: '30_days' },
-  { label: 'Custom Terms', value: 'custom' },
+// export const PAYMENT_TERMS_OPTIONS: TOption[] = [
+//   { label: 'Cash on Delivery', value: 'cash_on_delivery' },
+//   { label: '24 Hours', value: '24_hours' },
+//   { label: '7 Days', value: '7_days' },
+//   { label: '14 Days', value: '14_days' },
+//   { label: '30 Days', value: '30_days' },
+//   { label: 'Custom Terms', value: 'custom' },
+// ];
+
+export const PAYMENT_TERMS_OPTIONS = [
+  { 
+    label: 'Cash on Delivery', 
+    value: 'cash_on_delivery',
+    days: 0,
+    invoiceType: 'immediate',
+    description: 'Payment due immediately on delivery'
+  },
+  { 
+    label: '24 Hours', 
+    value: '24_hours',
+    days: 1,
+    invoiceType: 'immediate',
+    description: 'Invoice generated immediately, payment due in 1 day'
+  },
+  { 
+    label: '7 Days', 
+    value: '7_days',
+    days: 7,
+    invoiceType: 'immediate',
+    description: 'Invoice generated immediately, payment due in 7 days'
+  },
+  { 
+    label: '14 Days', 
+    value: '14_days',
+    days: 14,
+    invoiceType: 'twice_weekly',
+    description: 'Invoice consolidated twice weekly, payment due in 14 days'
+  },
+  { 
+    label: '30 Days', 
+    value: '30_days',
+    days: 30,
+    invoiceType: 'weekly',
+    description: 'Invoice consolidated weekly, payment due in 30 days'
+  },
+  { 
+    label: 'Custom Terms', 
+    value: 'custom',
+    days: null,
+    invoiceType: 'custom',
+    description: 'Custom payment terms with monthly invoicing'
+  },
 ];
+
 
 export const STATUS_OPTIONS: TOption[] = [
   { label: 'Draft', value: 'draft' },
