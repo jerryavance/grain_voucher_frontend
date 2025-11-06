@@ -256,7 +256,7 @@ const TradeDetails: FC<ITradeDetailsProps> = ({ trade: initialTrade, onClose, on
   }
 
   const canApprove = trade.status === 'pending_approval';
-  const canAllocateFinancing = trade.status === 'approved' && trade.requires_financing && !trade.financing_complete;
+  const canAllocateFinancing = trade.status === 'pending_allocation' && trade.requires_financing && !trade.financing_complete;
   const canAllocateVouchers = ['approved', 'pending_allocation'].includes(trade.status) && !trade.allocation_complete;
   const canRecordPayment = ['delivered', 'completed'].includes(trade.status) && trade.amount_due > 0;
   const canCreateGRN = trade.status === 'in_transit';
