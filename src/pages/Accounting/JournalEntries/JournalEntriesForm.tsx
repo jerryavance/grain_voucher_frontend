@@ -12,7 +12,7 @@ import { JournalEntryFormFields } from "./JournalEntriesFormFields";
 import { JournalEntryService } from "./JournalEntries.service";
 import { JournalEntryFormValidations } from "./JournalEntriesFormValidations";
 import { IJournalEntryFormProps, TJournalEntryFormProps } from "./JournalEntries.interface";
-import { TradeService } from "../../TradeQ/Trade.service"; // Adjust path
+import { TradeService } from "../../Trade/Trade.service"; // Adjust path
 import { InvoiceService } from "../Invoices/Invoices.service";
 import { PaymentService } from "../Payments/Payments.service";
 

@@ -14,7 +14,7 @@ import { InvoiceFormValidations } from "./InvoicesFormValidations";
 import { IInvoiceFormProps, TInvoiceFormProps } from "./Invoices.interface";
 // Hypothetical services for options
 import { CRMService } from "../../CRM/CRM.service"; // Adjust path
-import { TradeService } from "../../TradeQ/Trade.service"; // Adjust path
+import { TradeService } from "../../Trade/Trade.service"; // Adjust path
 
 const InvoiceForm: FC<IInvoiceFormProps> = ({ handleClose, formType = "Save", initialValues, callBack }) => {
   const formRef = useRef<HTMLFormElement | null>(null);
