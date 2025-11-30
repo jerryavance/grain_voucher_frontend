@@ -143,7 +143,7 @@ const DashboardSideBar: FC<SideNavBarProps> = ({ showMobileSideBar, closeMobileS
           border: "1px solid #ffffff1c",
         }}
       >
-        <LogoImage src="/wheat-sack.png" alt="Logo" />
+        <LogoImage src="/favicon.png" alt="Logo" />
       </Box>
       {renderMenuItems(topMenuList)}
     </Box>

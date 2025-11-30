@@ -198,10 +198,10 @@ const InvestorDetailsModal: FC<IInvestorDetailsModalProps> = ({
                 </Grid>
                 <Grid item xs={12} md={4}>
                   <Typography variant="body2" color="textSecondary">
-                    AMSAF Share
+                    BENNU Share
                   </Typography>
                   <Typography variant="body1" sx={{ fontWeight: 'bold', color: 'info.main' }}>
-                    {account.profit_agreement.amsaf_share || 0}%
+                    {account.profit_agreement.bennu_share || 0}%
                   </Typography>
                 </Grid>
                 <Grid item xs={12}>
@@ -415,10 +415,10 @@ export default InvestorDetailsModal;
 //                 </Grid>
 //                 <Grid item xs={12} md={4}>
 //                   <Typography variant="body2" color="textSecondary">
-//                     AMSAF Share
+//                     BENNU Share
 //                   </Typography>
 //                   <Typography variant="body1" sx={{ fontWeight: 'bold', color: 'info.main' }}>
-//                     {account.profit_agreement.amsaf_share}%
+//                     {account.profit_agreement.bennu_share}%
 //                   </Typography>
 //                 </Grid>
 //                 <Grid item xs={12}>

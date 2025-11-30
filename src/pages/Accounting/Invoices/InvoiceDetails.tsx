@@ -231,7 +231,7 @@ const InvoiceDetails = () => {
             }}
           >
             <Typography variant="h5" sx={{ color: "white", fontWeight: "bold", fontSize: { xs: "1.25rem", sm: "1.5rem" } }}>
-              AMSAF
+              BENNU
             </Typography>
           </Box>
           <Box sx={{ textAlign: "right" }}>
@@ -393,13 +393,13 @@ const InvoiceDetails = () => {
           <Grid item xs={12} sm={8}>
             <Box sx={{ border: "1px solid #ddd", p: 1.5 }}>
               <Typography variant="caption" sx={{ fontWeight: "bold", display: "block" }}>
-                AMSAF Fees:
+                BENNU Fees:
               </Typography>
             </Box>
           </Grid>
           <Grid item xs={12} sm={4}>
             <Box sx={{ border: "1px solid #ddd", p: 1.5, textAlign: "right" }}>
-              <Typography variant="body2">UGX {formatAmount(invoice.amsaf_fees)}</Typography>
+              <Typography variant="body2">UGX {formatAmount(invoice.bennu_fees)}</Typography>
             </Box>
           </Grid>
 

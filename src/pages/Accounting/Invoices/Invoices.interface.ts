@@ -36,7 +36,7 @@ export interface IInvoice {
   
   // Amounts
   subtotal: number;
-  amsaf_fees: number;
+  bennu_fees: number;
   logistics_cost: number;
   weighbridge_cost: number;
   other_charges: number;

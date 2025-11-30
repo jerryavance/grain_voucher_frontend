@@ -1,27 +1,35 @@
-// TradeForm.tsx - UPDATED with Invoice Information Display
-import React, { FC, useEffect, useRef, useState } from "react";
-import { 
-  Box, 
-  Button, 
-  Alert, 
-  Typography, 
+import React, { FC, useEffect, useState } from "react";
+import {
+  Box,
+  Button,
+  Stepper,
+  Step,
+  StepLabel,
+  Typography,
   Paper,
-  Divider 
 } from "@mui/material";
-import InfoIcon from '@mui/icons-material/Info';
 import { useFormik } from "formik";
 import ModalDialog from "../../components/UI/Modal/ModalDialog";
 import ProgressIndicator from "../../components/UI/ProgressIndicator";
 import { Span } from "../../components/Typography";
 import FormFactory from "../../components/UI/FormFactory";
+import { toast } from "react-hot-toast";
 import { getInitialValues, patchInitialValues } from "../../utils/form_factory";
 import uniqueId from "../../utils/generateId";
-import { TradeFormFields, getInvoiceInfoFromPaymentTerms, PAYMENT_TERMS_OPTIONS } from "./TradeFormFields";
+import { TradeFormFields } from "./TradeFormFields";
 import { TradeService } from "./Trade.service";
 import { TradeFormValidations } from "./TradeFormValidations";
-import { ITradeFormProps } from "./Trade.interface";
+import { ITradeFormProps, TTradeFormProps } from "./Trade.interface";
 import { TOption } from "../../@types/common";
-import { toast } from "react-hot-toast";
+
+const steps = [
+  "Basic Information",
+  "Quantities & Weight",
+  "Pricing",
+  "Costs & Fees",
+  "Delivery & Payment",
+  "Additional Options",
+];
 
 const TradeForm: FC<ITradeFormProps> = ({
   handleClose,
@@ -29,32 +37,35 @@ const TradeForm: FC<ITradeFormProps> = ({
   initialValues,
   callBack,
 }) => {
-  const formRef = useRef<HTMLFormElement | null>(null);
   const [loading, setLoading] = useState<boolean>(false);
-  const [warning, setWarning] = useState<string>("");
+  const [activeStep, setActiveStep] = useState<number>(0);
 
-  // State for dropdown options
-  const [hubs, setHubs] = useState<TOption[]>([]);
-  const [grainTypes, setGrainTypes] = useState<TOption[]>([]);
-  const [qualityGrades, setQualityGrades] = useState<TOption[]>([]);
+  // Lookup options
   const [buyers, setBuyers] = useState<TOption[]>([]);
   const [suppliers, setSuppliers] = useState<TOption[]>([]);
+  const [grainTypes, setGrainTypes] = useState<TOption[]>([]);
+  const [qualityGrades, setQualityGrades] = useState<TOption[]>([]);
+  const [hubs, setHubs] = useState<TOption[]>([]);
 
-  // State for invoice info display
-  const [invoiceInfo, setInvoiceInfo] = useState<any>(null);
-
-  const formFields = TradeFormFields({
-    hubs,
-    grainTypes,
-    qualityGrades,
+  const formProps: TTradeFormProps = {
     buyers,
     suppliers,
-    isUpdate: formType === "Update",
-  });
+    grainTypes,
+    qualityGrades,
+    hubs,
+    handleBuyerSearch,
+    handleSupplierSearch,
+    handleGrainTypeSearch,
+    handleQualityGradeSearch,
+    handleHubSearch,
+  };
+
+  const allFormFields = TradeFormFields(formProps, -1); // Get all fields
+  const currentStepFields = TradeFormFields(formProps, activeStep);
 
   const tradeForm = useFormik({
-    initialValues: getInitialValues(formFields),
-    validationSchema: TradeFormValidations(),
+    initialValues: getInitialValues(allFormFields),
+    validationSchema: TradeFormValidations(activeStep),
     validateOnChange: false,
     validateOnMount: false,
     validateOnBlur: false,
@@ -63,128 +74,166 @@ const TradeForm: FC<ITradeFormProps> = ({
   });
 
   useEffect(() => {
-    fetchDropdownData();
+    // Load lookup data
+    loadBuyers();
+    loadSuppliers();
+    loadGrainTypes();
+    loadQualityGrades();
+    loadHubs();
   }, []);
 
   useEffect(() => {
     if (formType === "Update" && initialValues) {
-      const patchedValues = {
-        ...initialValues,
-        buyer_id: initialValues.buyer?.id || initialValues.buyer_id,
-        supplier_id: initialValues.supplier?.id || initialValues.supplier_id,
-        hub_id: initialValues.hub?.id || initialValues.hub_id,
-        grain_type_id: initialValues.grain_type?.id || initialValues.grain_type_id,
-        quality_grade_id: initialValues.quality_grade?.id || initialValues.quality_grade_id,
-      };
-      tradeForm.setValues(patchInitialValues(formFields)(patchedValues));
+      tradeForm.setValues(patchInitialValues(allFormFields)(initialValues || {}));
     }
-  }, [initialValues, formType, hubs, grainTypes, qualityGrades, buyers, suppliers]);
+  }, [initialValues, formType]);
 
-  // Watch for payment terms changes
-  useEffect(() => {
-    const paymentTerms = tradeForm.values.payment_terms;
-    if (paymentTerms) {
-      const info = getInvoiceInfoFromPaymentTerms(paymentTerms);
-      setInvoiceInfo(info);
-      
-      // Auto-fill payment_terms_days
-      if (info.days !== null) {
-        tradeForm.setFieldValue('payment_terms_days', info.days);
-      }
-      
-      // Auto-calculate payment due date if delivery date is set
-      const deliveryDate = tradeForm.values.delivery_date;
-      if (deliveryDate && info.days !== null) {
-        const dueDate = new Date(deliveryDate);
-        dueDate.setDate(dueDate.getDate() + info.days);
-        tradeForm.setFieldValue('payment_due_date', dueDate.toISOString().split('T')[0]);
-      }
-    }
-  }, [tradeForm.values.payment_terms, tradeForm.values.delivery_date]);
-
-  const fetchDropdownData = async () => {
+  // Lookup loaders
+  async function loadBuyers(search?: string) {
     try {
-      const [hubsData, grainTypesData, qualityGradesData, buyersData, suppliersData] = await Promise.all([
-        TradeService.getHubs(),
-        TradeService.getGrainTypes(),
-        TradeService.getQualityGrades(),
-        TradeService.getBuyers(),
-        TradeService.getSuppliers(),
-      ]);
-
-      setHubs(hubsData.map((h: any) => ({ label: h.name, value: h.id })));
-      setGrainTypes(grainTypesData.map((g: any) => ({ label: g.name, value: g.id })));
-      setQualityGrades(qualityGradesData.map((q: any) => ({ label: q.name, value: q.id })));
-      setBuyers(buyersData.map((b: any) => ({ label: b.name, value: b.id })));
-      setSuppliers(suppliersData.map((s: any) => ({ 
-        label: `${s.first_name} ${s.last_name}`, 
-        value: s.id 
-      })));
-    } catch (error: any) {
-      console.error("Error fetching dropdown data:", error);
-      toast.error("Failed to load form data");
+      const data = await TradeService.getBuyers(search);
+      setBuyers(
+        data.results.map((item: any) => ({
+          label: item.name,
+          value: item.id,
+        }))
+      );
+    } catch (error) {
+      console.error("Error loading buyers:", error);
     }
-  };
+  }
+
+  async function loadSuppliers(search?: string) {
+    try {
+      const data = await TradeService.getSuppliers(search);
+      setSuppliers(
+        data.results.map((item: any) => ({
+          label: `${item.first_name} ${item.last_name}`,
+          value: item.id,
+        }))
+      );
+    } catch (error) {
+      console.error("Error loading suppliers:", error);
+    }
+  }
+
+  async function loadGrainTypes(search?: string) {
+    try {
+      const data = await TradeService.getGrainTypes(search);
+      setGrainTypes(
+        data.results.map((item: any) => ({
+          label: item.name,
+          value: item.id,
+        }))
+      );
+    } catch (error) {
+      console.error("Error loading grain types:", error);
+    }
+  }
+
+  async function loadQualityGrades(search?: string) {
+    try {
+      const data = await TradeService.getQualityGrades(search);
+      setQualityGrades(
+        data.results.map((item: any) => ({
+          label: item.name,
+          value: item.id,
+        }))
+      );
+    } catch (error) {
+      console.error("Error loading quality grades:", error);
+    }
+  }
+
+  async function loadHubs(search?: string) {
+    try {
+      const data = await TradeService.getHubs(search);
+      setHubs(
+        data.results.map((item: any) => ({
+          label: item.name,
+          value: item.id,
+        }))
+      );
+    } catch (error) {
+      console.error("Error loading hubs:", error);
+    }
+  }
+
+  // Search handlers
+  function handleBuyerSearch(value: any) {
+    loadBuyers(value);
+  }
+
+  function handleSupplierSearch(value: any) {
+    loadSuppliers(value);
+  }
+
+  function handleGrainTypeSearch(value: any) {
+    loadGrainTypes(value);
+  }
+
+  function handleQualityGradeSearch(value: any) {
+    loadQualityGrades(value);
+  }
+
+  function handleHubSearch(value: any) {
+    loadHubs(value);
+  }
 
   const handleSubmit = async (values: any) => {
     setLoading(true);
-    setWarning("");
     try {
       if (formType === "Update") {
-        await TradeService.updateTrade(initialValues.id, values);
+        await TradeService.updateTrade(values, initialValues.id);
         toast.success("Trade updated successfully");
-        tradeForm.resetForm();
-        callBack && callBack();
-        handleClose();
       } else {
-        const response = await TradeService.createTrade(values);
-        
-        if (response.warning) {
-          setWarning(response.warning);
-          toast("Trade created - pending approval", {
-            icon: "⚠️",
-            duration: 5000,
-          });
-        } else {
-          toast.success("Trade created successfully");
-        }
-
-        tradeForm.resetForm();
-        callBack && callBack();
-        
-        setTimeout(() => {
-          handleClose();
-        }, warning ? 2000 : 500);
+        await TradeService.createTrade(values);
+        toast.success("Trade created successfully");
       }
 
+      tradeForm.resetForm();
+      callBack && callBack();
+      handleClose();
+      setActiveStep(0);
       setLoading(false);
     } catch (error: any) {
       setLoading(false);
-
       if (error.response?.data) {
-        const errors = error.response.data;
-        tradeForm.setErrors(errors);
-        
-        const firstError = Object.values(errors)[0];
-        if (Array.isArray(firstError)) {
-          toast.error(firstError[0]);
-        } else if (typeof firstError === 'string') {
-          toast.error(firstError);
-        }
-      } else {
-        toast.error(error.message || "An error occurred");
+        tradeForm.setErrors(error.response.data);
       }
+      toast.error(error.message || "An error occurred");
     }
   };
 
   const handleReset = () => {
     tradeForm.resetForm();
-    setWarning("");
+    setActiveStep(0);
     handleClose();
   };
 
-  const handleButtonClick = () => {
-    tradeForm.handleSubmit();
+  const handleNext = async () => {
+    // Validate current step
+    const errors = await tradeForm.validateForm();
+    const currentFieldNames = currentStepFields.map((f) => f.name);
+    const currentErrors = Object.keys(errors).filter((key) =>
+      currentFieldNames.includes(key)
+    );
+
+    if (currentErrors.length > 0) {
+      toast.error("Please fill in all required fields");
+      tradeForm.setErrors(errors);
+      return;
+    }
+
+    if (activeStep === steps.length - 1) {
+      tradeForm.handleSubmit();
+    } else {
+      setActiveStep((prev) => prev + 1);
+    }
+  };
+
+  const handleBack = () => {
+    setActiveStep((prev) => prev - 1);
   };
 
   const ActionBtns: FC = () => {
@@ -193,23 +242,29 @@ const TradeForm: FC<ITradeFormProps> = ({
         <Button onClick={handleReset} disabled={loading}>
           Close
         </Button>
+        <Box sx={{ flex: "1 1 auto" }} />
+        {activeStep > 0 && (
+          <Button onClick={handleBack} disabled={loading}>
+            Back
+          </Button>
+        )}
         <Button
-          onClick={handleButtonClick}
+          onClick={handleNext}
           type="button"
           variant="contained"
           disabled={loading}
         >
           {loading ? (
             <>
-              <ProgressIndicator color="inherit" size={20} />
+              <ProgressIndicator color="inherit" size={20} />{" "}
               <Span style={{ marginLeft: "0.5rem" }} color="primary">
-                {formType === "Update" ? "Updating..." : "Creating..."}
+                Loading...
               </Span>
             </>
-          ) : formType === "Update" ? (
-            "Update Trade"
+          ) : activeStep === steps.length - 1 ? (
+            formType === "Update" ? "Update Trade" : "Create Trade"
           ) : (
-            "Create Trade"
+            "Next"
           )}
         </Button>
       </>
@@ -222,88 +277,54 @@ const TradeForm: FC<ITradeFormProps> = ({
       onClose={handleReset}
       id={uniqueId()}
       ActionButtons={ActionBtns}
-      maxWidth="lg"
+      maxWidth="md"
     >
-      <form
-        ref={formRef}
-        onSubmit={(e) => {
-          e.preventDefault();
-          handleSubmit(tradeForm.values);
-        }}
-      >
-        <Box sx={{ width: "100%" }}>
-          {warning && (
-            <Alert severity="warning" sx={{ mb: 2 }}>
-              {warning}
-              <Typography variant="body2" sx={{ mt: 1 }}>
-                The trade will be created in 'draft' status and will need approval before voucher allocation.
-              </Typography>
-            </Alert>
-          )}
+      <Box sx={{ width: "100%", mb: 3 }}>
+        <Stepper activeStep={activeStep} alternativeLabel>
+          {steps.map((label) => (
+            <Step key={label}>
+              <StepLabel>{label}</StepLabel>
+            </Step>
+          ))}
+        </Stepper>
+      </Box>
 
-          {formType === "Save" && (
-            <Alert severity="info" sx={{ mb: 2 }}>
-              <Typography variant="body2">
-                <strong>Trade Creation Flow:</strong> After creating the trade, it will go through approval → voucher allocation → delivery → GRN submission → Invoice generation.
-                {tradeForm.values.requires_financing && " This trade requires investor financing before voucher allocation."}
-              </Typography>
-            </Alert>
-          )}
+      <Paper elevation={0} sx={{ p: 2, backgroundColor: "grey.50" }}>
+        <Typography variant="h6" gutterBottom>
+          {steps[activeStep]}
+        </Typography>
+        <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+          {getStepDescription(activeStep)}
+        </Typography>
 
-          {/* Invoice Information Display */}
-          {invoiceInfo && (
-            <Paper 
-              elevation={0} 
-              sx={{ 
-                p: 2, 
-                mb: 2, 
-                bgcolor: 'info.lighter',
-                border: '1px solid',
-                borderColor: 'info.main'
-              }}
-            >
-              <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 1 }}>
-                <InfoIcon color="info" />
-                <Box sx={{ flex: 1 }}>
-                  <Typography variant="subtitle2" color="info.dark" gutterBottom>
-                    📄 Invoice Generation Schedule
-                  </Typography>
-                  <Divider sx={{ my: 1 }} />
-                  <Typography variant="body2" sx={{ mb: 1 }}>
-                    <strong>Payment Terms:</strong> {invoiceInfo.label}
-                  </Typography>
-                  <Typography variant="body2" sx={{ mb: 1 }}>
-                    <strong>Invoice Type:</strong> {invoiceInfo.invoiceType === 'immediate' ? '✅ Immediate' : '📅 Consolidated'}
-                  </Typography>
-                  <Typography variant="body2" sx={{ mb: 1 }}>
-                    <strong>Invoice Schedule:</strong> {invoiceInfo.invoiceSchedule}
-                  </Typography>
-                  <Typography variant="body2" color="text.secondary">
-                    {invoiceInfo.description}
-                  </Typography>
-                  
-                  {invoiceInfo.invoiceType !== 'immediate' && (
-                    <Alert severity="info" sx={{ mt: 2 }} icon={false}>
-                      <Typography variant="caption">
-                        <strong>Note:</strong> Multiple deliveries (GRNs) within the same period will be combined into one invoice for this customer.
-                      </Typography>
-                    </Alert>
-                  )}
-                </Box>
-              </Box>
-            </Paper>
-          )}
-
+        <form
+          onSubmit={(e) => {
+            e.preventDefault();
+            handleSubmit(tradeForm.values);
+          }}
+        >
           <FormFactory
             others={{ sx: { marginBottom: "0rem" } }}
             formikInstance={tradeForm}
-            formFields={formFields}
-            validationSchema={TradeFormValidations()}
+            formFields={currentStepFields}
+            validationSchema={TradeFormValidations(activeStep)}
           />
-        </Box>
-      </form>
+        </form>
+      </Paper>
     </ModalDialog>
   );
 };
+
+function getStepDescription(step: number): string {
+  const descriptions = [
+    "Enter the buyer, supplier, hub, and grain details for this trade",
+    "Specify the gross tonnage, net tonnage, and bag quantities",
+    "Enter the buying and selling prices per kilogram",
+    "Add all costs associated with this trade including transport, QA, and fees",
+    "Set delivery date, location, and payment terms",
+    "Configure financing and voucher allocation requirements",
+  ];
+  return descriptions[step] || "";
+}
 
 export default TradeForm;

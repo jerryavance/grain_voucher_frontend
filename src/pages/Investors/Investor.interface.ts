@@ -59,7 +59,7 @@ export interface IProfitSharingAgreement {
     investor_account_id: string; // UUID for write operations
     profit_threshold: string; // DecimalField as string (percentage)
     investor_share: string; // DecimalField as string (percentage)
-    amsaf_share: string; // DecimalField as string (percentage)
+    bennu_share: string; // DecimalField as string (percentage)
     effective_date: string; // ISO date string
     notes: string;
     created_at: string; // ISO date string
@@ -88,7 +88,7 @@ export interface ITrade {
     amount_due: string; // DecimalField as string (UGX)
     delivery_date: string; // ISO date string
     delivery_status: 'pending' | 'delivered';
-    amsaf_fees: string; // DecimalField as string (UGX)
+    bennu_fees: string; // DecimalField as string (UGX)
     created_at: string; // ISO date string
     updated_at: string; // ISO date string
 }
@@ -101,7 +101,7 @@ export interface ITradeAllocation {
     allocated_amount: string; // DecimalField as string (UGX)
     margin_earned: string; // DecimalField as string (UGX)
     investor_margin: string; // DecimalField as string (UGX)
-    amsaf_margin: string; // DecimalField as string (UGX)
+    bennu_margin: string; // DecimalField as string (UGX)
     allocation_date: string; // ISO date string
     notes: string;
 }

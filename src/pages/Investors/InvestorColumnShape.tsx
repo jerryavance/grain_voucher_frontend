@@ -242,11 +242,11 @@ export const ProfitAgreementColumnShape = (actions: IDropdownAction[]) => [
     }
   },
   {
-    Header: "AMSAF Share",
-    accessor: "amsaf_share",
+    Header: "BENNU Share",
+    accessor: "bennu_share",
     minWidth: 120,
     Cell: ({ row }: any) => {
-      return <Span color="info.main">{row.original.amsaf_share}%</Span>;
+      return <Span color="info.main">{row.original.bennu_share}%</Span>;
     }
   },
   {

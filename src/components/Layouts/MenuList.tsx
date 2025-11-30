@@ -80,7 +80,7 @@ export const MenuList = (
         {
           title: "Grain Hubs",
           Icon: Icons.Agriculture,
-          path: "/hubs",
+          path: "/admin/hubs",
           visible: isSuperUser,
         },
         {
@@ -143,6 +143,12 @@ export const MenuList = (
       visible: isSuperUser || CanMakeTrades,
       isHeader: true,
       subMenu: [
+        {
+          title: "dashboard",
+          Icon: Icons.TrendingUpIcon,
+          path: "/admin/trade/dashboard",
+          visible: isSuperUser || CanMakeTrades,
+        },
         {
           title: "Trade",
           Icon: Icons.TrendingUpIcon,
@@ -218,7 +224,7 @@ export const MenuList = (
         {
           title: "Users",
           Icon: Icons.GroupsIcon,
-          path: "/users",
+          path: "/admin/users",
           visible: isSuperUser,
         },
       ],

@@ -107,9 +107,9 @@ export const ProfitAgreementFormFields = (investorAccountOptions: { label: strin
     required: true,
   },
   {
-    name: 'amsaf_share',
+    name: 'bennu_share',
     initailValue: '25.00',
-    label: 'AMSAF Share (%)',
+    label: 'BENNU Share (%)',
     type: 'number',
     uiType: 'number',
     uiBreakpoints: { xs: 12, sm: 12, md: 6, lg: 6, xl: 6 },

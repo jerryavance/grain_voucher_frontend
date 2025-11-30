@@ -385,7 +385,7 @@ const VoucherDetailsDialog: FC<VoucherDetailsDialogProps> = ({
               }}
             >
               <Typography sx={{ color: 'white', fontWeight: 'bold', fontSize: '1.5rem' }}>
-                AMSAF
+                BENNU
               </Typography>
             </Box>
             <Box sx={{ textAlign: 'right' }}>
@@ -643,7 +643,7 @@ const VoucherDetailsDialog: FC<VoucherDetailsDialogProps> = ({
           {/* Footer */}
           <Box sx={{ mt: 2, pt: 1.5, borderTop: '2px solid #ddd', textAlign: 'center' }}>
             <Typography sx={{ fontSize: '0.7rem', color: '#666' }}>
-              This is an official AMSAF grain voucher. For verification or inquiries, contact AMSAF support.
+              This is an official BENNU grain voucher. For verification or inquiries, contact BENNU support.
             </Typography>
             <Typography sx={{ fontSize: '0.65rem', mt: 0.5, fontFamily: 'monospace', color: '#999' }}>
               Generated on {formatDateShort(new Date().toISOString())}
@@ -1050,7 +1050,7 @@ export default VoucherDetailsDialog;
 //               }}
 //             >
 //               <Typography variant="h4" sx={{ color: 'white', fontWeight: 'bold' }}>
-//                 AMSAF
+//                 BENNU
 //               </Typography>
 //             </Box>
 //             <Box sx={{ textAlign: 'right' }}>
@@ -1311,7 +1311,7 @@ export default VoucherDetailsDialog;
 //           {/* Footer */}
 //           <Box sx={{ mt: 4, pt: 3, borderTop: '2px solid #ddd', textAlign: 'center' }}>
 //             <Typography variant="caption" sx={{ color: '#666' }}>
-//               This is an official AMSAF grain voucher. For verification or inquiries, please contact AMSAF support.
+//               This is an official BENNU grain voucher. For verification or inquiries, please contact BENNU support.
 //             </Typography>
 //             <Typography variant="caption" sx={{ display: 'block', mt: 1, fontFamily: 'monospace', color: '#999' }}>
 //               Generated on {formatDateShort(new Date().toISOString())}

@@ -30,18 +30,18 @@ export const ProfitAgreementValidation = Yup.object().shape({
     .min(0, "Investor share must be at least 0")
     .max(100, "Investor share cannot exceed 100%")
     .required("Investor share is required"),
-  amsaf_share: Yup.number()
-    .min(0, "AMSAF share must be at least 0")
-    .max(100, "AMSAF share cannot exceed 100%")
-    .required("AMSAF share is required"),
+    bennu_share: Yup.number()
+    .min(0, "BENNU share must be at least 0")
+    .max(100, "BENNU share cannot exceed 100%")
+    .required("BENNU share is required"),
   notes: Yup.string(),
-}).test('shares-sum', 'Investor and AMSAF shares must sum to 100%', function(values) {
-  const { investor_share, amsaf_share } = values;
+}).test('shares-sum', 'Investor and BENNU shares must sum to 100%', function(values) {
+  const { investor_share, bennu_share } = values;
   if (
     typeof investor_share === "number" &&
-    typeof amsaf_share === "number"
+    typeof bennu_share === "number"
   ) {
-    return investor_share + amsaf_share === 100;
+    return investor_share + bennu_share === 100;
   }
   return true;
 });

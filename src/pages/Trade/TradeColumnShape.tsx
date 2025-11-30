@@ -1,9 +1,17 @@
-// TradeColumnShape.tsx
 import { FC } from "react";
-import { Typography, Chip, Box } from "@mui/material";
-import { formatDateToDDMMYYYY } from "../../utils/date_formatter";
+import { Typography, Chip, Box, LinearProgress, Tooltip } from "@mui/material";
+import { useNavigate } from "react-router-dom";
+import LocalShippingIcon from "@mui/icons-material/LocalShipping";
+import ReceiptIcon from "@mui/icons-material/Receipt";
 import DropdownActionBtn, { IDropdownAction } from "../../components/UI/DropdownActionBtn";
 import { Span } from "../../components/Typography";
+import { ITradeListItem } from "./Trade.interface";
+import {
+  formatCurrency,
+  formatNumber,
+  getTradeStatusColor,
+  getPaymentStatusColor,
+} from "./tradeWorkflowHelper";
 
 const styledTypography = {
   cursor: "pointer",
@@ -13,69 +21,49 @@ const styledTypography = {
   },
 };
 
-export const TradeDetailsLink: FC<{ 
-  tradeNumber: string;
-  onClick: () => void;
-}> = ({ tradeNumber, onClick }) => {
+export const TradeDetailsLink: FC<{ id: string; tradeNumber: string }> = ({
+  id,
+  tradeNumber,
+}) => {
+  const navigate = useNavigate();
   return (
     <Typography
       sx={styledTypography}
       color="primary"
       variant="h6"
-      onClick={onClick}
+      onClick={() => navigate(`/admin/trade/${id}`)}
     >
       {tradeNumber}
     </Typography>
   );
 };
 
-const getStatusColor = (status: string) => {
-  const statusColors: Record<string, "default" | "primary" | "secondary" | "error" | "info" | "success" | "warning"> = {
-    draft: "default",
-    pending_approval: "warning",
-    approved: "info",
-    pending_allocation: "warning",
-    allocated: "primary",
-    in_transit: "info",
-    delivered: "success",
-    completed: "success",
-    cancelled: "error",
-    rejected: "error",
-  };
-  return statusColors[status] || "default";
-};
-
-const formatCurrency = (amount: number) => {
-  return new Intl.NumberFormat('en-UG', {
-    style: 'currency',
-    currency: 'UGX',
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 0,
-  }).format(amount);
-};
-
-const TradeColumnShape = (actions: IDropdownAction[], onTradeClick: (trade: any) => void) => [
+const TradeColumnShape = (actions: IDropdownAction[]) => [
   {
-    Header: "Trade Number",
+    Header: "Trade #",
     accessor: "trade_number",
     minWidth: 150,
     Cell: ({ row }: any) => {
-      const { trade_number } = row.original;
-      return (
-        <TradeDetailsLink 
-          tradeNumber={trade_number}
-          onClick={() => onTradeClick(row.original)}
-        />
-      );
+      const { id, trade_number } = row.original;
+      return <TradeDetailsLink id={id} tradeNumber={trade_number} />;
     },
   },
   {
     Header: "Buyer",
     accessor: "buyer_name",
+    minWidth: 180,
+    Cell: ({ row }: any) => {
+      const { buyer_name } = row.original;
+      return <Span sx={{ fontSize: 14, fontWeight: 500 }}>{buyer_name}</Span>;
+    },
+  },
+  {
+    Header: "Supplier",
+    accessor: "supplier_name",
     minWidth: 150,
     Cell: ({ row }: any) => {
-      const buyer_name = row.original.buyer_name || row.original.buyer?.name;
-      return <Span sx={{ fontSize: 13 }}>{buyer_name || "N/A"}</Span>;
+      const { supplier_name } = row.original;
+      return <Span sx={{ fontSize: 13 }}>{supplier_name}</Span>;
     },
   },
   {
@@ -83,97 +71,200 @@ const TradeColumnShape = (actions: IDropdownAction[], onTradeClick: (trade: any)
     accessor: "grain_type_name",
     minWidth: 120,
     Cell: ({ row }: any) => {
-      const grain_type_name = row.original.grain_type_name || row.original.grain_type?.name;
-      return <Span sx={{ fontSize: 13 }}>{grain_type_name || "N/A"}</Span>;
-    },
-  },
-  {
-    Header: "Quality",
-    accessor: "quality_grade_name",
-    minWidth: 100,
-    Cell: ({ row }: any) => {
-      const quality_grade_name = row.original.quality_grade_name || row.original.quality_grade?.name;
-      return <Span sx={{ fontSize: 13 }}>{quality_grade_name || "N/A"}</Span>;
-    },
-  },
-  {
-    Header: "Quantity",
-    accessor: "quantity_mt",
-    minWidth: 100,
-    Cell: ({ row }: any) => {
-      const { quantity_mt, quantity_kg } = row.original;
+      const { grain_type_name, quality_grade_name } = row.original;
       return (
         <Box>
-          <Span sx={{ fontSize: 13, fontWeight: 600 }}>
-            {Number(quantity_kg || 0).toFixed(2)} Kg
-          </Span>
-          <Span sx={{ fontSize: 11, display: "block", color: "text.primary" }}>
-            ({Number(quantity_mt || 0).toFixed(0)} MT)
+          <Span sx={{ fontSize: 13, fontWeight: 500 }}>{grain_type_name}</Span>
+          <br />
+          <Span sx={{ fontSize: 11, color: "text.secondary" }}>
+            {quality_grade_name}
           </Span>
         </Box>
       );
     },
   },
   {
-    Header: "Buying Price",
-    accessor: "buying_price",
-    minWidth: 100,
+    Header: "Quantity",
+    accessor: "quantity_kg",
+    minWidth: 120,
     Cell: ({ row }: any) => {
-      const { buying_price } = row.original;
+      const { quantity_kg, net_tonnage } = row.original;
       return (
-        <Span sx={{ fontSize: 13 }}>
-          {formatCurrency(buying_price || 0)}
-        </Span>
+        <Box>
+          <Span sx={{ fontSize: 13, fontWeight: 500 }}>
+            {formatNumber(quantity_kg, 0)} kg
+          </Span>
+          <br />
+          <Span sx={{ fontSize: 11, color: "text.secondary" }}>
+            {formatNumber(net_tonnage, 2)} MT
+          </Span>
+        </Box>
       );
     },
   },
   {
-    Header: "Selling Price",
-    accessor: "selling_price",
-    minWidth: 100,
+    Header: "Price (Buy/Sell)",
+    accessor: "buying_price",
+    minWidth: 150,
     Cell: ({ row }: any) => {
-      const { selling_price } = row.original;
+      const { buying_price, selling_price } = row.original;
       return (
-        <Span sx={{ fontSize: 13 }}>
-          {formatCurrency(selling_price || 0)}
-        </Span>
+        <Box>
+          <Span sx={{ fontSize: 12, color: "error.main" }}>
+            Buy: {formatCurrency(buying_price)}/kg
+          </Span>
+          <br />
+          <Span sx={{ fontSize: 12, color: "success.main" }}>
+            Sell: {formatCurrency(selling_price)}/kg
+          </Span>
+        </Box>
+      );
+    },
+  },
+  // ✅ NEW: Delivery Progress Column
+  {
+    Header: "Delivery Progress",
+    accessor: "delivery_completion_percentage",
+    minWidth: 180,
+    Cell: ({ row }: any) => {
+      const { delivery_completion_percentage, grn_count, status } = row.original;
+
+      // Only show for trades in delivery phase
+      if (!["ready_for_delivery", "in_transit", "delivered", "completed"].includes(status)) {
+        return <Span sx={{ fontSize: 12, color: "text.secondary" }}>-</Span>;
+      }
+
+      const percentage = delivery_completion_percentage || 0;
+      const batches = grn_count || 0;
+
+      return (
+        <Box sx={{ width: "100%" }}>
+          <Box display="flex" alignItems="center" gap={0.5} mb={0.5}>
+            <LocalShippingIcon sx={{ fontSize: 14, color: "primary.main" }} />
+            <Span sx={{ fontSize: 11, fontWeight: 600, color: "primary.main" }}>
+              {percentage.toFixed(0)}%
+            </Span>
+            {batches > 0 && (
+              <Span sx={{ fontSize: 10, color: "text.secondary" }}>
+                ({batches} {batches === 1 ? "batch" : "batches"})
+              </Span>
+            )}
+          </Box>
+          <Tooltip title={`${percentage.toFixed(1)}% delivered`}>
+            <LinearProgress
+              variant="determinate"
+              value={percentage}
+              sx={{
+                height: 6,
+                borderRadius: 1,
+                backgroundColor: "grey.200",
+                "& .MuiLinearProgress-bar": {
+                  borderRadius: 1,
+                  backgroundColor:
+                    percentage >= 100 ? "success.main" : "primary.main",
+                },
+              }}
+            />
+          </Tooltip>
+        </Box>
       );
     },
   },
   {
     Header: "Revenue",
     accessor: "payable_by_buyer",
-    minWidth: 120,
+    minWidth: 130,
     Cell: ({ row }: any) => {
       const { payable_by_buyer } = row.original;
       return (
-        <Span sx={{ fontSize: 13, fontWeight: 600 }}>
-          {formatCurrency(payable_by_buyer || 0)}
+        <Span sx={{ fontSize: 13, fontWeight: 600, color: "success.main" }}>
+          {formatCurrency(payable_by_buyer)}
         </Span>
       );
     },
   },
   {
-    Header: "Margin",
+    Header: "Margin / ROI",
     accessor: "margin",
-    minWidth: 120,
+    minWidth: 140,
     Cell: ({ row }: any) => {
       const { margin, roi_percentage } = row.original;
-      const isPositive = margin >= 0;
       return (
         <Box>
-          <Span 
-            sx={{ 
-              fontSize: 13, 
-              fontWeight: 600,
-              color: isPositive ? "success.main" : "error.main" 
-            }}
-          >
-            {formatCurrency(margin || 0)}
+          <Span sx={{ fontSize: 13, fontWeight: 500, color: "primary.main" }}>
+            {formatCurrency(margin)}
           </Span>
-          <Span sx={{ fontSize: 11, display: "block", color: "text.primary" }}>
-            ROI: {Number(roi_percentage || 0).toFixed(2)}%
-          </Span>
+          <br />
+          <Chip
+            label={`ROI: ${formatNumber(roi_percentage, 1)}%`}
+            size="small"
+            color={
+              roi_percentage > 10
+                ? "success"
+                : roi_percentage > 5
+                ? "warning"
+                : "default"
+            }
+            sx={{ height: 20, fontSize: 10 }}
+          />
+        </Box>
+      );
+    },
+  },
+  {
+    Header: "Status",
+    accessor: "status",
+    minWidth: 140,
+    Cell: ({ row }: any) => {
+      const { status_display, status } = row.original;
+      return (
+        <Chip
+          label={status_display}
+          size="small"
+          color={getTradeStatusColor(status)}
+          sx={{ fontWeight: 500 }}
+        />
+      );
+    },
+  },
+  // ✅ ENHANCED: Payment Status with Invoice Count
+  {
+    Header: "Payment",
+    accessor: "payment_status_display",
+    minWidth: 120,
+    Cell: ({ row }: any) => {
+      const { payment_status_display, amount_due, grn_count } = row.original;
+
+      return (
+        <Box>
+          <Box display="flex" alignItems="center" gap={0.5} mb={0.5}>
+            <Chip
+              label={payment_status_display || "Pending"}
+              size="small"
+              color={getPaymentStatusColor(payment_status_display?.toLowerCase())}
+              sx={{ fontWeight: 500 }}
+            />
+          </Box>
+          {grn_count > 0 && (
+            <Box display="flex" alignItems="center" gap={0.5}>
+              <ReceiptIcon sx={{ fontSize: 12, color: "text.secondary" }} />
+              <Span sx={{ fontSize: 10, color: "text.secondary" }}>
+                {grn_count} {grn_count === 1 ? "invoice" : "invoices"}
+              </Span>
+            </Box>
+          )}
+          {amount_due > 0 && (
+            <Span
+              sx={{
+                fontSize: 10,
+                color: "error.main",
+                display: "block",
+                mt: 0.5,
+              }}
+            >
+              Due: {formatCurrency(amount_due)}
+            </Span>
+          )}
         </Box>
       );
     },
@@ -183,71 +274,17 @@ const TradeColumnShape = (actions: IDropdownAction[], onTradeClick: (trade: any)
     accessor: "hub_name",
     minWidth: 120,
     Cell: ({ row }: any) => {
-      const hub_name = row.original.hub_name || row.original.hub?.name;
-      return <Span sx={{ fontSize: 13 }}>{hub_name || "N/A"}</Span>;
+      const { hub_name } = row.original;
+      return <Span sx={{ fontSize: 12 }}>{hub_name}</Span>;
     },
   },
   {
-    Header: "Status",
-    accessor: "status_display",
+    Header: "Created By",
+    accessor: "initiated_by_name",
     minWidth: 130,
     Cell: ({ row }: any) => {
-      const { status, status_display, allocation_complete } = row.original;
-      return (
-        <Box>
-          <Chip
-            label={status_display || status}
-            color={getStatusColor(status)}
-            size="small"
-            sx={{ fontSize: 11 }}
-          />
-          {status === 'allocated' && allocation_complete && (
-            <Chip
-              label="Allocated"
-              color="success"
-              size="small"
-              sx={{ fontSize: 10, ml: 0.5 }}
-            />
-          )}
-        </Box>
-      );
-    },
-  },
-  {
-    Header: "Initiated By",
-    accessor: "initiated_by_name",
-    minWidth: 120,
-    Cell: ({ row }: any) => {
-      const { initiated_by_name, initiated_by } = row.original;
-      const name = initiated_by_name || 
-        (initiated_by ? `${initiated_by.first_name} ${initiated_by.last_name}` : "N/A");
-      return <Span sx={{ fontSize: 12 }}>{name}</Span>;
-    },
-  },
-  {
-    Header: "Created Date",
-    accessor: "created_at",
-    minWidth: 100,
-    Cell: ({ row }: any) => {
-      const { created_at } = row.original;
-      return (
-        <Span sx={{ fontSize: 12 }}>
-          {created_at ? formatDateToDDMMYYYY(created_at) : "N/A"}
-        </Span>
-      );
-    },
-  },
-  {
-    Header: "Delivery Date",
-    accessor: "delivery_date",
-    minWidth: 100,
-    Cell: ({ row }: any) => {
-      const { delivery_date } = row.original;
-      return (
-        <Span sx={{ fontSize: 12 }}>
-          {delivery_date ? formatDateToDDMMYYYY(delivery_date) : "N/A"}
-        </Span>
-      );
+      const { initiated_by_name } = row.original;
+      return <Span sx={{ fontSize: 12 }}>{initiated_by_name}</Span>;
     },
   },
   {
@@ -257,260 +294,11 @@ const TradeColumnShape = (actions: IDropdownAction[], onTradeClick: (trade: any)
     maxWidth: 100,
     Cell: ({ row }: any) => {
       const data = row.original;
-      return <DropdownActionBtn key={row.id} actions={actions} metaData={data} />;
+      return (
+        <DropdownActionBtn key={row.id} actions={actions} metaData={data} />
+      );
     },
   },
 ];
 
 export default TradeColumnShape;
-
-
-// // TradeColumnShape.tsx
-// import { FC } from "react";
-// import { Typography, Chip, Box } from "@mui/material";
-// import { useNavigate } from "react-router-dom";
-// import { formatDateToDDMMYYYY } from "../../utils/date_formatter";
-// import DropdownActionBtn, { IDropdownAction } from "../../components/UI/DropdownActionBtn";
-// import { Span } from "../../components/Typography";
-
-// const styledTypography = {
-//   cursor: "pointer",
-//   "&:hover": {
-//     textDecoration: "underline",
-//     fontWeight: "bold",
-//   },
-// };
-
-// export const TradeDetailsLink: FC<{ id: string; tradeNumber: string }> = ({
-//   id,
-//   tradeNumber,
-// }) => {
-//   const navigate = useNavigate();
-//   return (
-//     <Typography
-//       sx={styledTypography}
-//       color="primary"
-//       variant="h6"
-//       onClick={() => navigate(`/trades/details/${id}`)}
-//     >
-//       {tradeNumber}
-//     </Typography>
-//   );
-// };
-
-// const getStatusColor = (status: string) => {
-//   const statusColors: Record<string, "default" | "primary" | "secondary" | "error" | "info" | "success" | "warning"> = {
-//     draft: "default",
-//     pending_approval: "warning",
-//     approved: "info",
-//     pending_allocation: "warning",
-//     allocated: "primary",
-//     in_transit: "info",
-//     delivered: "success",
-//     completed: "success",
-//     cancelled: "error",
-//     rejected: "error",
-//   };
-//   return statusColors[status] || "default";
-// };
-
-// const formatCurrency = (amount: number) => {
-//   return new Intl.NumberFormat('en-UG', {
-//     style: 'currency',
-//     currency: 'UGX',
-//     minimumFractionDigits: 0,
-//     maximumFractionDigits: 0,
-//   }).format(amount);
-// };
-
-// const TradeColumnShape = (actions: IDropdownAction[]) => [
-//   {
-//     Header: "Trade Number",
-//     accessor: "trade_number",
-//     minWidth: 150,
-//     Cell: ({ row }: any) => {
-//       const { id, trade_number } = row.original;
-//       return <TradeDetailsLink id={id} tradeNumber={trade_number} />;
-//     },
-//   },
-//   {
-//     Header: "Buyer",
-//     accessor: "buyer_name",
-//     minWidth: 150,
-//     Cell: ({ row }: any) => {
-//       const buyer_name = row.original.buyer_name || row.original.buyer?.name;
-//       return <Span sx={{ fontSize: 13 }}>{buyer_name || "N/A"}</Span>;
-//     },
-//   },
-//   {
-//     Header: "Grain Type",
-//     accessor: "grain_type_name",
-//     minWidth: 120,
-//     Cell: ({ row }: any) => {
-//       const grain_type_name = row.original.grain_type_name || row.original.grain_type?.name;
-//       return <Span sx={{ fontSize: 13 }}>{grain_type_name || "N/A"}</Span>;
-//     },
-//   },
-//   {
-//     Header: "Quality",
-//     accessor: "quality_grade_name",
-//     minWidth: 100,
-//     Cell: ({ row }: any) => {
-//       const quality_grade_name = row.original.quality_grade_name || row.original.quality_grade?.name;
-//       return <Span sx={{ fontSize: 13 }}>{quality_grade_name || "N/A"}</Span>;
-//     },
-//   },
-//   {
-//     Header: "Quantity",
-//     accessor: "quantity_mt",
-//     minWidth: 100,
-//     Cell: ({ row }: any) => {
-//       const { quantity_mt, quantity_kg } = row.original;
-//       return (
-//         <Box>
-//           <Span sx={{ fontSize: 13, fontWeight: 600 }}>
-//             {Number(quantity_mt || 0).toFixed(2)} MT
-//           </Span>
-//           <Span sx={{ fontSize: 11, display: "block", color: "text.secondary" }}>
-//             ({Number(quantity_kg || 0).toFixed(0)} kg)
-//           </Span>
-//         </Box>
-//       );
-//     },
-//   },
-//   {
-//     Header: "Price/kg",
-//     accessor: "buyer_price_per_kg",
-//     minWidth: 100,
-//     Cell: ({ row }: any) => {
-//       const { buyer_price_per_kg } = row.original;
-//       return (
-//         <Span sx={{ fontSize: 13 }}>
-//           {formatCurrency(buyer_price_per_kg || 0)}
-//         </Span>
-//       );
-//     },
-//   },
-//   {
-//     Header: "Revenue",
-//     accessor: "total_revenue",
-//     minWidth: 120,
-//     Cell: ({ row }: any) => {
-//       const { total_revenue } = row.original;
-//       return (
-//         <Span sx={{ fontSize: 13, fontWeight: 600 }}>
-//           {formatCurrency(total_revenue || 0)}
-//         </Span>
-//       );
-//     },
-//   },
-//   {
-//     Header: "Profit",
-//     accessor: "gross_profit",
-//     minWidth: 120,
-//     Cell: ({ row }: any) => {
-//       const { gross_profit, roi_percentage } = row.original;
-//       const isPositive = gross_profit >= 0;
-//       return (
-//         <Box>
-//           <Span 
-//             sx={{ 
-//               fontSize: 13, 
-//               fontWeight: 600,
-//               color: isPositive ? "success.main" : "error.main" 
-//             }}
-//           >
-//             {formatCurrency(gross_profit || 0)}
-//           </Span>
-//           <Span sx={{ fontSize: 11, display: "block", color: "text.secondary" }}>
-//             ROI: {Number(roi_percentage || 0).toFixed(2)}%
-//           </Span>
-//         </Box>
-//       );
-//     },
-//   },
-//   {
-//     Header: "Hub",
-//     accessor: "hub_name",
-//     minWidth: 120,
-//     Cell: ({ row }: any) => {
-//       const hub_name = row.original.hub_name || row.original.hub?.name;
-//       return <Span sx={{ fontSize: 13 }}>{hub_name || "N/A"}</Span>;
-//     },
-//   },
-//   {
-//     Header: "Status",
-//     accessor: "status_display",
-//     minWidth: 130,
-//     Cell: ({ row }: any) => {
-//       const { status, status_display, allocation_complete } = row.original;
-//       return (
-//         <Box>
-//           <Chip
-//             label={status_display || status}
-//             color={getStatusColor(status)}
-//             size="small"
-//             sx={{ fontSize: 11 }}
-//           />
-//           {status === 'allocated' && allocation_complete && (
-//             <Chip
-//               label="Allocated"
-//               color="success"
-//               size="small"
-//               sx={{ fontSize: 10, ml: 0.5 }}
-//             />
-//           )}
-//         </Box>
-//       );
-//     },
-//   },
-//   {
-//     Header: "Initiated By",
-//     accessor: "initiated_by_name",
-//     minWidth: 120,
-//     Cell: ({ row }: any) => {
-//       const { initiated_by_name, initiated_by } = row.original;
-//       const name = initiated_by_name || 
-//         (initiated_by ? `${initiated_by.first_name} ${initiated_by.last_name}` : "N/A");
-//       return <Span sx={{ fontSize: 12 }}>{name}</Span>;
-//     },
-//   },
-//   {
-//     Header: "Created Date",
-//     accessor: "created_at",
-//     minWidth: 100,
-//     Cell: ({ row }: any) => {
-//       const { created_at } = row.original;
-//       return (
-//         <Span sx={{ fontSize: 12 }}>
-//           {created_at ? formatDateToDDMMYYYY(created_at) : "N/A"}
-//         </Span>
-//       );
-//     },
-//   },
-//   {
-//     Header: "Delivery Date",
-//     accessor: "expected_delivery_date",
-//     minWidth: 100,
-//     Cell: ({ row }: any) => {
-//       const { expected_delivery_date } = row.original;
-//       return (
-//         <Span sx={{ fontSize: 12 }}>
-//           {expected_delivery_date ? formatDateToDDMMYYYY(expected_delivery_date) : "N/A"}
-//         </Span>
-//       );
-//     },
-//   },
-//   {
-//     Header: "Action",
-//     accessor: "action",
-//     minWidth: 100,
-//     maxWidth: 100,
-//     Cell: ({ row }: any) => {
-//       const data = row.original;
-//       return <DropdownActionBtn key={row.id} actions={actions} metaData={data} />;
-//     },
-//   },
-// ];
-
-// export default TradeColumnShape;
