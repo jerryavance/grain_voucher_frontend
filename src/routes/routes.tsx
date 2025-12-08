@@ -55,6 +55,9 @@ const routes = [
       { path: "accounting/payments", element: <LazyLoader.Payments /> },
       { path: "accounting/payments/details/:id", element: <LazyLoader.PaymentDetails /> },
 
+      { 
+        path: "reports", element: <RouteGuard requiredPermissions={[]}><LazyLoader.Reports /></RouteGuard> },
+
       { path: "accounting/journal-entries", element: <LazyLoader.JournalEntries /> },
       { path: "accounting/journal-entries/details/:id", element: <LazyLoader.JournalEntriesDetails /> },
 

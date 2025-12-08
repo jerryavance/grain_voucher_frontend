@@ -64,6 +64,8 @@ import FolderSharedIcon from '@mui/icons-material/FolderShared';
 import LibraryBooksIcon from '@mui/icons-material/LibraryBooks';
 import AutoStoriesIcon from '@mui/icons-material/AutoStories';
 
+import AssessmentIcon from "@mui/icons-material/Assessment";
+
 // eslint-disable-next-line import/no-anonymous-default-export
 export default {
 
@@ -125,6 +127,8 @@ export default {
   FolderSharedIcon,
   LibraryBooksIcon,
   AutoStoriesIcon,
+
+  AssessmentIcon,
 
 };
 

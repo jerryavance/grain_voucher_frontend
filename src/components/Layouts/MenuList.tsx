@@ -26,6 +26,20 @@ export const MenuList = (
       visible: true,
     },
     {
+      title: "Reports",
+      Icon: Icons.AssessmentIcon,
+      visible: isSuperUser || isHubAdmin,
+      isHeader: true,
+      subMenu: [
+        {
+          title: "Reports & Analytics",
+          Icon: Icons.AssessmentIcon,
+          path: "/admin/reports",
+          visible: isSuperUser || isHubAdmin,
+        },
+      ],
+    },
+    {
       title: "Vouchers",
       Icon: Icons.ReceiptIcon,
       visible: true,
@@ -34,13 +48,13 @@ export const MenuList = (
         {
           title: "My Vouchers",
           Icon: Icons.ReceiptIcon,
-          path: "/dashboard/vouchers",
+          path: "/vouchers",
           visible: true,
         },
         {
           title: "Redemptions",
           Icon: Icons.ConfirmationNumberIcon,
-          path: "/dashboard/voucher-management",
+          path: "/voucher-management",
           visible: isSuperUser,
         },
       ],
@@ -54,7 +68,7 @@ export const MenuList = (
         {
           title: "Investments",
           Icon: Icons.DashboardCustomizeIcon,
-          path: "/dashboard/invest",
+          path: "/invest",
           visible: true,
         },
         {
