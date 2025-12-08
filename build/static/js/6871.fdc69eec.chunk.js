@@ -1,2 +1,0 @@
-"use strict";(self.webpackChunkinvest=self.webpackChunkinvest||[]).push([[6871],{16871:(s,e,t)=>{t.d(e,{A:()=>c});t(65043);var n=t(66734),a=t(70579);const c=(0,n.A)((0,a.jsx)("path",{d:"M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"}),"Close")}}]);
-//# sourceMappingURL=6871.fdc69eec.chunk.js.map
