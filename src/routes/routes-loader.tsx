@@ -79,6 +79,8 @@ const RouteLazyLoader = {
 
   InvestorsAdmin: Loadable(lazy(() => import("../pages/Investors/InvestorsAdmin"))),
 
+  Reports: Loadable(lazy(() => import("../pages/Reports/Reports"))),
+
   // Transactions: Loadable(lazy(() => import("../pages/Transactions/TransactionsList"))),
 
   Users: Loadable(lazy(() => import("../pages/Users/Users"))),

@@ -1,2 +1,0 @@
-"use strict";(self.webpackChunkgrain_voucher_system=self.webpackChunkgrain_voucher_system||[]).push([[6871],{16871:(s,e,a)=>{a.d(e,{A:()=>r});a(65043);var c=a(66734),h=a(70579);const r=(0,c.A)((0,h.jsx)("path",{d:"M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"}),"Close")}}]);
-//# sourceMappingURL=6871.f1edcc44.chunk.js.map
