@@ -127,6 +127,7 @@ export const USER_ROLE_OPTIONS: TOption[] = [
   { value: "bdm", label: "Business Development Manager" },
   { value: "client", label: "Client" },
   { value: "finance", label: "Finance" },
+  { value: "super_admin", label: "Super Admin" }, // remove this
 ];
 
 export const ROLE_HUB_ADMIN = 'hub_admin';
