@@ -93,7 +93,7 @@ const Suppliers = () => {
 
   const handleVerifySupplier = async (supplier: ISupplierProfile) => {
     if (supplier.is_verified) {
-      toast("Supplier is already verified", { icon: "ℹ️" });
+      toast.success("Supplier is already verified");
       return;
     }
 

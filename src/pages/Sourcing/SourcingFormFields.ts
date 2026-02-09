@@ -518,6 +518,6 @@ export const SupplierProfileFormFields = (
     options: grainTypes,
     uiBreakpoints: { xs: 12, sm: 12, md: 12, lg: 12, xl: 12 },
     required: true,
-    // removed invalid property 'multiple'
+    // Removed invalid 'multiple' prop
   }
 ];
