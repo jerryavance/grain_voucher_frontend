@@ -90,6 +90,45 @@ const routes = [
     ],
   },
 
+  // In your admin routes section
+  {
+    path: "/admin/sourcing",
+    element: <AuthGuard><DashboardLayout /></AuthGuard>,
+    children: [
+      { path: "dashboard", element: <LazyLoader.SourcingDashboard /> },
+      
+      // Suppliers
+      { path: "suppliers", element: <LazyLoader.Suppliers /> },
+      { path: "suppliers/:id", element: <LazyLoader.SupplierDetails /> },
+      
+      // Source Orders
+      { path: "orders", element: <LazyLoader.SourceOrders /> },
+      { path: "orders/:id", element: <LazyLoader.SourceOrderDetails /> },
+      
+      // Invoices
+      { path: "invoices", element: <LazyLoader.SupplierInvoices /> },
+      { path: "invoices/:id", element: <LazyLoader.SupplierInvoiceDetails /> },
+      
+      // Deliveries
+      { path: "deliveries", element: <LazyLoader.DeliveryRecords /> },
+      
+      // Weighbridge
+      { path: "weighbridge", element: <LazyLoader.WeighbridgeRecords /> },
+      
+      // Payments
+      { path: "payments", element: <LazyLoader.SupplierPayments /> },
+    ],
+  },
+
+  // Supplier dashboard (for farmer role)
+  {
+    path: "/supplier",
+    element: <AuthGuard><DashboardLayout /></AuthGuard>,
+    children: [
+      { path: "dashboard", element: <LazyLoader.SupplierDashboard /> },
+    ],
+  },
+
   // =============== FALLBACK ===============
   { path: "/forbidden", element: <LazyLoader.Error403 /> },
   { path: "*", element: <LazyLoader.Error404 /> },

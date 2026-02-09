@@ -66,6 +66,10 @@ import AutoStoriesIcon from '@mui/icons-material/AutoStories';
 
 import AssessmentIcon from "@mui/icons-material/Assessment";
 
+import LocalShippingIcon from '@mui/icons-material/LocalShipping';
+import PeopleIcon from '@mui/icons-material/People';
+import ShoppingCartIcon from '@mui/icons-material/ShoppingCart';
+
 // eslint-disable-next-line import/no-anonymous-default-export
 export default {
 
@@ -129,6 +133,9 @@ export default {
   AutoStoriesIcon,
 
   AssessmentIcon,
+  LocalShippingIcon,
+  PeopleIcon,
+  ShoppingCartIcon,
 
 };
 

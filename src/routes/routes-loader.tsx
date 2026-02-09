@@ -81,6 +81,19 @@ const RouteLazyLoader = {
 
   Reports: Loadable(lazy(() => import("../pages/Reports/Reports"))),
 
+  // Sourcing Module
+  Suppliers: Loadable(lazy(() => import("../pages/Sourcing/Suppliers"))),
+  SourcingDashboard: Loadable(lazy(() => import("../pages/Sourcing/SourcingDashboard"))),
+  SupplierDetails: Loadable(lazy(() => import("../pages/Sourcing/SupplierDetails"))),
+  SourceOrders: Loadable(lazy(() => import("../pages/Sourcing/SourceOrders"))),
+  SourceOrderDetails: Loadable(lazy(() => import("../pages/Sourcing/SourceOrderDetails"))),
+  SupplierInvoices: Loadable(lazy(() => import("../pages/Sourcing/SupplierInvoices"))),
+  SupplierInvoiceDetails: Loadable(lazy(() => import("../pages/Sourcing/SupplierInvoiceDetails"))),
+  DeliveryRecords: Loadable(lazy(() => import("../pages/Sourcing/DeliveryRecords"))),
+  WeighbridgeRecords: Loadable(lazy(() => import("../pages/Sourcing/WeighbridgeRecords"))),
+  SupplierPayments: Loadable(lazy(() => import("../pages/Sourcing/SupplierPayments"))),
+  SupplierDashboard: Loadable(lazy(() => import("../pages/Sourcing/SupplierDashboard"))),
+
   // Transactions: Loadable(lazy(() => import("../pages/Transactions/TransactionsList"))),
 
   Users: Loadable(lazy(() => import("../pages/Users/Users"))),

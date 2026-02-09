@@ -60,6 +60,56 @@ export const MenuList = (
       ],
     },
     {
+      title: "Sourcing",
+      Icon: Icons.LocalShippingIcon, // Fixed icon name
+      visible: isSuperUser || isHubAdmin, // Removed isBDM as it was undefined
+      isHeader: true,
+      subMenu: [
+        {
+          title: "Dashboard",
+          Icon: Icons.HomeIcon, // Changed to a valid icon; DashboardIcon does not exist
+          path: "/admin/sourcing/dashboard",
+          visible: isSuperUser || isHubAdmin,
+        },
+        {
+          title: "Suppliers",
+          Icon: Icons.PeopleIcon, // Changed from PeopleIcon to GroupIcon to fix error
+          path: "/admin/sourcing/suppliers",
+          visible: true,
+        },
+        {
+          title: "Source Orders",
+          Icon: Icons.ShoppingCartIcon,
+          path: "/admin/sourcing/orders",
+          visible: true,
+        },
+        {
+          title: "Deliveries",
+          Icon: Icons.LocalShippingIcon, // Fixed icon reference
+          path: "/admin/sourcing/deliveries",
+          visible: true,
+        },
+        {
+          title: "Weighbridge",
+          Icon: Icons.BalanceIcon, // Changed from ScaleIcon to BalanceIcon to fix error
+          path: "/admin/sourcing/weighbridge",
+          visible: true,
+        },
+        {
+          title: "Invoices",
+          Icon: Icons.ReceiptIcon,
+          path: "/admin/sourcing/invoices",
+          visible: true,
+        },
+        {
+          title: "Payments",
+          Icon: Icons.PaymentsIcon,
+          path: "/admin/sourcing/payments",
+          visible: isSuperUser, // Removed isFinance as it is undefined
+        },
+      ],
+    },
+    {
       title: "Invest",
       Icon: Icons.DashboardCustomizeIcon,
       visible: true,
