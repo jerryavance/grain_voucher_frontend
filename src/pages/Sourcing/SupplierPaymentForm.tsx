@@ -1,43 +1,23 @@
 // ============================================================
-// ALL REMAINING SOURCING FORMS
-// DeliveryRecordForm, WeighbridgeRecordForm, SupplierPaymentForm, PaymentPreferenceForm
+// SUPPLIER PAYMENT FORM - Complete Implementation
+// Handles payment recording for supplier invoices with validation
 // ============================================================
 
 import { FC, useEffect, useRef, useState } from "react";
-import { Box, Button, Alert } from "@mui/material";
+import { Button, Alert } from "@mui/material";
 import { useFormik } from "formik";
 import { toast } from "react-hot-toast";
 import ModalDialog from "../../components/UI/Modal/ModalDialog";
 import ProgressIndicator from "../../components/UI/ProgressIndicator";
 import { Span } from "../../components/Typography";
 import FormFactory from "../../components/UI/FormFactory";
-import { getInitialValues, patchInitialValues } from "../../utils/form_factory";
+import { getInitialValues } from "../../utils/form_factory";
 import uniqueId from "../../utils/generateId";
-import {
-  DeliveryRecordFormFields,
-  WeighbridgeRecordFormFields,
-  SupplierPaymentFormFields,
-  PaymentPreferenceFormFields,
-} from "./SourcingFormFields";
-import {
-  DeliveryRecordFormValidations,
-  WeighbridgeRecordFormValidations,
-  SupplierPaymentFormValidations,
-  PaymentPreferenceFormValidations,
-} from "./SourcingFormValidations";
+import { SupplierPaymentFormFields } from "./SourcingFormFields";
+import { SupplierPaymentFormValidations } from "./SourcingFormValidations";
 import { SourcingService } from "./Sourcing.service";
-import {
-  IDeliveryFormProps,
-  IWeighbridgeFormProps,
-  IPaymentFormProps,
-  IPaymentPreferenceFormProps,
-} from "./Sourcing.interface";
+import { IPaymentFormProps } from "./Sourcing.interface";
 import { TOption } from "../../@types/common";
-
-
-// ============================================================
-// SUPPLIER PAYMENT FORM
-// ============================================================
 
 export const SupplierPaymentForm: FC<IPaymentFormProps> = ({
   handleClose,
@@ -46,29 +26,45 @@ export const SupplierPaymentForm: FC<IPaymentFormProps> = ({
 }) => {
   const formRef = useRef<HTMLFormElement | null>(null);
   const [loading, setLoading] = useState<boolean>(false);
+  
+  // Options state
   const [invoices, setInvoices] = useState<TOption[]>([]);
   const [maxAmount, setMaxAmount] = useState<number>(0);
 
+  // ============================================================
+  // FETCH INVOICES ON MOUNT
+  // ============================================================
+  
   useEffect(() => {
-    fetchInvoices();
+    loadInvoices();
   }, []);
 
-  const fetchInvoices = async () => {
+  // ============================================================
+  // LOOKUP LOADERS - Following Trade Service Pattern
+  // ============================================================
+  
+  async function loadInvoices() {
     try {
-      const response = await SourcingService.getSupplierInvoices({ 
-        status__in: 'pending,partial' 
+      const data = await SourcingService.getSupplierInvoices({ 
+        status__in: 'pending,partial',
+        page_size: 50
       });
-      const options = response.results.map((invoice: any) => ({
-        value: invoice.id,
-        label: `${invoice.invoice_number} - Balance: ${invoice.balance_due.toLocaleString()} UGX`,
-        balance: invoice.balance_due,
-      }));
-      setInvoices(options);
+      setInvoices(
+        data.results.map((invoice: any) => ({
+          label: `${invoice.invoice_number} - Balance: ${invoice.balance_due.toLocaleString()} UGX`,
+          value: invoice.id,
+          balance: invoice.balance_due,
+        }))
+      );
     } catch (error) {
-      console.error("Error fetching invoices:", error);
+      console.error("Error loading invoices:", error);
     }
-  };
+  }
 
+  // ============================================================
+  // FORM SETUP
+  // ============================================================
+  
   const formFields = SupplierPaymentFormFields(invoices);
 
   const paymentForm = useFormik({
@@ -76,9 +72,13 @@ export const SupplierPaymentForm: FC<IPaymentFormProps> = ({
       ? { ...getInitialValues(formFields), supplier_invoice: invoiceId }
       : getInitialValues(formFields),
     validationSchema: SupplierPaymentFormValidations,
+    validateOnChange: false,
+    validateOnMount: false,
+    validateOnBlur: false,
+    enableReinitialize: true,
     validate: (values) => {
       const errors: Record<string, any> = {};
-      if (values.amount && values.amount > maxAmount) {
+      if (values.amount && maxAmount > 0 && values.amount > maxAmount) {
         errors.amount = `Amount cannot exceed maximum allowed: ${maxAmount.toLocaleString()} UGX`;
       }
       return errors;
@@ -102,7 +102,10 @@ export const SupplierPaymentForm: FC<IPaymentFormProps> = ({
     },
   });
 
-  // Update max amount when invoice changes
+  // ============================================================
+  // UPDATE MAX AMOUNT WHEN INVOICE CHANGES
+  // ============================================================
+  
   useEffect(() => {
     if (paymentForm.values.supplier_invoice) {
       const invoice = invoices.find(inv => inv.value === paymentForm.values.supplier_invoice);
@@ -112,19 +115,44 @@ export const SupplierPaymentForm: FC<IPaymentFormProps> = ({
     }
   }, [paymentForm.values.supplier_invoice, invoices]);
 
+  // ============================================================
+  // ACTION BUTTONS
+  // ============================================================
+  
+  const ActionBtns: FC = () => {
+    return (
+      <>
+        <Button onClick={handleClose} disabled={loading}>
+          Close
+        </Button>
+        <Button 
+          onClick={() => paymentForm.handleSubmit()} 
+          variant="contained" 
+          disabled={loading}
+        >
+          {loading ? (
+            <>
+              <ProgressIndicator color="inherit" size={20} />{" "}
+              <Span sx={{ ml: 1 }}>Loading...</Span>
+            </>
+          ) : (
+            "Record Payment"
+          )}
+        </Button>
+      </>
+    );
+  };
+
+  // ============================================================
+  // RENDER
+  // ============================================================
+  
   return (
     <ModalDialog
       title="Record Payment"
       onClose={handleClose}
       id={uniqueId()}
-      ActionButtons={() => (
-        <>
-          <Button onClick={handleClose} disabled={loading}>Close</Button>
-          <Button onClick={() => paymentForm.handleSubmit()} variant="contained" disabled={loading}>
-            {loading ? <><ProgressIndicator color="inherit" size={20} /> <Span sx={{ ml: 1 }}>Loading...</Span></> : "Record Payment"}
-          </Button>
-        </>
-      )}
+      ActionButtons={ActionBtns}
     >
       <form ref={formRef} onSubmit={paymentForm.handleSubmit}>
         {maxAmount > 0 && (

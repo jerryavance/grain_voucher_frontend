@@ -1,10 +1,10 @@
 // ============================================================
-// ALL REMAINING SOURCING FORMS
-// DeliveryRecordForm, WeighbridgeRecordForm, SupplierPaymentForm, PaymentPreferenceForm
+// PAYMENT PREFERENCE FORM - Complete Implementation
+// Handles supplier payment method preferences with dynamic fields
 // ============================================================
 
 import { FC, useEffect, useRef, useState } from "react";
-import { Box, Button, Alert } from "@mui/material";
+import { Button } from "@mui/material";
 import { useFormik } from "formik";
 import { toast } from "react-hot-toast";
 import ModalDialog from "../../components/UI/Modal/ModalDialog";
@@ -13,30 +13,10 @@ import { Span } from "../../components/Typography";
 import FormFactory from "../../components/UI/FormFactory";
 import { getInitialValues, patchInitialValues } from "../../utils/form_factory";
 import uniqueId from "../../utils/generateId";
-import {
-  DeliveryRecordFormFields,
-  WeighbridgeRecordFormFields,
-  SupplierPaymentFormFields,
-  PaymentPreferenceFormFields,
-} from "./SourcingFormFields";
-import {
-  DeliveryRecordFormValidations,
-  WeighbridgeRecordFormValidations,
-  SupplierPaymentFormValidations,
-  PaymentPreferenceFormValidations,
-} from "./SourcingFormValidations";
+import { PaymentPreferenceFormFields } from "./SourcingFormFields";
+import { PaymentPreferenceFormValidations } from "./SourcingFormValidations";
 import { SourcingService } from "./Sourcing.service";
-import {
-  IDeliveryFormProps,
-  IWeighbridgeFormProps,
-  IPaymentFormProps,
-  IPaymentPreferenceFormProps,
-} from "./Sourcing.interface";
-import { TOption } from "../../@types/common";
-
-// ============================================================
-// PAYMENT PREFERENCE FORM
-// ============================================================
+import { IPaymentPreferenceFormProps } from "./Sourcing.interface";
 
 export const PaymentPreferenceForm: FC<IPaymentPreferenceFormProps> = ({
   handleClose,
@@ -48,11 +28,19 @@ export const PaymentPreferenceForm: FC<IPaymentPreferenceFormProps> = ({
   const [loading, setLoading] = useState<boolean>(false);
   const [selectedMethod, setSelectedMethod] = useState<string>('');
 
+  // ============================================================
+  // FORM SETUP - Fields change based on payment method
+  // ============================================================
+  
   const formFields = PaymentPreferenceFormFields(selectedMethod);
 
   const preferenceForm = useFormik({
     initialValues: getInitialValues(formFields),
     validationSchema: PaymentPreferenceFormValidations,
+    validateOnChange: false,
+    validateOnMount: false,
+    validateOnBlur: false,
+    enableReinitialize: true,
     onSubmit: async (values: any) => {
       setLoading(true);
       try {
@@ -78,6 +66,10 @@ export const PaymentPreferenceForm: FC<IPaymentPreferenceFormProps> = ({
     },
   });
 
+  // ============================================================
+  // LOAD INITIAL VALUES FOR UPDATE
+  // ============================================================
+  
   useEffect(() => {
     if (formType === "Update" && initialValues) {
       preferenceForm.setValues(patchInitialValues(formFields)(initialValues));
@@ -85,23 +77,52 @@ export const PaymentPreferenceForm: FC<IPaymentPreferenceFormProps> = ({
     }
   }, [initialValues, formType]);
 
+  // ============================================================
+  // UPDATE SELECTED METHOD WHEN FORM VALUE CHANGES
+  // ============================================================
+  
   useEffect(() => {
     setSelectedMethod(preferenceForm.values.method);
   }, [preferenceForm.values.method]);
 
+  // ============================================================
+  // ACTION BUTTONS
+  // ============================================================
+  
+  const ActionBtns: FC = () => {
+    return (
+      <>
+        <Button onClick={handleClose} disabled={loading}>
+          Close
+        </Button>
+        <Button 
+          onClick={() => preferenceForm.handleSubmit()} 
+          variant="contained" 
+          disabled={loading}
+        >
+          {loading ? (
+            <>
+              <ProgressIndicator color="inherit" size={20} />{" "}
+              <Span sx={{ ml: 1 }}>Loading...</Span>
+            </>
+          ) : (
+            formType === "Update" ? "Update" : "Add"
+          )}
+        </Button>
+      </>
+    );
+  };
+
+  // ============================================================
+  // RENDER
+  // ============================================================
+  
   return (
     <ModalDialog
       title={formType === "Save" ? "Add Payment Preference" : "Edit Payment Preference"}
       onClose={handleClose}
       id={uniqueId()}
-      ActionButtons={() => (
-        <>
-          <Button onClick={handleClose} disabled={loading}>Close</Button>
-          <Button onClick={() => preferenceForm.handleSubmit()} variant="contained" disabled={loading}>
-            {loading ? <><ProgressIndicator color="inherit" size={20} /> <Span sx={{ ml: 1 }}>Loading...</Span></> : (formType === "Update" ? "Update" : "Add")}
-          </Button>
-        </>
-      )}
+      ActionButtons={ActionBtns}
     >
       <form ref={formRef} onSubmit={preferenceForm.handleSubmit}>
         <FormFactory

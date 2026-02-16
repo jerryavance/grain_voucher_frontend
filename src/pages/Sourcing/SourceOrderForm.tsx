@@ -11,97 +11,50 @@ import uniqueId from "../../utils/generateId";
 import { SourceOrderFormFields } from "./SourcingFormFields";
 import { SourceOrderFormValidations } from "./SourcingFormValidations";
 import { SourcingService } from "./Sourcing.service";
-import { ISourceOrderFormProps } from "./Sourcing.interface";
-import { TOption } from "../../@types/common";
 import { calculateTotalCost, formatCurrency } from "./SourcingConstants";
+
+interface ISourceOrderFormProps {
+  handleClose: () => void;
+  formType?: "Save" | "Update";
+  initialValues?: any;
+  callBack?: () => void;
+  formData: {
+    suppliers: { value: string; label: string }[];
+    hubs: { value: string; label: string }[];
+    grainTypes: { value: string; label: string }[];
+    paymentMethods: { value: string; label: string }[];
+  };
+  formDataLoading: boolean;
+  searchHandlers: {
+    handleSupplierSearch: (query: string) => void;
+    handleHubSearch: (query: string) => void;
+    handleGrainTypeSearch: (query: string) => void;
+  };
+  onLoadPaymentMethods: (supplierId: string) => Promise<void>;
+}
 
 const SourceOrderForm: FC<ISourceOrderFormProps> = ({
   handleClose,
   formType = "Save",
   initialValues,
   callBack,
+  formData,
+  formDataLoading,
+  searchHandlers,
+  onLoadPaymentMethods,
 }) => {
   const formRef = useRef<HTMLFormElement | null>(null);
   const [loading, setLoading] = useState<boolean>(false);
-  
-  // Options state
-  const [suppliers, setSuppliers] = useState<TOption[]>([]);
-  const [hubs, setHubs] = useState<TOption[]>([]);
-  const [grainTypes, setGrainTypes] = useState<TOption[]>([]);
-  const [paymentMethods, setPaymentMethods] = useState<TOption[]>([]);
   const [totalCost, setTotalCost] = useState<number>(0);
 
-  // Fetch options on mount
-  useEffect(() => {
-    fetchSuppliers();
-    fetchHubs();
-    fetchGrainTypes();
-  }, []);
-
-  const fetchSuppliers = async (search = '') => {
-    try {
-      const response = await SourcingService.getSuppliers({ search, is_verified: true });
-      const options = response.results.map((supplier: any) => ({
-        value: supplier.id,
-        label: `${supplier.business_name} (${supplier.user.phone_number})`,
-      }));
-      setSuppliers(options);
-    } catch (error) {
-      console.error("Error fetching suppliers:", error);
-    }
-  };
-
-  const fetchHubs = async (search = '') => {
-    try {
-      const response = await fetch(`/api/hubs/hubs/?search=${search}`);
-      const data = await response.json();
-      const options = data.results.map((hub: any) => ({
-        value: hub.id,
-        label: hub.name,
-      }));
-      setHubs(options);
-    } catch (error) {
-      console.error("Error fetching hubs:", error);
-    }
-  };
-
-  const fetchGrainTypes = async (search = '') => {
-    try {
-      const response = await fetch(`/api/vouchers/grain-types/?search=${search}`);
-      const data = await response.json();
-      const options = data.results.map((grain: any) => ({
-        value: grain.id,
-        label: grain.name,
-      }));
-      setGrainTypes(options);
-    } catch (error) {
-      console.error("Error fetching grain types:", error);
-    }
-  };
-
-  const fetchPaymentMethods = async (supplierId: string) => {
-    if (!supplierId) return;
-    
-    try {
-      const response = await SourcingService.getPaymentPreferences({ supplier: supplierId, is_active: true });
-      const options = response.results.map((pm: any) => ({
-        value: pm.id,
-        label: `${pm.method_display}${pm.is_default ? ' (Default)' : ''}`,
-      }));
-      setPaymentMethods(options);
-    } catch (error) {
-      console.error("Error fetching payment methods:", error);
-    }
-  };
-
   const formFields = SourceOrderFormFields(
-    suppliers,
-    hubs,
-    grainTypes,
-    paymentMethods,
-    (value: string) => fetchSuppliers(value),
-    (value: string) => fetchHubs(value),
-    (value: string) => fetchGrainTypes(value)
+    formData.suppliers,
+    formData.hubs,
+    formData.grainTypes,
+    formData.paymentMethods,
+    searchHandlers.handleSupplierSearch,
+    searchHandlers.handleHubSearch,
+    searchHandlers.handleGrainTypeSearch
   );
 
   const orderForm = useFormik({
@@ -114,7 +67,6 @@ const SourceOrderForm: FC<ISourceOrderFormProps> = ({
     onSubmit: (values: any) => handleSubmit(values),
   });
 
-  // Watch for changes to recalculate total cost
   useEffect(() => {
     const cost = calculateTotalCost(orderForm.values);
     setTotalCost(cost);
@@ -127,15 +79,14 @@ const SourceOrderForm: FC<ISourceOrderFormProps> = ({
     orderForm.values.other_costs,
   ]);
 
-  // Fetch payment methods when supplier changes
   useEffect(() => {
     if (orderForm.values.supplier_id) {
-      fetchPaymentMethods(orderForm.values.supplier_id);
+      onLoadPaymentMethods(orderForm.values.supplier_id);
     }
   }, [orderForm.values.supplier_id]);
 
   useEffect(() => {
-    if (formType === "Update" && initialValues) {
+    if (formType === "Update" && initialValues && !formDataLoading) {
       const mappedValues = {
         ...initialValues,
         supplier_id: initialValues.supplier?.id,
@@ -145,7 +96,7 @@ const SourceOrderForm: FC<ISourceOrderFormProps> = ({
       };
       orderForm.setValues(patchInitialValues(formFields)(mappedValues));
     }
-  }, [initialValues, formType]);
+  }, [initialValues, formType, formDataLoading]);
 
   const handleSubmit = async (values: any) => {
     setLoading(true);
@@ -184,20 +135,20 @@ const SourceOrderForm: FC<ISourceOrderFormProps> = ({
   const ActionBtns: FC = () => {
     return (
       <>
-        <Button onClick={handleReset} disabled={loading}>
+        <Button onClick={handleReset} disabled={loading || formDataLoading}>
           Close
         </Button>
         <Button 
           onClick={handleButtonClick} 
           type="button"
           variant="contained"
-          disabled={loading}
+          disabled={loading || formDataLoading}
         >
-          {loading ? (
+          {loading || formDataLoading ? (
             <>
               <ProgressIndicator color="inherit" size={20} />{" "}
               <Span style={{ marginLeft: "0.5rem" }} color="primary">
-                Loading...
+                {formDataLoading ? "Loading..." : "Saving..."}
               </Span>
             </>
           ) : (
@@ -207,6 +158,23 @@ const SourceOrderForm: FC<ISourceOrderFormProps> = ({
       </>
     );
   };
+
+  if (formDataLoading) {
+    return (
+      <ModalDialog
+        title={formType === "Save" ? "New Source Order" : "Edit Source Order"}
+        onClose={handleReset}
+        id={uniqueId()}
+        ActionButtons={ActionBtns}
+        maxWidth="md"
+      >
+        <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', p: 4 }}>
+          <ProgressIndicator />
+          <Span sx={{ ml: 2 }}>Loading form data...</Span>
+        </Box>
+      </ModalDialog>
+    );
+  }
 
   return (
     <ModalDialog
@@ -233,7 +201,6 @@ const SourceOrderForm: FC<ISourceOrderFormProps> = ({
           
           <Divider sx={{ my: 2 }} />
           
-          {/* Total Cost Display */}
           <Box sx={{ 
             p: 2, 
             bgcolor: 'background.paper', 

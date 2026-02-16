@@ -28,9 +28,34 @@ const routes = [
       // Vouchers
       { path: "vouchers", element: <LazyLoader.VoucherGrid /> },
       { path: "voucher-management", element: <LazyLoader.VoucherManagement /> },
+    ],
+  },
 
-      // Investor Dashboard
-      { path: "invest", element: <LazyLoader.InvestorDashboard /> },
+  // =============== SUPPLIER (FARMER) ROUTES ===============
+  // 🆕 ADD THIS ENTIRE SECTION
+  {
+    path: "/supplier",
+    element: <AuthGuard><DashboardLayout /></AuthGuard>,
+    children: [
+      { path: "dashboard", element: <LazyLoader.SupplierDashboard /> },
+      { path: "orders", element: <LazyLoader.SupplierOrders /> },
+      { path: "orders/:id", element: <LazyLoader.SupplierOrderDetails /> },
+      // { path: "invoices", element: <LazyLoader.SupplierInvoicesView /> },
+      { path: "payment-methods", element: <LazyLoader.SupplierPaymentPreferences /> },
+      { path: "profile", element: <LazyLoader.SupplierProfile /> },
+      // { path: "notifications", element: <LazyLoader.SupplierNotifications /> },
+    ],
+  },
+
+  // =============== INVESTOR ROUTES ===============
+  // 🔄 UPDATE THIS SECTION (add children)
+  {
+    path: "/invest",
+    element: <AuthGuard><DashboardLayout /></AuthGuard>,
+    children: [
+      { path: "", element: <LazyLoader.InvestorDashboard /> },
+      { path: "returns", element: <LazyLoader.InvestorReturns /> },
+      { path: "transactions", element: <LazyLoader.InvestorTransactions /> },
     ],
   },
 
@@ -41,30 +66,24 @@ const routes = [
     children: [
       // Trade Module
       { path: "trade", element: <LazyLoader.Trade /> },
-      { path: "trade/dashboard", element: <LazyLoader.TradeDashboard /> },     // NEW
-      { path: "trade/:tradeId", element: <LazyLoader.TradeDetails /> },         // Details
-
-      // DO NOT ADD /trade/edit/:id → we use modal instead!
+      { path: "trade/dashboard", element: <LazyLoader.TradeDashboard /> },
+      { path: "trade/:tradeId", element: <LazyLoader.TradeDetails /> },
 
       // Accounting Module
       { path: "accounting", element: <LazyLoader.Accounting /> },
       { path: "accounting/invoices", element: <LazyLoader.Invoices /> },
       { path: "accounting/invoices/aging", element: <LazyLoader.InvoiceAgingReport /> },
       { path: "accounting/invoices/details/:id", element: <LazyLoader.InvoiceDetails /> },
-
       { path: "accounting/payments", element: <LazyLoader.Payments /> },
       { path: "accounting/payments/details/:id", element: <LazyLoader.PaymentDetails /> },
-
-      { 
-        path: "reports", element: <RouteGuard requiredPermissions={[]}><LazyLoader.Reports /></RouteGuard> },
-
       { path: "accounting/journal-entries", element: <LazyLoader.JournalEntries /> },
       { path: "accounting/journal-entries/details/:id", element: <LazyLoader.JournalEntriesDetails /> },
-
       { path: "accounting/budgets", element: <LazyLoader.Budgets /> },
       { path: "accounting/budgets/details/:id", element: <LazyLoader.BudgetDetails /> },
-
       { path: "accounting/ledger-entries", element: <LazyLoader.LedgerEntries /> },
+
+      // Reports
+      { path: "reports", element: <RouteGuard requiredPermissions={[]}><LazyLoader.Reports /></RouteGuard> },
 
       // CRM & Others
       { path: "crm", element: <LazyLoader.CRM /> },
@@ -90,42 +109,47 @@ const routes = [
     ],
   },
 
-  // In your admin routes section
+  // =============== SOURCING MODULE (ADMIN) ===============
   {
     path: "/admin/sourcing",
     element: <AuthGuard><DashboardLayout /></AuthGuard>,
     children: [
+      // Dashboard
       { path: "dashboard", element: <LazyLoader.SourcingDashboard /> },
       
       // Suppliers
       { path: "suppliers", element: <LazyLoader.Suppliers /> },
       { path: "suppliers/:id", element: <LazyLoader.SupplierDetails /> },
       
-      // Source Orders
+      // Source Orders (buying from farmers)
       { path: "orders", element: <LazyLoader.SourceOrders /> },
       { path: "orders/:id", element: <LazyLoader.SourceOrderDetails /> },
       
-      // Invoices
-      { path: "invoices", element: <LazyLoader.SupplierInvoices /> },
-      { path: "invoices/:id", element: <LazyLoader.SupplierInvoiceDetails /> },
-      
-      // Deliveries
+      // Deliveries & Weighbridge
       { path: "deliveries", element: <LazyLoader.DeliveryRecords /> },
-      
-      // Weighbridge
       { path: "weighbridge", element: <LazyLoader.WeighbridgeRecords /> },
       
-      // Payments
+      // Supplier Invoices & Payments
+      { path: "invoices", element: <LazyLoader.SupplierInvoices /> },
+      { path: "invoices/:id", element: <LazyLoader.SupplierInvoiceDetails /> },
       { path: "payments", element: <LazyLoader.SupplierPayments /> },
-    ],
-  },
 
-  // Supplier dashboard (for farmer role)
-  {
-    path: "/supplier",
-    element: <AuthGuard><DashboardLayout /></AuthGuard>,
-    children: [
-      { path: "dashboard", element: <LazyLoader.SupplierDashboard /> },
+      // Investor Funding
+      { path: "investor-allocations", element: <LazyLoader.InvestorAllocations /> },
+      
+      // Stock/Inventory (Sale Lots)
+      { path: "sale-lots", element: <LazyLoader.SaleLots /> },
+      
+      // Buyer Orders (selling to buyers)
+      { path: "buyer-orders", element: <LazyLoader.BuyerOrders /> },
+      { path: "buyer-orders/:id", element: <LazyLoader.BuyerOrderDetails /> },
+      
+      // Buyer Invoices & Payments
+      { path: "buyer-invoices", element: <LazyLoader.BuyerInvoices /> },
+      { path: "buyer-payments", element: <LazyLoader.BuyerPayments /> },
+      
+      // Trade Settlements & P&L
+      { path: "settlements", element: <LazyLoader.TradeSettlements /> },
     ],
   },
 

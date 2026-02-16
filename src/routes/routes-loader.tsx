@@ -1,6 +1,7 @@
 import { lazy, Suspense as ReactSuspense } from "react";
 import LoadingScreen from "../components/LoadingScreen";
 import JournalEntries from "../pages/Accounting/JournalEntries/JournalEntries";
+import SupplierDashboard from "../pages/Sourcing/SupplierDashboard";
 
 const Suspense: any = ReactSuspense;
 
@@ -15,9 +16,7 @@ const Loadable = (Component: any) => (props: any) => {
 const RouteLazyLoader = {
 
   Login: Loadable(lazy(() => import("../pages/Authentication/Login/Login"))),
-
   DashboardSaaS: Loadable(lazy(() => import("../pages/Dashboard/SaaS"))),
-
   AccountView: Loadable(lazy(() => import("../pages/Account/Common/AccountView"))),
 
   HubList: Loadable(lazy(() => import("../pages/HubList/HubList"))),
@@ -75,13 +74,10 @@ const RouteLazyLoader = {
 
   LedgerEntries: Loadable(lazy(() => import("../pages/LedgerEntries/LedgerEntries"))),
 
-  InvestorDashboard: Loadable(lazy(() => import("../pages/Investors/InvestorDashboard"))),
-
-  InvestorsAdmin: Loadable(lazy(() => import("../pages/Investors/InvestorsAdmin"))),
-
   Reports: Loadable(lazy(() => import("../pages/Reports/Reports"))),
 
-  // Sourcing Module
+
+  // Sourcing Module (Admin Views) - ALREADY EXISTS
   Suppliers: Loadable(lazy(() => import("../pages/Sourcing/Suppliers"))),
   SourcingDashboard: Loadable(lazy(() => import("../pages/Sourcing/SourcingDashboard"))),
   SupplierDetails: Loadable(lazy(() => import("../pages/Sourcing/SupplierDetails"))),
@@ -92,14 +88,36 @@ const RouteLazyLoader = {
   DeliveryRecords: Loadable(lazy(() => import("../pages/Sourcing/DeliveryRecords"))),
   WeighbridgeRecords: Loadable(lazy(() => import("../pages/Sourcing/WeighbridgeRecords"))),
   SupplierPayments: Loadable(lazy(() => import("../pages/Sourcing/SupplierPayments"))),
+  InvestorAllocations: Loadable(lazy(() => import("../pages/Sourcing/InvestorAllocations"))),
+  SaleLots: Loadable(lazy(() => import("../pages/Sourcing/SaleLots"))),
+  BuyerOrders: Loadable(lazy(() => import("../pages/Sourcing/BuyerOrders"))),
+  BuyerOrderDetails: Loadable(lazy(() => import("../pages/Sourcing/BuyerOrderDetails"))),
+  BuyerInvoices: Loadable(lazy(() => import("../pages/Sourcing/BuyerInvoices"))),
+  BuyerPayments: Loadable(lazy(() => import("../pages/Sourcing/BuyerPayments"))),
+  TradeSettlements: Loadable(lazy(() => import("../pages/Sourcing/TradeSettlements"))),
+
+  // 🆕 ADD SUPPLIER PORTAL LOADERS HERE
   SupplierDashboard: Loadable(lazy(() => import("../pages/Sourcing/SupplierDashboard"))),
+  SupplierOrders: Loadable(lazy(() => import("../pages/Sourcing/SupplierOrders"))),
+  SupplierOrderDetails: Loadable(lazy(() => import("../pages/Sourcing/SupplierOrderDetails"))),
+  SupplierPaymentPreferences: Loadable(lazy(() => import("../pages/Sourcing/SupplierPaymentPreferences"))),
+  SupplierProfile: Loadable(lazy(() => import("../pages/Sourcing/SupplierProfile"))),
 
-  // Transactions: Loadable(lazy(() => import("../pages/Transactions/TransactionsList"))),
+  // Investor Views - ALREADY EXISTS
+  InvestorDashboard: Loadable(lazy(() => import("../pages/Investors/InvestorDashboard"))),
+  InvestorsAdmin: Loadable(lazy(() => import("../pages/Investors/InvestorsAdmin"))),
+  
+  // 🆕 ADD INVESTOR PORTAL LOADERS HERE
+  InvestorReturns: Loadable(lazy(() => import("../pages/Investors/InvestorReturns"))),
+  InvestorTransactions: Loadable(lazy(() => import("../pages/Investors/InvestorTransactions"))),
 
+  // Users - ALREADY EXISTS
   Users: Loadable(lazy(() => import("../pages/Users/Users"))),
 
+  // Error pages - ALREADY EXISTS
   Error404: Loadable(lazy(() => import("../pages/404"))),
   Error403: Loadable(lazy(() => import("../pages/403"))),
+
 };
 
 export default RouteLazyLoader;

@@ -1,0 +1,566 @@
+import { FC, useEffect, useState } from "react";
+import { useParams, useNavigate } from "react-router-dom";
+import {
+  Alert, Box, Button, Card, CardContent, Chip, Divider,
+  FormControl, Grid, IconButton, InputLabel, MenuItem, Paper,
+  Select, Tab, Tabs, Table, TableBody, TableCell, TableHead,
+  TableRow, TextField, Typography,
+} from "@mui/material";
+import { useFormik } from "formik";
+import * as Yup from "yup";
+import { toast } from "react-hot-toast";
+import ArrowBackIcon from "@mui/icons-material/ArrowBack";
+import AddIcon from "@mui/icons-material/Add";
+import CheckCircleIcon from "@mui/icons-material/CheckCircle";
+import DeleteIcon from "@mui/icons-material/Delete";
+import LocalShippingIcon from "@mui/icons-material/LocalShipping";
+import ReceiptIcon from "@mui/icons-material/Receipt";
+import LoadingScreen from "../../components/LoadingScreen";
+import ModalDialog from "../../components/UI/Modal/ModalDialog";
+import ProgressIndicator from "../../components/UI/ProgressIndicator";
+import { Span } from "../../components/Typography";
+import useTitle from "../../hooks/useTitle";
+import uniqueId from "../../utils/generateId";
+import { formatDateToDDMMYYYY } from "../../utils/date_formatter";
+import { SourcingService } from "./Sourcing.service";
+import { formatCurrency, formatWeight } from "./SourcingConstants";
+import { IBuyerOrder, IBuyerOrderLine, ISaleLot, ISaleExpense } from "./Sourcing.interface";
+
+const BUYER_ORDER_STATUS_COLORS: Record<string, any> = {
+  draft: "default", confirmed: "primary", dispatched: "warning",
+  delivered: "info", invoiced: "secondary", completed: "success", cancelled: "error",
+};
+const BUYER_INVOICE_STATUS_COLORS: Record<string, any> = {
+  draft: "default", issued: "primary", partial: "warning",
+  paid: "success", overdue: "error", cancelled: "error",
+};
+const EXPENSE_CATEGORY_LABELS: Record<string, string> = {
+  logistics: "Logistics", storage: "Storage", grading: "Grading",
+  handling: "Handling", insurance: "Insurance", finance: "Finance", other: "Other",
+};
+
+const InfoRow: FC<{ label: string; value: React.ReactNode }> = ({ label, value }) => (
+  <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 1.5 }}>
+    <Span sx={{ fontWeight: 600, color: "text.secondary", minWidth: 180 }}>{label}</Span>
+    <Box>{value}</Box>
+  </Box>
+);
+
+// ─── Add Line Form ────────────────────────────────────────────────────────
+const AddLineForm: FC<{
+  orderId: string;
+  availableLots: ISaleLot[];
+  handleClose: () => void;
+  callBack?: () => void;
+}> = ({ orderId, availableLots, handleClose, callBack }) => {
+  const [loading, setLoading] = useState(false);
+
+  const form = useFormik({
+    initialValues: { sale_lot: "", quantity_kg: "", sale_price_per_kg: "", notes: "" },
+    validationSchema: Yup.object({
+      sale_lot: Yup.string().required("Select a lot"),
+      quantity_kg: Yup.number().positive().required("Quantity required"),
+      sale_price_per_kg: Yup.number().positive().required("Price required"),
+    }),
+    onSubmit: async (values) => {
+      setLoading(true);
+      try {
+        await SourcingService.addBuyerOrderLine(orderId, values as any);
+        toast.success("Line added");
+        callBack?.();
+        handleClose();
+      } catch (e: any) {
+        toast.error(
+          e?.response?.data?.quantity_kg?.[0] ||
+          e?.response?.data?.sale_lot?.[0] ||
+          "Failed to add line"
+        );
+      } finally { setLoading(false); }
+    },
+  });
+
+  const selectedLot = availableLots.find(l => l.id === form.values.sale_lot);
+  const qty = Number(form.values.quantity_kg);
+  const price = Number(form.values.sale_price_per_kg);
+  const estRevenue = qty * price;
+  const estCOGS = selectedLot ? qty * selectedLot.cost_per_kg : 0;
+  const estProfit = estRevenue - estCOGS;
+
+  const ActionBtns: FC = () => (
+    <>
+      <Button onClick={handleClose} disabled={loading}>Cancel</Button>
+      <Button variant="contained" onClick={() => form.handleSubmit()} disabled={loading}>Add Line</Button>
+    </>
+  );
+
+  return (
+    <ModalDialog title="Add Sale Line" onClose={handleClose} id={uniqueId()} ActionButtons={ActionBtns}>
+      <Box sx={{ display: "flex", flexDirection: "column", gap: 2, pt: 1 }}>
+        <FormControl fullWidth error={Boolean(form.errors.sale_lot)}>
+          <InputLabel>Sale Lot *</InputLabel>
+          <Select value={form.values.sale_lot} label="Sale Lot *"
+            onChange={e => form.setFieldValue("sale_lot", e.target.value)}>
+            {availableLots.filter(l => l.status !== "sold").map(l => (
+              <MenuItem key={l.id} value={l.id}>
+                {l.lot_number} — {l.grain_type_name} — {formatWeight(l.available_quantity_kg)} avail — cost {formatCurrency(l.cost_per_kg)}/kg
+              </MenuItem>
+            ))}
+          </Select>
+        </FormControl>
+
+        {selectedLot && (
+          <Alert severity="info">
+            Available: <strong>{formatWeight(selectedLot.available_quantity_kg)}</strong>
+            {" | "}COGS basis: <strong>{formatCurrency(selectedLot.cost_per_kg)}/kg</strong>
+          </Alert>
+        )}
+
+        <TextField fullWidth label="Quantity (kg) *" type="number"
+          value={form.values.quantity_kg}
+          onChange={e => form.setFieldValue("quantity_kg", e.target.value)}
+          error={Boolean(form.errors.quantity_kg)} helperText={form.errors.quantity_kg as string} />
+
+        <TextField fullWidth label="Selling Price per kg (UGX) *" type="number"
+          value={form.values.sale_price_per_kg}
+          onChange={e => form.setFieldValue("sale_price_per_kg", e.target.value)}
+          error={Boolean(form.errors.sale_price_per_kg)} helperText={form.errors.sale_price_per_kg as string} />
+
+        {estRevenue > 0 && (
+          <Card variant="outlined">
+            <CardContent sx={{ p: 1.5, "&:last-child": { pb: 1.5 } }}>
+              <Typography variant="caption" color="text.secondary" display="block" gutterBottom>
+                Live Estimate
+              </Typography>
+              <Box sx={{ display: "flex", gap: 3 }}>
+                <Box>
+                  <Typography variant="caption">Revenue</Typography>
+                  <Typography variant="body2" sx={{ fontWeight: 700, color: "primary.main" }}>
+                    {formatCurrency(estRevenue)}
+                  </Typography>
+                </Box>
+                <Box>
+                  <Typography variant="caption">COGS</Typography>
+                  <Typography variant="body2" sx={{ color: "text.secondary" }}>
+                    {formatCurrency(estCOGS)}
+                  </Typography>
+                </Box>
+                <Box>
+                  <Typography variant="caption">Gross Profit</Typography>
+                  <Typography variant="body2" sx={{ fontWeight: 700, color: estProfit >= 0 ? "success.main" : "error.main" }}>
+                    {formatCurrency(estProfit)}
+                  </Typography>
+                </Box>
+              </Box>
+            </CardContent>
+          </Card>
+        )}
+
+        <TextField fullWidth label="Notes" multiline rows={2}
+          value={form.values.notes}
+          onChange={e => form.setFieldValue("notes", e.target.value)} />
+      </Box>
+    </ModalDialog>
+  );
+};
+
+// ─── Add Expense Form ─────────────────────────────────────────────────────
+const AddExpenseForm: FC<{
+  orderId: string;
+  handleClose: () => void;
+  callBack?: () => void;
+}> = ({ orderId, handleClose, callBack }) => {
+  const [loading, setLoading] = useState(false);
+
+  const form = useFormik({
+    initialValues: { category: "logistics", description: "", amount: "", receipt_reference: "", notes: "" },
+    validationSchema: Yup.object({
+      description: Yup.string().required("Description required"),
+      amount: Yup.number().positive().required("Amount required"),
+    }),
+    onSubmit: async (values) => {
+      setLoading(true);
+      try {
+        await SourcingService.addSaleExpense(orderId, values as any);
+        toast.success("Expense added");
+        callBack?.();
+        handleClose();
+      } catch { toast.error("Failed to add expense"); }
+      finally { setLoading(false); }
+    },
+  });
+
+  const ActionBtns: FC = () => (
+    <>
+      <Button onClick={handleClose} disabled={loading}>Cancel</Button>
+      <Button variant="contained" onClick={() => form.handleSubmit()} disabled={loading}>Add Expense</Button>
+    </>
+  );
+
+  return (
+    <ModalDialog title="Add Selling Expense" onClose={handleClose} id={uniqueId()} ActionButtons={ActionBtns}>
+      <Box sx={{ display: "flex", flexDirection: "column", gap: 2, pt: 1 }}>
+        <FormControl fullWidth>
+          <InputLabel>Category *</InputLabel>
+          <Select value={form.values.category} label="Category *"
+            onChange={e => form.setFieldValue("category", e.target.value)}>
+            {Object.entries(EXPENSE_CATEGORY_LABELS).map(([v, l]) => (
+              <MenuItem key={v} value={v}>{l}</MenuItem>
+            ))}
+          </Select>
+        </FormControl>
+        <TextField fullWidth label="Description *" value={form.values.description}
+          onChange={e => form.setFieldValue("description", e.target.value)}
+          error={Boolean(form.errors.description)} helperText={form.errors.description as string} />
+        <TextField fullWidth label="Amount (UGX) *" type="number" value={form.values.amount}
+          onChange={e => form.setFieldValue("amount", e.target.value)}
+          error={Boolean(form.errors.amount)} helperText={form.errors.amount as string} />
+        <TextField fullWidth label="Receipt Reference" value={form.values.receipt_reference}
+          onChange={e => form.setFieldValue("receipt_reference", e.target.value)} />
+        <TextField fullWidth label="Notes" multiline rows={2}
+          value={form.values.notes}
+          onChange={e => form.setFieldValue("notes", e.target.value)} />
+      </Box>
+    </ModalDialog>
+  );
+};
+
+// ─── Issue Invoice Form ───────────────────────────────────────────────────
+const IssueInvoiceForm: FC<{
+  order: IBuyerOrder;
+  handleClose: () => void;
+  callBack?: () => void;
+}> = ({ order, handleClose, callBack }) => {
+  const [loading, setLoading] = useState(false);
+  const [terms, setTerms] = useState(order.credit_terms_days);
+  const [notes, setNotes] = useState("");
+
+  const ActionBtns: FC = () => (
+    <>
+      <Button onClick={handleClose} disabled={loading}>Cancel</Button>
+      <Button variant="contained" color="secondary" startIcon={<ReceiptIcon />}
+        disabled={loading}
+        onClick={async () => {
+          setLoading(true);
+          try {
+            const inv = await SourcingService.issueBuyerInvoice(order.id, { payment_terms_days: terms, notes });
+            toast.success(`Invoice ${inv.invoice_number} issued`);
+            callBack?.();
+          } catch (e: any) {
+            toast.error(e?.response?.data?.error || "Failed to issue invoice");
+          } finally { setLoading(false); }
+        }}>
+        {loading ? <ProgressIndicator color="inherit" size={20} /> : "Issue Invoice"}
+      </Button>
+    </>
+  );
+
+  return (
+    <ModalDialog title="Issue Buyer Invoice" onClose={handleClose} id={uniqueId()} ActionButtons={ActionBtns}>
+      <Box sx={{ display: "flex", flexDirection: "column", gap: 2, pt: 1 }}>
+        <Alert severity="info">
+          <strong>Invoice Amount: {formatCurrency(order.subtotal)}</strong><br />
+          This creates a receivable for the buyer.
+        </Alert>
+        <TextField fullWidth label="Payment Terms (Days)" type="number"
+          value={terms} onChange={e => setTerms(parseInt(e.target.value) || 0)}
+          helperText="0 = immediate, 30 / 60 / 90 = net terms" />
+        <TextField fullWidth label="Notes" multiline rows={2}
+          value={notes} onChange={e => setNotes(e.target.value)} />
+      </Box>
+    </ModalDialog>
+  );
+};
+
+// ─── Main Page ────────────────────────────────────────────────────────────
+const BuyerOrderDetails: FC = () => {
+  const { id } = useParams<{ id: string }>();
+  const navigate = useNavigate();
+  const [order, setOrder] = useState<IBuyerOrder | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [tab, setTab] = useState(0);
+  const [showAddLine, setShowAddLine] = useState(false);
+  const [showAddExpense, setShowAddExpense] = useState(false);
+  const [showIssueInvoice, setShowIssueInvoice] = useState(false);
+  const [availableLots, setAvailableLots] = useState<ISaleLot[]>([]);
+  const [actionLoading, setActionLoading] = useState(false);
+
+  useTitle(order ? `Order ${order.order_number}` : "Buyer Order");
+
+  useEffect(() => {
+    fetchOrder();
+    SourcingService.getAvailableSaleLots().then(setAvailableLots).catch(() => {});
+  }, [id]);
+
+  const fetchOrder = async () => {
+    setLoading(true);
+    try { setOrder(await SourcingService.getBuyerOrderDetails(id!)); }
+    catch { toast.error("Failed to load order"); navigate("/admin/sourcing/buyer-orders"); }
+    finally { setLoading(false); }
+  };
+
+  const handleAction = async (action: string) => {
+    setActionLoading(true);
+    try {
+      if (action === "confirm") await SourcingService.confirmBuyerOrder(id!);
+      else if (action === "dispatch") await SourcingService.dispatchBuyerOrder(id!);
+      else if (action === "deliver") await SourcingService.deliverBuyerOrder(id!);
+      else if (action === "cancel") await SourcingService.cancelBuyerOrder(id!);
+      toast.success("Order updated");
+      fetchOrder();
+    } catch (e: any) {
+      toast.error(e?.response?.data?.error || "Action failed");
+    } finally { setActionLoading(false); }
+  };
+
+  const handleRemoveLine = async (lineId: string) => {
+    if (!window.confirm("Remove this line?")) return;
+    try {
+      await SourcingService.removeBuyerOrderLine(id!, lineId);
+      toast.success("Line removed");
+      fetchOrder();
+    } catch { toast.error("Failed to remove line"); }
+  };
+
+  if (loading) return <LoadingScreen />;
+  if (!order) return null;
+
+  const grossMarginPct = order.subtotal > 0
+    ? (order.gross_profit / order.subtotal * 100).toFixed(1)
+    : "0.0";
+
+  return (
+    <Box pt={2} pb={4}>
+      {/* Header */}
+      <Box sx={{ display: "flex", alignItems: "center", mb: 3, flexWrap: "wrap", gap: 1 }}>
+        <Button startIcon={<ArrowBackIcon />} onClick={() => navigate("/admin/sourcing/buyer-orders")} sx={{ mr: 1 }}>
+          Back
+        </Button>
+        <Typography variant="h4">{order.order_number}</Typography>
+        <Chip label={order.status.toUpperCase()} color={BUYER_ORDER_STATUS_COLORS[order.status]} sx={{ ml: 1 }} />
+        {order.invoice_status && (
+          <Chip
+            label={`Invoice: ${order.invoice_status.toUpperCase()}`}
+            color={BUYER_INVOICE_STATUS_COLORS[order.invoice_status]}
+            variant="outlined"
+          />
+        )}
+      </Box>
+
+      {/* Action Buttons */}
+      <Box sx={{ display: "flex", gap: 1, mb: 3, flexWrap: "wrap" }}>
+        {order.status === "draft" && (
+          <>
+            <Button variant="contained" color="success" startIcon={<CheckCircleIcon />}
+              onClick={() => handleAction("confirm")}
+              disabled={actionLoading || order.lines.length === 0}>
+              Confirm Order
+            </Button>
+            <Button variant="outlined" startIcon={<AddIcon />} onClick={() => setShowAddLine(true)}>
+              Add Line
+            </Button>
+            <Button variant="outlined" startIcon={<AddIcon />} onClick={() => setShowAddExpense(true)}>
+              Add Expense
+            </Button>
+            <Button variant="outlined" color="error"
+              onClick={() => { if (window.confirm("Cancel this order?")) handleAction("cancel"); }}
+              disabled={actionLoading}>
+              Cancel Order
+            </Button>
+          </>
+        )}
+        {["confirmed", "dispatched", "delivered"].includes(order.status) && (
+          <Button variant="outlined" startIcon={<AddIcon />} onClick={() => setShowAddExpense(true)}>
+            Add Expense
+          </Button>
+        )}
+        {order.status === "confirmed" && (
+          <Button variant="contained" color="warning" startIcon={<LocalShippingIcon />}
+            onClick={() => handleAction("dispatch")} disabled={actionLoading}>
+            Mark Dispatched
+          </Button>
+        )}
+        {order.status === "dispatched" && (
+          <Button variant="contained" color="info"
+            onClick={() => handleAction("deliver")} disabled={actionLoading}>
+            Mark Delivered
+          </Button>
+        )}
+        {["confirmed", "dispatched", "delivered"].includes(order.status) && !order.invoice_status && (
+          <Button variant="contained" color="secondary" startIcon={<ReceiptIcon />}
+            onClick={() => setShowIssueInvoice(true)}>
+            Issue Invoice
+          </Button>
+        )}
+      </Box>
+
+      {/* P&L Summary Cards */}
+      <Grid container spacing={2} sx={{ mb: 3 }}>
+        {[
+          { label: "Revenue", value: formatCurrency(order.subtotal), color: "primary.main" },
+          { label: "COGS", value: formatCurrency(order.total_cogs), color: "text.secondary" },
+          { label: "Selling Expenses", value: formatCurrency(order.total_selling_expenses), color: "warning.main" },
+          {
+            label: "Gross Profit",
+            value: formatCurrency(order.gross_profit),
+            color: order.gross_profit >= 0 ? "success.main" : "error.main",
+          },
+          {
+            label: "Gross Margin",
+            value: `${grossMarginPct}%`,
+            color: parseFloat(grossMarginPct) >= 5 ? "success.main" : "warning.main",
+          },
+        ].map(card => (
+          <Grid item xs={6} sm={4} md={2.4} key={card.label}>
+            <Card variant="outlined">
+              <CardContent sx={{ p: 1.5, "&:last-child": { pb: 1.5 } }}>
+                <Typography variant="caption" color="text.secondary">{card.label}</Typography>
+                <Typography variant="h6" sx={{ color: card.color, fontWeight: 700 }}>{card.value}</Typography>
+              </CardContent>
+            </Card>
+          </Grid>
+        ))}
+      </Grid>
+
+      {/* Tabs */}
+      <Tabs value={tab} onChange={(_, v) => setTab(v)} sx={{ mb: 2, borderBottom: 1, borderColor: "divider" }}>
+        <Tab label={`Lines (${order.lines.length})`} />
+        <Tab label={`Expenses (${order.sale_expenses.length})`} />
+        <Tab label="Order Info" />
+      </Tabs>
+
+      {/* Lines */}
+      {tab === 0 && (
+        <Paper variant="outlined">
+          <Table size="small">
+            <TableHead>
+              <TableRow sx={{ bgcolor: "action.hover" }}>
+                {["Lot #", "Grain", "Qty (kg)", "Price/kg", "Revenue", "COGS/kg", "COGS", "Profit", ""].map(h => (
+                  <TableCell key={h} sx={{ fontWeight: 700 }}>{h}</TableCell>
+                ))}
+              </TableRow>
+            </TableHead>
+            <TableBody>
+              {order.lines.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={9} sx={{ textAlign: "center", py: 3, color: "text.secondary" }}>
+                    No lines added yet. Add lot lines to include grain in this order.
+                  </TableCell>
+                </TableRow>
+              ) : order.lines.map((line: IBuyerOrderLine) => (
+                <TableRow key={line.id} hover>
+                  <TableCell><Typography variant="body2" sx={{ fontFamily: "monospace" }}>{line.lot_number}</Typography></TableCell>
+                  <TableCell>{line.grain_type}</TableCell>
+                  <TableCell>{formatWeight(line.quantity_kg)}</TableCell>
+                  <TableCell>{formatCurrency(line.sale_price_per_kg)}</TableCell>
+                  <TableCell sx={{ fontWeight: 600 }}>{formatCurrency(line.line_total)}</TableCell>
+                  <TableCell sx={{ color: "text.secondary" }}>{formatCurrency(line.cogs_per_kg)}</TableCell>
+                  <TableCell sx={{ color: "text.secondary" }}>{formatCurrency(line.cogs_total)}</TableCell>
+                  <TableCell sx={{ fontWeight: 600, color: line.line_gross_profit >= 0 ? "success.main" : "error.main" }}>
+                    {formatCurrency(line.line_gross_profit)}
+                  </TableCell>
+                  <TableCell>
+                    {order.status === "draft" && (
+                      <IconButton size="small" color="error" onClick={() => handleRemoveLine(line.id)}>
+                        <DeleteIcon fontSize="small" />
+                      </IconButton>
+                    )}
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </Paper>
+      )}
+
+      {/* Expenses */}
+      {tab === 1 && (
+        <Paper variant="outlined">
+          <Table size="small">
+            <TableHead>
+              <TableRow sx={{ bgcolor: "action.hover" }}>
+                {["Category", "Description", "Amount", "Date", "Receipt Ref"].map(h => (
+                  <TableCell key={h} sx={{ fontWeight: 700 }}>{h}</TableCell>
+                ))}
+              </TableRow>
+            </TableHead>
+            <TableBody>
+              {order.sale_expenses.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={5} sx={{ textAlign: "center", py: 3, color: "text.secondary" }}>
+                    No expenses recorded.
+                  </TableCell>
+                </TableRow>
+              ) : order.sale_expenses.map((exp: ISaleExpense) => (
+                <TableRow key={exp.id} hover>
+                  <TableCell>
+                    <Chip label={EXPENSE_CATEGORY_LABELS[exp.category] || exp.category} size="small" variant="outlined" />
+                  </TableCell>
+                  <TableCell>{exp.description}</TableCell>
+                  <TableCell sx={{ fontWeight: 600, color: "warning.main" }}>{formatCurrency(exp.amount)}</TableCell>
+                  <TableCell sx={{ fontSize: 12 }}>{formatDateToDDMMYYYY(exp.incurred_at)}</TableCell>
+                  <TableCell sx={{ fontSize: 12, fontFamily: "monospace" }}>{exp.receipt_reference || "—"}</TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </Paper>
+      )}
+
+      {/* Info */}
+      {tab === 2 && (
+        <Grid container spacing={2}>
+          <Grid item xs={12} md={6}>
+            <Card variant="outlined"><CardContent>
+              <Typography variant="h6" gutterBottom>Buyer Details</Typography>
+              <Divider sx={{ mb: 2 }} />
+              <InfoRow label="Buyer Name" value={order.buyer_name} />
+              {order.buyer_contact_name && <InfoRow label="Contact Person" value={order.buyer_contact_name} />}
+              {order.buyer_phone && <InfoRow label="Phone" value={order.buyer_phone} />}
+              {order.buyer_email && <InfoRow label="Email" value={order.buyer_email} />}
+              <InfoRow
+                label="Credit Terms"
+                value={order.credit_terms_days === 0 ? "Cash on Delivery" : `Net ${order.credit_terms_days} days`}
+              />
+            </CardContent></Card>
+          </Grid>
+          <Grid item xs={12} md={6}>
+            <Card variant="outlined"><CardContent>
+              <Typography variant="h6" gutterBottom>Timeline</Typography>
+              <Divider sx={{ mb: 2 }} />
+              <InfoRow label="Created" value={formatDateToDDMMYYYY(order.created_at)} />
+              {order.confirmed_at && <InfoRow label="Confirmed" value={formatDateToDDMMYYYY(order.confirmed_at)} />}
+              {order.dispatched_at && <InfoRow label="Dispatched" value={formatDateToDDMMYYYY(order.dispatched_at)} />}
+              {order.delivered_at && <InfoRow label="Delivered" value={formatDateToDDMMYYYY(order.delivered_at)} />}
+              {order.completed_at && <InfoRow label="Completed" value={formatDateToDDMMYYYY(order.completed_at)} />}
+            </CardContent></Card>
+          </Grid>
+          {order.notes && (
+            <Grid item xs={12}>
+              <Card variant="outlined"><CardContent>
+                <Typography variant="h6" gutterBottom>Notes</Typography>
+                <Divider sx={{ mb: 2 }} />
+                <Typography>{order.notes}</Typography>
+              </CardContent></Card>
+            </Grid>
+          )}
+        </Grid>
+      )}
+
+      {/* Sub-forms */}
+      {showAddLine && (
+        <AddLineForm orderId={id!} availableLots={availableLots}
+          handleClose={() => setShowAddLine(false)} callBack={fetchOrder} />
+      )}
+      {showAddExpense && (
+        <AddExpenseForm orderId={id!} handleClose={() => setShowAddExpense(false)} callBack={fetchOrder} />
+      )}
+      {showIssueInvoice && (
+        <IssueInvoiceForm order={order}
+          handleClose={() => setShowIssueInvoice(false)}
+          callBack={() => { setShowIssueInvoice(false); fetchOrder(); }} />
+      )}
+    </Box>
+  );
+};
+
+export default BuyerOrderDetails;

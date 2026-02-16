@@ -1,43 +1,23 @@
 // ============================================================
-// ALL REMAINING SOURCING FORMS
-// DeliveryRecordForm, WeighbridgeRecordForm, SupplierPaymentForm, PaymentPreferenceForm
+// WEIGHBRIDGE RECORD FORM - FIXED VERSION
+// Key fix: Load options before initializing form
 // ============================================================
 
 import { FC, useEffect, useRef, useState } from "react";
-import { Box, Button, Alert } from "@mui/material";
+import { Button, Alert, Box } from "@mui/material";
 import { useFormik } from "formik";
 import { toast } from "react-hot-toast";
 import ModalDialog from "../../components/UI/Modal/ModalDialog";
 import ProgressIndicator from "../../components/UI/ProgressIndicator";
 import { Span } from "../../components/Typography";
 import FormFactory from "../../components/UI/FormFactory";
-import { getInitialValues, patchInitialValues } from "../../utils/form_factory";
+import { getInitialValues } from "../../utils/form_factory";
 import uniqueId from "../../utils/generateId";
-import {
-  DeliveryRecordFormFields,
-  WeighbridgeRecordFormFields,
-  SupplierPaymentFormFields,
-  PaymentPreferenceFormFields,
-} from "./SourcingFormFields";
-import {
-  DeliveryRecordFormValidations,
-  WeighbridgeRecordFormValidations,
-  SupplierPaymentFormValidations,
-  PaymentPreferenceFormValidations,
-} from "./SourcingFormValidations";
+import { WeighbridgeRecordFormFields } from "./SourcingFormFields";
+import { WeighbridgeRecordFormValidations } from "./SourcingFormValidations";
 import { SourcingService } from "./Sourcing.service";
-import {
-  IDeliveryFormProps,
-  IWeighbridgeFormProps,
-  IPaymentFormProps,
-  IPaymentPreferenceFormProps,
-} from "./Sourcing.interface";
+import { IWeighbridgeFormProps } from "./Sourcing.interface";
 import { TOption } from "../../@types/common";
-
-
-// ============================================================
-// WEIGHBRIDGE RECORD FORM
-// ============================================================
 
 export const WeighbridgeRecordForm: FC<IWeighbridgeFormProps> = ({
   handleClose,
@@ -47,70 +27,87 @@ export const WeighbridgeRecordForm: FC<IWeighbridgeFormProps> = ({
 }) => {
   const formRef = useRef<HTMLFormElement | null>(null);
   const [loading, setLoading] = useState<boolean>(false);
+  const [optionsLoading, setOptionsLoading] = useState<boolean>(true); // ✅ NEW
+  
   const [sourceOrders, setSourceOrders] = useState<TOption[]>([]);
   const [deliveries, setDeliveries] = useState<TOption[]>([]);
   const [qualityGrades, setQualityGrades] = useState<TOption[]>([]);
   const [netWeight, setNetWeight] = useState<number>(0);
 
+  // ✅ FIX: Load all options on mount
   useEffect(() => {
-    fetchSourceOrders();
-    fetchQualityGrades();
+    loadAllOptions();
   }, []);
 
-  useEffect(() => {
-    if (sourceOrderId) {
-      fetchDeliveries(sourceOrderId);
-    }
-  }, [sourceOrderId]);
+  async function loadAllOptions() {
+    setOptionsLoading(true);
+    await Promise.all([
+      loadSourceOrders(),
+      loadQualityGrades(),
+      ...(sourceOrderId ? [loadDeliveries(sourceOrderId)] : [])
+    ]);
+    setOptionsLoading(false);
+  }
 
-  const fetchSourceOrders = async (search = '') => {
+  async function loadSourceOrders(search?: string) {
     try {
-      const response = await SourcingService.getSourceOrders({ 
+      const data = await SourcingService.getSourceOrders({ 
         search, 
-        status: 'delivered' 
+        status: 'delivered',
+        page_size: 50
       });
-      const options = response.results.map((order: any) => ({
-        value: order.id,
-        label: `${order.order_number} - ${order.supplier_name}`,
-      }));
-      setSourceOrders(options);
+      setSourceOrders(
+        data.results.map((order: any) => ({
+          label: `${order.order_number} - ${order.supplier_name}`,
+          value: order.id,
+        }))
+      );
     } catch (error) {
-      console.error("Error fetching orders:", error);
+      console.error("Error loading orders:", error);
     }
-  };
+  }
 
-  const fetchDeliveries = async (orderId: string) => {
+  async function loadDeliveries(orderId: string) {
     try {
-      const response = await SourcingService.getDeliveryRecords({ source_order: orderId });
-      const options = response.results.map((delivery: any) => ({
-        value: delivery.id,
-        label: `Delivery at ${delivery.hub.name}`,
-      }));
-      setDeliveries(options);
+      const data = await SourcingService.getDeliveryRecords({ 
+        source_order: orderId,
+        page_size: 50
+      });
+      setDeliveries(
+        data.results.map((delivery: any) => ({
+          label: `Delivery at ${delivery.hub.name} - ${new Date(delivery.received_at).toLocaleDateString()}`,
+          value: delivery.id,
+        }))
+      );
     } catch (error) {
-      console.error("Error fetching deliveries:", error);
+      console.error("Error loading deliveries:", error);
     }
-  };
+  }
 
-  const fetchQualityGrades = async () => {
+  async function loadQualityGrades(search?: string) {
     try {
-      const response = await fetch('/api/vouchers/quality-grades/');
-      const data = await response.json();
-      const options = data.results.map((grade: any) => ({
-        value: grade.id,
-        label: grade.name,
-      }));
-      setQualityGrades(options);
+      const data = await SourcingService.getQualityGrades(search);
+      setQualityGrades(
+        data.results.map((grade: any) => ({
+          label: grade.name,
+          value: grade.id,
+        }))
+      );
     } catch (error) {
-      console.error("Error fetching quality grades:", error);
+      console.error("Error loading quality grades:", error);
     }
-  };
+  }
 
+  function handleOrderSearch(value: any) {
+    loadSourceOrders(value);
+  }
+
+  // ✅ Generate formFields WITH loaded options
   const formFields = WeighbridgeRecordFormFields(
     sourceOrders,
     deliveries,
     qualityGrades,
-    (value: string) => fetchSourceOrders(value)
+    handleOrderSearch
   );
 
   const weighbridgeForm = useFormik({
@@ -120,6 +117,10 @@ export const WeighbridgeRecordForm: FC<IWeighbridgeFormProps> = ({
       ...(deliveryId && { delivery_id: deliveryId }),
     },
     validationSchema: WeighbridgeRecordFormValidations,
+    validateOnChange: false,
+    validateOnMount: false,
+    validateOnBlur: false,
+    enableReinitialize: true,
     onSubmit: async (values: any) => {
       setLoading(true);
       try {
@@ -149,37 +150,62 @@ export const WeighbridgeRecordForm: FC<IWeighbridgeFormProps> = ({
   // Fetch deliveries when order changes
   useEffect(() => {
     if (weighbridgeForm.values.source_order_id) {
-      fetchDeliveries(weighbridgeForm.values.source_order_id);
+      loadDeliveries(weighbridgeForm.values.source_order_id);
     }
   }, [weighbridgeForm.values.source_order_id]);
+
+  const ActionBtns: FC = () => {
+    return (
+      <>
+        <Button onClick={handleClose} disabled={loading || optionsLoading}>
+          Close
+        </Button>
+        <Button 
+          onClick={() => weighbridgeForm.handleSubmit()} 
+          variant="contained" 
+          disabled={loading || optionsLoading}
+        >
+          {loading || optionsLoading ? (
+            <>
+              <ProgressIndicator color="inherit" size={20} />{" "}
+              <Span sx={{ ml: 1 }}>
+                {optionsLoading ? "Loading..." : "Saving..."}
+              </Span>
+            </>
+          ) : (
+            "Create Record"
+          )}
+        </Button>
+      </>
+    );
+  };
 
   return (
     <ModalDialog
       title="Weighbridge Record"
       onClose={handleClose}
       id={uniqueId()}
-      ActionButtons={() => (
-        <>
-          <Button onClick={handleClose} disabled={loading}>Close</Button>
-          <Button onClick={() => weighbridgeForm.handleSubmit()} variant="contained" disabled={loading}>
-            {loading ? <><ProgressIndicator color="inherit" size={20} /> <Span sx={{ ml: 1 }}>Loading...</Span></> : "Create Record"}
-          </Button>
-        </>
-      )}
+      ActionButtons={ActionBtns}
     >
-      <form ref={formRef} onSubmit={weighbridgeForm.handleSubmit}>
-        <FormFactory
-          formikInstance={weighbridgeForm}
-          formFields={formFields}
-          validationSchema={WeighbridgeRecordFormValidations}
-        />
-        
-        {netWeight > 0 && (
-          <Alert severity="info" sx={{ mt: 2 }}>
-            Calculated Net Weight: <strong>{netWeight.toFixed(2)} kg</strong>
-          </Alert>
-        )}
-      </form>
+      {optionsLoading ? (
+        <Box sx={{ display: 'flex', justifyContent: 'center', p: 4 }}>
+          <ProgressIndicator />
+        </Box>
+      ) : (
+        <form ref={formRef} onSubmit={weighbridgeForm.handleSubmit}>
+          <FormFactory
+            formikInstance={weighbridgeForm}
+            formFields={formFields}
+            validationSchema={WeighbridgeRecordFormValidations}
+          />
+          
+          {netWeight > 0 && (
+            <Alert severity="info" sx={{ mt: 2 }}>
+              Calculated Net Weight: <strong>{netWeight.toFixed(2)} kg</strong>
+            </Alert>
+          )}
+        </form>
+      )}
     </ModalDialog>
   );
 };

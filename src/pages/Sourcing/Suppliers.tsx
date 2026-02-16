@@ -1,6 +1,7 @@
-import { Box, Button, Chip } from "@mui/material";
-import { useEffect, useState } from "react";
+import { Box, Button } from "@mui/material";
+import { useEffect, useState, useCallback } from "react";
 import { toast } from "react-hot-toast";
+import { debounce } from "lodash";
 import EditIcon from "@mui/icons-material/Edit";
 import DeleteIcon from "@mui/icons-material/Delete";
 import VerifiedIcon from "@mui/icons-material/Verified";
@@ -28,9 +29,20 @@ const Suppliers = () => {
   const [filters, setFilters] = useState<any>({ page: 1, page_size: INITIAL_PAGE_SIZE });
   const [loading, setLoading] = useState<boolean>(false);
 
+  const [formData, setFormData] = useState({
+    users: [],
+    hubs: [],
+    grainTypes: [],
+  });
+  const [formDataLoading, setFormDataLoading] = useState<boolean>(true);
+
   useEffect(() => {
     fetchData(filters);
   }, [filters]);
+
+  useEffect(() => {
+    fetchFormData();
+  }, []);
 
   const fetchData = async (params?: any) => {
     try {
@@ -44,6 +56,75 @@ const Suppliers = () => {
       toast.error("Failed to fetch suppliers");
     }
   };
+
+  const fetchFormData = async () => {
+    try {
+      setFormDataLoading(true);
+      
+      const [usersResponse, hubsResponse, grainTypesResponse] = await Promise.all([
+        SourcingService.getUsers(),
+        SourcingService.getHubs(),
+        SourcingService.getGrainTypes(),
+      ]);
+
+      setFormData({
+        users: (usersResponse.results || usersResponse).map((user: any) => ({
+          value: user.id,
+          label: `${user.first_name} ${user.last_name} (${user.phone_number})`
+        })),
+        hubs: (hubsResponse.results || hubsResponse).map((hub: any) => ({
+          value: hub.id,
+          label: hub.name
+        })),
+        grainTypes: (grainTypesResponse.results || grainTypesResponse).map((grain: any) => ({
+          value: grain.id,
+          label: grain.name
+        })),
+      });
+      
+      setFormDataLoading(false);
+    } catch (error) {
+      console.error('Error fetching form data:', error);
+      toast.error('Failed to load form data');
+      setFormDataLoading(false);
+    }
+  };
+
+  const handleUserSearch = useCallback(
+    debounce(async (query: string) => {
+      try {
+        const results = await SourcingService.getUsers(query);
+        setFormData(prev => ({
+          ...prev,
+          users: (results.results || results).map((user: any) => ({
+            value: user.id,
+            label: `${user.first_name} ${user.last_name} (${user.phone_number})`
+          }))
+        }));
+      } catch (error) {
+        console.error('Error searching users:', error);
+      }
+    }, 300),
+    []
+  );
+
+  const handleHubSearch = useCallback(
+    debounce(async (query: string) => {
+      try {
+        const results = await SourcingService.getHubs(query);
+        setFormData(prev => ({
+          ...prev,
+          hubs: (results.results || results).map((hub: any) => ({
+            value: hub.id,
+            label: hub.name
+          }))
+        }));
+      } catch (error) {
+        console.error('Error searching hubs:', error);
+      }
+    }, 300),
+    []
+  );
 
   const handleRefreshData = async () => {
     await fetchData({ ...filters, search: searchQuery });
@@ -141,6 +222,11 @@ const Suppliers = () => {
           <SearchInput
             value={searchQuery}
             onChange={handleInputChange}
+            onKeyPress={(event) => {
+              if (event.key === "Enter") {
+                handleSearch();
+              }
+            }}
             type="text"
             placeholder="Search by business name, phone..."
           />
@@ -196,6 +282,12 @@ const Suppliers = () => {
         formType={formType}
         handleClose={handleCloseModal}
         initialValues={editSupplier}
+        formData={formData}
+        formDataLoading={formDataLoading}
+        searchHandlers={{
+          handleUserSearch,
+          handleHubSearch,
+        }}
       />
     </Box>
   );

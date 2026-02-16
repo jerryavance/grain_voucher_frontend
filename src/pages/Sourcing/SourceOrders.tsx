@@ -1,11 +1,7 @@
-// ============================================================
-// SOURCING MODULE - SOURCE ORDERS COMPONENT
-// Main listing page for source orders with full CRUD operations
-// ============================================================
-
-import { Box, Button, Chip, MenuItem, Select, FormControl, InputLabel } from "@mui/material";
-import { Key, useEffect, useState } from "react";
+import { Box, Button, MenuItem, Select, FormControl, InputLabel } from "@mui/material";
+import { Key, useEffect, useState, useCallback } from "react";
 import { toast } from "react-hot-toast";
+import { debounce } from "lodash";
 import { useNavigate } from "react-router-dom";
 import EditIcon from "@mui/icons-material/Edit";
 import DeleteIcon from "@mui/icons-material/Delete";
@@ -26,6 +22,14 @@ import SourceOrderForm from "./SourceOrderForm";
 import { INITIAL_PAGE_SIZE } from "../../api/constants";
 import { ORDER_STATUS_OPTIONS } from "./SourcingConstants";
 
+// ✅ ADD THIS INTERFACE
+interface FormDataState {
+  suppliers: { value: string; label: string }[];
+  hubs: { value: string; label: string }[];
+  grainTypes: { value: string; label: string }[];
+  paymentMethods: { value: string; label: string }[];
+}
+
 const SourceOrders = () => {
   useTitle("Source Orders");
   const navigate = useNavigate();
@@ -38,9 +42,22 @@ const SourceOrders = () => {
   const [filters, setFilters] = useState<any>({ page: 1, page_size: INITIAL_PAGE_SIZE });
   const [loading, setLoading] = useState<boolean>(false);
 
+  // ✅ FIX: Type the state properly
+  const [formData, setFormData] = useState<FormDataState>({
+    suppliers: [],
+    hubs: [],
+    grainTypes: [],
+    paymentMethods: [],
+  });
+  const [formDataLoading, setFormDataLoading] = useState<boolean>(true);
+
   useEffect(() => {
     fetchData(filters);
   }, [filters]);
+
+  useEffect(() => {
+    fetchFormData();
+  }, []);
 
   const fetchData = async (params?: any) => {
     try {
@@ -52,6 +69,119 @@ const SourceOrders = () => {
       setLoading(false);
       console.error("Error fetching Source Orders:", error);
       toast.error("Failed to fetch orders");
+    }
+  };
+
+  const fetchFormData = async () => {
+    try {
+      setFormDataLoading(true);
+      
+      const [suppliersResponse, hubsResponse, grainTypesResponse] = await Promise.all([
+        SourcingService.getSuppliers({ is_verified: true, page_size: 50 }),
+        SourcingService.getHubs(),
+        SourcingService.getGrainTypes(),
+      ]);
+
+      setFormData({
+        suppliers: (suppliersResponse.results || suppliersResponse).map((supplier: any) => ({
+          value: supplier.id,
+          label: `${supplier.business_name} (${supplier.user.phone_number})`
+        })),
+        hubs: (hubsResponse.results || hubsResponse).map((hub: any) => ({
+          value: hub.id,
+          label: hub.name
+        })),
+        grainTypes: (grainTypesResponse.results || grainTypesResponse).map((grain: any) => ({
+          value: grain.id,
+          label: grain.name
+        })),
+        paymentMethods: [],
+      });
+      
+      setFormDataLoading(false);
+    } catch (error) {
+      console.error('Error fetching form data:', error);
+      toast.error('Failed to load form data');
+      setFormDataLoading(false);
+    }
+  };
+
+  const handleSupplierSearch = useCallback(
+    debounce(async (query: string) => {
+      try {
+        const results = await SourcingService.getSuppliers({ 
+          search: query, 
+          is_verified: true, 
+          page_size: 50 
+        });
+        setFormData(prev => ({
+          ...prev,
+          suppliers: (results.results || results).map((supplier: any) => ({
+            value: supplier.id,
+            label: `${supplier.business_name} (${supplier.user.phone_number})`
+          }))
+        }));
+      } catch (error) {
+        console.error('Error searching suppliers:', error);
+      }
+    }, 300),
+    []
+  );
+
+  const handleHubSearch = useCallback(
+    debounce(async (query: string) => {
+      try {
+        const results = await SourcingService.getHubs(query);
+        setFormData(prev => ({
+          ...prev,
+          hubs: (results.results || results).map((hub: any) => ({
+            value: hub.id,
+            label: hub.name
+          }))
+        }));
+      } catch (error) {
+        console.error('Error searching hubs:', error);
+      }
+    }, 300),
+    []
+  );
+
+  const handleGrainTypeSearch = useCallback(
+    debounce(async (query: string) => {
+      try {
+        const results = await SourcingService.getGrainTypes(query);
+        setFormData(prev => ({
+          ...prev,
+          grainTypes: (results.results || results).map((grain: any) => ({
+            value: grain.id,
+            label: grain.name
+          }))
+        }));
+      } catch (error) {
+        console.error('Error searching grain types:', error);
+      }
+    }, 300),
+    []
+  );
+
+  const loadPaymentMethods = async (supplierId: string) => {
+    if (!supplierId) return;
+    
+    try {
+      const results = await SourcingService.getPaymentPreferences({ 
+        supplier: supplierId, 
+        is_active: true,
+        page_size: 50
+      });
+      setFormData(prev => ({
+        ...prev,
+        paymentMethods: (results.results || results).map((pm: any) => ({
+          value: pm.id,
+          label: `${pm.method_display}${pm.is_default ? ' (Default)' : ''}`
+        }))
+      }));
+    } catch (error) {
+      console.error('Error loading payment methods:', error);
     }
   };
 
@@ -81,6 +211,11 @@ const SourceOrders = () => {
   const handleEditOrder = async (order: ISourceOrderList) => {
     try {
       const fullOrder = await SourcingService.getSourceOrderDetails(order.id);
+      
+      if (fullOrder.supplier?.id) {
+        await loadPaymentMethods(fullOrder.supplier.id);
+      }
+      
       setFormType("Update");
       setEditOrder(fullOrder);
       setTimeout(() => setShowModal(true), 100);
@@ -122,9 +257,9 @@ const SourceOrders = () => {
   };
 
   const handleRejectOrder = async (order: ISourceOrderList) => {
-    const reason = prompt("Reason for rejection (optional):");
+    const reason = prompt("Reason for rejection (optional):") || "";
     try {
-      await SourcingService.rejectOrder(order.id, reason || undefined);
+      await SourcingService.rejectOrder(order.id, reason);
       toast.success("Order rejected");
       handleRefreshData();
     } catch (error: any) {
@@ -159,6 +294,11 @@ const SourceOrders = () => {
     navigate(`/admin/sourcing/orders/${order.id}`);
   };
 
+  const handleStatusFilter = (event: any) => {
+    const value = event.target.value;
+    setFilters({ ...filters, status: value || undefined, page: 1 });
+  };
+
   const tableActions: IDropdownAction[] = [
     {
       label: "View Details",
@@ -181,13 +321,13 @@ const SourceOrders = () => {
       label: "Accept Order",
       icon: <CheckIcon color="success" />,
       onClick: handleAcceptOrder,
-      condition: (order: ISourceOrderList) => order.status === 'open',
+      condition: (order: ISourceOrderList) => order.status === 'sent',
     },
     {
       label: "Reject Order",
       icon: <CloseIcon color="error" />,
       onClick: handleRejectOrder,
-      condition: (order: ISourceOrderList) => order.status === 'open',
+      condition: (order: ISourceOrderList) => order.status === 'sent',
     },
     {
       label: "Mark In Transit",
@@ -208,11 +348,6 @@ const SourceOrders = () => {
       condition: (order: ISourceOrderList) => order.status === 'draft',
     },
   ];
-
-  const handleStatusFilter = (event: any) => {
-    const value = event.target.value;
-    setFilters({ ...filters, status: value || undefined, page: 1 });
-  };
 
   return (
     <Box pt={2} pb={4}>
@@ -270,6 +405,14 @@ const SourceOrders = () => {
         formType={formType}
         handleClose={handleCloseModal}
         initialValues={editOrder}
+        formData={formData}
+        formDataLoading={formDataLoading}
+        searchHandlers={{
+          handleSupplierSearch,
+          handleHubSearch,
+          handleGrainTypeSearch,
+        }}
+        onLoadPaymentMethods={loadPaymentMethods}
       />
     </Box>
   );

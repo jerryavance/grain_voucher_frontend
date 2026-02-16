@@ -429,12 +429,12 @@ const SupplierDetails = () => {
       </TabPanel>
 
       {/* Edit Modal */}
-      <SupplierForm
+      {/* <SupplierForm
         formType="Update"
         initialValues={supplier}
         callBack={handleCloseModal}
         handleClose={handleCloseModal}
-      />
+      /> */}
     </Box>
   );
 };

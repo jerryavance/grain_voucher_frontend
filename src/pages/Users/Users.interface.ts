@@ -2,6 +2,8 @@ import { TOption } from "../../@types/common";
 import { IHub } from "../Hub/Hub.interface";
 
 export interface IUser {
+    email: string;
+    phone_number: string;
     id: string;
     first_name: string;
     last_name: string;

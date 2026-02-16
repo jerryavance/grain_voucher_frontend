@@ -1,19 +1,11 @@
-import { useEffect, useState } from "react";
+import { FC, useEffect, useRef, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import {
-  Box,
-  Card,
-  CardContent,
-  Typography,
-  Grid,
-  Chip,
-  Button,
-  Divider,
-  Paper,
-  Tab,
-  Tabs,
-  Alert,
+  Box, Card, CardContent, Typography, Grid, Chip, Button,
+  Divider, Tab, Tabs, Alert, TextField,
 } from "@mui/material";
+import { useFormik } from "formik";
+import * as Yup from "yup";
 import { toast } from "react-hot-toast";
 import ArrowBackIcon from "@mui/icons-material/ArrowBack";
 import SendIcon from "@mui/icons-material/Send";
@@ -21,109 +13,161 @@ import CheckIcon from "@mui/icons-material/Check";
 import CloseIcon from "@mui/icons-material/Close";
 import LocalShippingIcon from "@mui/icons-material/LocalShipping";
 import ScaleIcon from "@mui/icons-material/Scale";
+import AccountBalanceIcon from "@mui/icons-material/AccountBalance";
+import { FormControl, InputLabel, Select, MenuItem } from "@mui/material";
 import useTitle from "../../hooks/useTitle";
 import { SourcingService } from "./Sourcing.service";
-import { ISourceOrder } from "./Sourcing.interface";
+import { ISourceOrder, IInvestorAccount } from "./Sourcing.interface";
 import { formatCurrency, formatWeight, ORDER_STATUS_COLORS } from "./SourcingConstants";
 import { formatDateToDDMMYYYY } from "../../utils/date_formatter";
 import { Span } from "../../components/Typography";
 import LoadingScreen from "../../components/LoadingScreen";
+import ProgressIndicator from "../../components/UI/ProgressIndicator";
+import ModalDialog from "../../components/UI/Modal/ModalDialog";
+import uniqueId from "../../utils/generateId";
 import { DeliveryRecordForm } from "./DeliveryRecordForm";
 import { WeighbridgeRecordForm } from "./WeighbridgeRecordForm";
-import { useModalContext } from "../../contexts/ModalDialogContext";
 
-interface TabPanelProps {
-  children?: React.ReactNode;
-  index: number;
-  value: number;
+interface TabPanelProps { children?: React.ReactNode; index: number; value: number; }
+function TabPanel({ children, value, index }: TabPanelProps) {
+  return <div role="tabpanel" hidden={value !== index}>{value === index && <Box sx={{ p: 3 }}>{children}</Box>}</div>;
 }
 
-function TabPanel(props: TabPanelProps) {
-  const { children, value, index, ...other } = props;
-  return (
-    <div role="tabpanel" hidden={value !== index} {...other}>
-      {value === index && <Box sx={{ p: 3 }}>{children}</Box>}
-    </div>
+// ─── Investor Allocation Form ──────────────────────────────────────────────
+const InvestorAllocationForm: FC<{
+  order: ISourceOrder; handleClose: () => void; callBack?: () => void;
+}> = ({ order, handleClose, callBack }) => {
+  const [loading, setLoading] = useState(false);
+  const [optionsLoading, setOptionsLoading] = useState(true);
+  const [investorAccounts, setInvestorAccounts] = useState<IInvestorAccount[]>([]);
+
+  useEffect(() => {
+    SourcingService.getInvestorAccounts()
+      .then(r => setInvestorAccounts(r.results || (r as any)))
+      .catch(() => toast.error("Failed to load investor accounts"))
+      .finally(() => setOptionsLoading(false));
+  }, []);
+
+  const form = useFormik({
+    initialValues: {
+      investor_account: "",
+      source_order: order.id,
+      amount_allocated: order.total_cost,
+      notes: "",
+    },
+    validationSchema: Yup.object({
+      investor_account: Yup.string().required("Investor account is required"),
+      amount_allocated: Yup.number().positive("Must be positive").required("Amount is required"),
+    }),
+    onSubmit: async (values) => {
+      setLoading(true);
+      try {
+        await SourcingService.createInvestorAllocation({
+          investor_account: values.investor_account,
+          source_order: values.source_order,
+          amount_allocated: Number(values.amount_allocated),
+          notes: values.notes,
+        });
+        toast.success("Investor allocated successfully");
+        callBack?.();
+        handleClose();
+      } catch (e: any) {
+        const msg =
+          e.response?.data?.amount_allocated?.[0] ||
+          e.response?.data?.non_field_errors?.[0] ||
+          e.response?.data?.source_order?.[0] ||
+          "Failed to create allocation";
+        toast.error(msg);
+      } finally { setLoading(false); }
+    },
+  });
+
+  const selected = investorAccounts.find(a => a.id === form.values.investor_account);
+  const sufficient = selected ? selected.available_balance >= Number(form.values.amount_allocated) : true;
+
+  const ActionBtns: FC = () => (
+    <>
+      <Button onClick={handleClose} disabled={loading}>Cancel</Button>
+      <Button variant="contained" onClick={() => form.handleSubmit()} disabled={loading || optionsLoading || !sufficient}>
+        {loading ? <><ProgressIndicator color="inherit" size={20} /><Span sx={{ ml: 1 }}>Allocating...</Span></> : "Allocate Investor"}
+      </Button>
+    </>
   );
-}
 
+  return (
+    <ModalDialog title="Assign Investor to Order" onClose={handleClose} id={uniqueId()} ActionButtons={ActionBtns}>
+      {optionsLoading ? (
+        <Box sx={{ display: "flex", justifyContent: "center", p: 4 }}><ProgressIndicator /></Box>
+      ) : (
+        <Box sx={{ display: "flex", flexDirection: "column", gap: 2, pt: 1 }}>
+          <Alert severity="info">
+            Committing investor capital to fund this purchase. Funds + margin are returned once the grain is sold.
+          </Alert>
+
+          <FormControl fullWidth error={Boolean(form.errors.investor_account)}>
+            <InputLabel>Investor Account *</InputLabel>
+            <Select value={form.values.investor_account} label="Investor Account *"
+              onChange={e => form.setFieldValue("investor_account", e.target.value)}>
+              {investorAccounts.map(a => (
+                <MenuItem key={a.id} value={a.id}>
+                  {a.investor.first_name} {a.investor.last_name} — Balance: {formatCurrency(a.available_balance)}
+                </MenuItem>
+              ))}
+            </Select>
+          </FormControl>
+
+          {selected && (
+            <Alert severity={sufficient ? "success" : "error"}>
+              Available balance: <strong>{formatCurrency(selected.available_balance)}</strong>
+              {!sufficient && " — Insufficient funds for this allocation"}
+            </Alert>
+          )}
+
+          <TextField label="Amount Allocated (UGX) *" type="number" fullWidth
+            value={form.values.amount_allocated}
+            onChange={e => form.setFieldValue("amount_allocated", e.target.value)}
+            error={Boolean(form.errors.amount_allocated)}
+            helperText={(form.errors.amount_allocated as string) || `Order total cost: ${formatCurrency(order.total_cost)}`}
+          />
+
+          <TextField label="Notes" multiline rows={2} fullWidth
+            value={form.values.notes} onChange={e => form.setFieldValue("notes", e.target.value)} />
+        </Box>
+      )}
+    </ModalDialog>
+  );
+};
+
+// ─── Main Component ───────────────────────────────────────────────────────
 const SourceOrderDetails = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { setShowModal } = useModalContext();
-  
+
   const [order, setOrder] = useState<ISourceOrder | null>(null);
   const [loading, setLoading] = useState(true);
   const [tabValue, setTabValue] = useState(0);
   const [showDeliveryForm, setShowDeliveryForm] = useState(false);
   const [showWeighbridgeForm, setShowWeighbridgeForm] = useState(false);
+  const [showAllocationForm, setShowAllocationForm] = useState(false);
 
   useTitle(order ? `Order ${order.order_number}` : "Order Details");
 
-  useEffect(() => {
-    if (id) {
-      fetchOrderDetails();
-    }
-  }, [id]);
+  useEffect(() => { if (id) fetchOrderDetails(); }, [id]);
 
   const fetchOrderDetails = async () => {
     try {
       setLoading(true);
       const data = await SourcingService.getSourceOrderDetails(id!);
       setOrder(data);
-    } catch (error: any) {
+    } catch {
       toast.error("Failed to load order details");
       navigate("/admin/sourcing/orders");
-    } finally {
-      setLoading(false);
-    }
+    } finally { setLoading(false); }
   };
 
-  const handleSendToSupplier = async () => {
-    try {
-      await SourcingService.sendToSupplier(id!);
-      toast.success("Order sent to supplier");
-      fetchOrderDetails();
-    } catch (error: any) {
-      toast.error(error?.response?.data?.detail || "Failed to send order");
-    }
-  };
-
-  const handleAccept = async () => {
-    try {
-      await SourcingService.acceptOrder(id!);
-      toast.success("Order accepted");
-      fetchOrderDetails();
-    } catch (error: any) {
-      toast.error(error?.response?.data?.detail || "Failed to accept order");
-    }
-  };
-
-  const handleReject = async () => {
-    const reason = prompt("Reason for rejection:");
-    if (!reason) return;
-    
-    try {
-      await SourcingService.rejectOrder(id!, reason);
-      toast.success("Order rejected");
-      fetchOrderDetails();
-    } catch (error: any) {
-      toast.error(error?.response?.data?.detail || "Failed to reject order");
-    }
-  };
-
-  const handleMarkInTransit = async () => {
-    try {
-      await SourcingService.markInTransit(id!);
-      toast.success("Order marked as in transit");
-      fetchOrderDetails();
-    } catch (error: any) {
-      toast.error(error?.response?.data?.detail || "Failed to update order");
-    }
-  };
-
-  const handleTabChange = (event: React.SyntheticEvent, newValue: number) => {
-    setTabValue(newValue);
+  const handleAction = async (action: () => Promise<any>, successMsg: string) => {
+    try { await action(); toast.success(successMsg); fetchOrderDetails(); }
+    catch (e: any) { toast.error(e?.response?.data?.error || e?.response?.data?.detail || "Action failed"); }
   };
 
   if (loading) return <LoadingScreen />;
@@ -132,168 +176,133 @@ const SourceOrderDetails = () => {
   return (
     <Box pt={2} pb={4}>
       {/* Header */}
-      <Box sx={{ display: "flex", alignItems: "center", mb: 3 }}>
-        <Button
-          startIcon={<ArrowBackIcon />}
-          onClick={() => navigate("/admin/sourcing/orders")}
-          sx={{ mr: 2 }}
-        >
+      <Box sx={{ display: "flex", alignItems: "center", mb: 3, flexWrap: "wrap", gap: 1 }}>
+        <Button startIcon={<ArrowBackIcon />} onClick={() => navigate("/admin/sourcing/orders")} sx={{ mr: 1 }}>
           Back
         </Button>
         <Typography variant="h4">{order.order_number}</Typography>
-        <Chip
-          label={order.status_display}
-          color={ORDER_STATUS_COLORS[order.status]}
-          sx={{ ml: 2 }}
-        />
+        <Chip label={order.status_display} color={ORDER_STATUS_COLORS[order.status]} sx={{ ml: 1 }} />
+        {order.has_investor_allocation ? (
+          <Chip label="Investor Assigned" color="success" size="small" icon={<AccountBalanceIcon />} variant="outlined" />
+        ) : (
+          <Chip label="No Investor" color="warning" size="small" variant="outlined" />
+        )}
+        {order.has_sale_lot && <Chip label="Stock Created" color="info" size="small" variant="outlined" />}
       </Box>
 
       {/* Action Buttons */}
       <Box sx={{ mb: 3, display: "flex", gap: 1, flexWrap: "wrap" }}>
-        {order.status === 'draft' && (
-          <Button
-            variant="contained"
-            startIcon={<SendIcon />}
-            onClick={handleSendToSupplier}
-          >
+        {order.status === "draft" && (
+          <Button variant="contained" startIcon={<SendIcon />}
+            onClick={() => handleAction(() => SourcingService.sendToSupplier(id!), "Order sent to supplier")}>
             Send to Supplier
           </Button>
         )}
-        {order.status === 'open' && (
+        {order.status === "sent" && (
           <>
-            <Button
-              variant="contained"
-              color="success"
-              startIcon={<CheckIcon />}
-              onClick={handleAccept}
-            >
+            <Button variant="contained" color="success" startIcon={<CheckIcon />}
+              onClick={() => handleAction(() => SourcingService.acceptOrder(id!), "Order accepted")}>
               Accept Order
             </Button>
-            <Button
-              variant="outlined"
-              color="error"
-              startIcon={<CloseIcon />}
-              onClick={handleReject}
-            >
-              Reject Order
+            <Button variant="outlined" color="error" startIcon={<CloseIcon />}
+              onClick={() => handleAction(() => SourcingService.cancelOrder(id!), "Order cancelled")}>
+              Cancel
             </Button>
           </>
         )}
-        {order.status === 'accepted' && (
-          <Button
-            variant="contained"
-            color="warning"
-            startIcon={<LocalShippingIcon />}
-            onClick={handleMarkInTransit}
-          >
-            Mark In Transit
+        {order.status === "accepted" && (
+          <>
+            {/* Assign investor before transit if not already assigned */}
+            {!order.has_investor_allocation && (
+              <Button variant="contained" color="secondary" startIcon={<AccountBalanceIcon />}
+                onClick={() => setShowAllocationForm(true)}>
+                Assign Investor
+              </Button>
+            )}
+            <Button variant="contained" color="warning" startIcon={<LocalShippingIcon />}
+              onClick={() => handleAction(() => SourcingService.markInTransit(id!), "Order marked in transit")}>
+              Mark In Transit
+            </Button>
+          </>
+        )}
+        {/* Can always assign investor on accepted/in_transit if not yet assigned */}
+        {order.status === "in_transit" && !order.has_investor_allocation && (
+          <Button variant="outlined" color="secondary" startIcon={<AccountBalanceIcon />}
+            onClick={() => setShowAllocationForm(true)}>
+            Assign Investor
           </Button>
         )}
-        {order.status === 'in_transit' && !order.has_delivery && (
-          <Button
-            variant="contained"
-            color="info"
-            onClick={() => setShowDeliveryForm(true)}
-          >
+        {order.status === "in_transit" && !order.has_delivery && (
+          <Button variant="contained" color="info" onClick={() => setShowDeliveryForm(true)}>
             Record Delivery
           </Button>
         )}
         {order.has_delivery && !order.has_weighbridge && (
-          <Button
-            variant="contained"
-            color="success"
-            startIcon={<ScaleIcon />}
-            onClick={() => setShowWeighbridgeForm(true)}
-          >
+          <Button variant="contained" color="success" startIcon={<ScaleIcon />}
+            onClick={() => setShowWeighbridgeForm(true)}>
             Record Weighbridge
           </Button>
         )}
       </Box>
 
-      {/* Tabs */}
-      <Box sx={{ borderBottom: 1, borderColor: "divider" }}>
-        <Tabs value={tabValue} onChange={handleTabChange}>
-          <Tab label="Order Details" />
-          <Tab label="Supplier Info" />
-          <Tab label="Invoice & Payments" disabled={!order.has_invoice} />
-        </Tabs>
-      </Box>
+      {/* No investor alert on accepted orders */}
+      {order.status === "accepted" && !order.has_investor_allocation && (
+        <Alert severity="warning" sx={{ mb: 2 }} action={
+          <Button color="inherit" size="small" onClick={() => setShowAllocationForm(true)}>Assign Now</Button>
+        }>
+          This order has no investor assigned. Assign an investor before dispatching to ensure funding is committed.
+        </Alert>
+      )}
 
-      {/* Tab Panels */}
+      <Tabs value={tabValue} onChange={(_, v) => setTabValue(v)} sx={{ borderBottom: 1, borderColor: "divider" }}>
+        <Tab label="Order Details" />
+        <Tab label="Supplier Info" />
+        <Tab label="Invoice & Payments" />
+      </Tabs>
+
       <TabPanel value={tabValue} index={0}>
         <Grid container spacing={3}>
-          {/* Order Information */}
           <Grid item xs={12} md={6}>
             <Card>
               <CardContent>
                 <Typography variant="h6" gutterBottom>Order Information</Typography>
                 <Divider sx={{ mb: 2 }} />
-                
-                <Box sx={styles.infoRow}>
-                  <Span sx={styles.label}>Order Number:</Span>
-                  <Span sx={styles.value}>{order.order_number}</Span>
-                </Box>
-                <Box sx={styles.infoRow}>
-                  <Span sx={styles.label}>Hub:</Span>
-                  <Span sx={styles.value}>{order.hub.name}</Span>
-                </Box>
-                <Box sx={styles.infoRow}>
-                  <Span sx={styles.label}>Grain Type:</Span>
-                  <Span sx={styles.value}>{order.grain_type.name}</Span>
-                </Box>
-                <Box sx={styles.infoRow}>
-                  <Span sx={styles.label}>Quantity:</Span>
-                  <Span sx={styles.value}>{formatWeight(order.quantity_kg)}</Span>
-                </Box>
-                <Box sx={styles.infoRow}>
-                  <Span sx={styles.label}>Price per kg:</Span>
-                  <Span sx={styles.value}>{formatCurrency(order.offered_price_per_kg)}</Span>
-                </Box>
-                <Box sx={styles.infoRow}>
-                  <Span sx={styles.label}>Created By:</Span>
-                  <Span sx={styles.value}>{order.created_by.first_name} {order.created_by.last_name}</Span>
-                </Box>
-                <Box sx={styles.infoRow}>
-                  <Span sx={styles.label}>Created At:</Span>
-                  <Span sx={styles.value}>{formatDateToDDMMYYYY(order.created_at)}</Span>
-                </Box>
-                {order.expected_delivery_date && (
-                  <Box sx={styles.infoRow}>
-                    <Span sx={styles.label}>Expected Delivery:</Span>
-                    <Span sx={styles.value}>{formatDateToDDMMYYYY(order.expected_delivery_date)}</Span>
+                {[
+                  ["Order Number", order.order_number],
+                  ["Hub", order.hub.name],
+                  ["Grain Type", order.grain_type.name],
+                  ["Quantity", formatWeight(order.quantity_kg)],
+                  ["Price per kg", formatCurrency(order.offered_price_per_kg)],
+                  ["Created By", `${order.created_by.first_name} ${order.created_by.last_name}`],
+                  ["Created At", formatDateToDDMMYYYY(order.created_at)],
+                  ...(order.expected_delivery_date ? [["Expected Delivery", formatDateToDDMMYYYY(order.expected_delivery_date)]] : []),
+                ].map(([label, value]) => (
+                  <Box key={label as string} sx={styles.infoRow}>
+                    <Span sx={styles.label}>{label}:</Span>
+                    <Span sx={styles.value}>{value}</Span>
                   </Box>
-                )}
+                ))}
               </CardContent>
             </Card>
           </Grid>
 
-          {/* Cost Breakdown */}
           <Grid item xs={12} md={6}>
             <Card>
               <CardContent>
                 <Typography variant="h6" gutterBottom>Cost Breakdown</Typography>
                 <Divider sx={{ mb: 2 }} />
-                
-                <Box sx={styles.infoRow}>
-                  <Span sx={styles.label}>Grain Cost:</Span>
-                  <Span sx={styles.value}>{formatCurrency(order.grain_cost)}</Span>
-                </Box>
-                <Box sx={styles.infoRow}>
-                  <Span sx={styles.label}>Weighbridge Cost:</Span>
-                  <Span sx={styles.value}>{formatCurrency(order.weighbridge_cost)}</Span>
-                </Box>
-                <Box sx={styles.infoRow}>
-                  <Span sx={styles.label}>Logistics Cost:</Span>
-                  <Span sx={styles.value}>{formatCurrency(order.logistics_cost)}</Span>
-                </Box>
-                <Box sx={styles.infoRow}>
-                  <Span sx={styles.label}>Handling Cost:</Span>
-                  <Span sx={styles.value}>{formatCurrency(order.handling_cost)}</Span>
-                </Box>
-                <Box sx={styles.infoRow}>
-                  <Span sx={styles.label}>Other Costs:</Span>
-                  <Span sx={styles.value}>{formatCurrency(order.other_costs)}</Span>
-                </Box>
+                {[
+                  ["Grain Cost", formatCurrency(order.grain_cost)],
+                  ["Weighbridge Cost", formatCurrency(order.weighbridge_cost)],
+                  ["Logistics Cost", formatCurrency(order.logistics_cost)],
+                  ["Handling Cost", formatCurrency(order.handling_cost)],
+                  ["Other Costs", formatCurrency(order.other_costs)],
+                ].map(([label, value]) => (
+                  <Box key={label as string} sx={styles.infoRow}>
+                    <Span sx={styles.label}>{label}:</Span>
+                    <Span sx={styles.value}>{value}</Span>
+                  </Box>
+                ))}
                 <Divider sx={{ my: 2 }} />
                 <Box sx={styles.infoRow}>
                   <Typography variant="h6">Total Cost:</Typography>
@@ -303,138 +312,81 @@ const SourceOrderDetails = () => {
             </Card>
           </Grid>
 
-          {/* Logistics Information */}
           {order.logistics_type && (
             <Grid item xs={12}>
               <Card>
                 <CardContent>
-                  <Typography variant="h6" gutterBottom>Logistics Information</Typography>
+                  <Typography variant="h6" gutterBottom>Logistics</Typography>
                   <Divider sx={{ mb: 2 }} />
                   <Grid container spacing={2}>
-                    <Grid item xs={12} md={4}>
-                      <Span sx={styles.label}>Logistics Type:</Span>
-                      <Span sx={styles.value}>{order.logistics_type_display}</Span>
-                    </Grid>
-                    {order.driver_name && (
-                      <Grid item xs={12} md={4}>
-                        <Span sx={styles.label}>Driver Name:</Span>
-                        <Span sx={styles.value}>{order.driver_name}</Span>
-                      </Grid>
-                    )}
-                    {order.driver_phone && (
-                      <Grid item xs={12} md={4}>
-                        <Span sx={styles.label}>Driver Phone:</Span>
-                        <Span sx={styles.value}>{order.driver_phone}</Span>
-                      </Grid>
-                    )}
+                    <Grid item xs={12} md={4}><Span sx={styles.label}>Type:</Span><Span sx={styles.value}> {order.logistics_type_display}</Span></Grid>
+                    {order.driver_name && <Grid item xs={12} md={4}><Span sx={styles.label}>Driver:</Span><Span sx={styles.value}> {order.driver_name}</Span></Grid>}
+                    {order.driver_phone && <Grid item xs={12} md={4}><Span sx={styles.label}>Phone:</Span><Span sx={styles.value}> {order.driver_phone}</Span></Grid>}
                   </Grid>
                 </CardContent>
               </Card>
             </Grid>
           )}
 
-          {/* Notes */}
           {order.notes && (
             <Grid item xs={12}>
-              <Card>
-                <CardContent>
-                  <Typography variant="h6" gutterBottom>Notes</Typography>
-                  <Divider sx={{ mb: 2 }} />
-                  <Typography>{order.notes}</Typography>
-                </CardContent>
-              </Card>
+              <Card><CardContent>
+                <Typography variant="h6" gutterBottom>Notes</Typography>
+                <Divider sx={{ mb: 2 }} /><Typography>{order.notes}</Typography>
+              </CardContent></Card>
             </Grid>
           )}
         </Grid>
       </TabPanel>
 
       <TabPanel value={tabValue} index={1}>
-        <Card>
-          <CardContent>
-            <Typography variant="h6" gutterBottom>Supplier Information</Typography>
-            <Divider sx={{ mb: 2 }} />
-            <Grid container spacing={2}>
-              <Grid item xs={12} md={6}>
-                <Box sx={styles.infoRow}>
-                  <Span sx={styles.label}>Business Name:</Span>
-                  <Span sx={styles.value}>{order.supplier.business_name}</Span>
-                </Box>
-                <Box sx={styles.infoRow}>
-                  <Span sx={styles.label}>Contact Person:</Span>
-                  <Span sx={styles.value}>{order.supplier.user.first_name} {order.supplier.user.last_name}</Span>
-                </Box>
-                <Box sx={styles.infoRow}>
-                  <Span sx={styles.label}>Phone:</Span>
-                {/* <Span sx={styles.value}>{order.supplier.user.phone_number || "Not provided"}</Span> */}
-                </Box>
-              </Grid>
-              <Grid item xs={12} md={6}>
-                <Box sx={styles.infoRow}>
-                  <Span sx={styles.label}>Primary Hub:</Span>
-                  <Span sx={styles.value}>{order.supplier.hub?.name || "Not Set"}</Span>
-                </Box>
-                <Box sx={styles.infoRow}>
-                  <Span sx={styles.label}>Verified:</Span>
-                  <Chip 
-                    label={order.supplier.is_verified ? "Verified" : "Not Verified"} 
-                    color={order.supplier.is_verified ? "success" : "warning"} 
-                    size="small"
-                  />
-                </Box>
-              </Grid>
+        <Card><CardContent>
+          <Typography variant="h6" gutterBottom>Supplier Information</Typography>
+          <Divider sx={{ mb: 2 }} />
+          <Grid container spacing={2}>
+            <Grid item xs={12} md={6}>
+              <Box sx={styles.infoRow}><Span sx={styles.label}>Business Name:</Span><Span sx={styles.value}>{order.supplier.business_name}</Span></Box>
+              <Box sx={styles.infoRow}><Span sx={styles.label}>Contact Person:</Span><Span sx={styles.value}>{order.supplier.user.first_name} {order.supplier.user.last_name}</Span></Box>
             </Grid>
-          </CardContent>
-        </Card>
+            <Grid item xs={12} md={6}>
+              <Box sx={styles.infoRow}><Span sx={styles.label}>Primary Hub:</Span><Span sx={styles.value}>{order.supplier.hub?.name || "Not Set"}</Span></Box>
+              <Box sx={styles.infoRow}>
+                <Span sx={styles.label}>Verified:</Span>
+                <Chip label={order.supplier.is_verified ? "Verified" : "Not Verified"} color={order.supplier.is_verified ? "success" : "warning"} size="small" />
+              </Box>
+            </Grid>
+          </Grid>
+        </CardContent></Card>
       </TabPanel>
 
       <TabPanel value={tabValue} index={2}>
-        {order.has_invoice ? (
-          <Alert severity="info">Invoice details will be displayed here</Alert>
-        ) : (
-          <Alert severity="warning">No invoice generated yet</Alert>
-        )}
+        {order.has_invoice
+          ? <Alert severity="info">View invoice details in the Supplier Invoices section.</Alert>
+          : <Alert severity="warning">No invoice generated yet. Invoice is auto-created when order is accepted.</Alert>}
       </TabPanel>
 
       {/* Modals */}
-      {showDeliveryForm && (
-        <DeliveryRecordForm
-          sourceOrderId={order.id}
-          callBack={() => {
-            setShowDeliveryForm(false);
-            fetchOrderDetails();
-          }}
-          handleClose={() => setShowDeliveryForm(false)}
-        />
+      {showAllocationForm && (
+        <InvestorAllocationForm order={order} handleClose={() => setShowAllocationForm(false)} callBack={fetchOrderDetails} />
       )}
-
+      {showDeliveryForm && (
+        <DeliveryRecordForm sourceOrderId={order.id}
+          callBack={() => { setShowDeliveryForm(false); fetchOrderDetails(); }}
+          handleClose={() => setShowDeliveryForm(false)} />
+      )}
       {showWeighbridgeForm && (
-        <WeighbridgeRecordForm
-          sourceOrderId={order.id}
-          callBack={() => {
-            setShowWeighbridgeForm(false);
-            fetchOrderDetails();
-          }}
-          handleClose={() => setShowWeighbridgeForm(false)}
-        />
+        <WeighbridgeRecordForm sourceOrderId={order.id}
+          callBack={() => { setShowWeighbridgeForm(false); fetchOrderDetails(); }}
+          handleClose={() => setShowWeighbridgeForm(false)} />
       )}
     </Box>
   );
 };
 
 const styles = {
-  infoRow: {
-    display: "flex",
-    justifyContent: "space-between",
-    alignItems: "center",
-    mb: 1.5,
-  },
-  label: {
-    fontWeight: 600,
-    color: "text.secondary",
-  },
-  value: {
-    color: "text.primary",
-  },
+  infoRow: { display: "flex", justifyContent: "space-between", alignItems: "center", mb: 1.5 },
+  label: { fontWeight: 600, color: "text.secondary" },
+  value: { color: "text.primary" },
 };
 
 export default SourceOrderDetails;

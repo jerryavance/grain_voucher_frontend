@@ -1,42 +1,24 @@
 // ============================================================
-// ALL REMAINING SOURCING FORMS
-// DeliveryRecordForm, WeighbridgeRecordForm, SupplierPaymentForm, PaymentPreferenceForm
+// DELIVERY RECORD FORM - FIXED VERSION
+// Key fix: Load options before initializing form
 // ============================================================
 
 import { FC, useEffect, useRef, useState } from "react";
-import { Box, Button, Alert } from "@mui/material";
+import { Button } from "@mui/material";
 import { useFormik } from "formik";
 import { toast } from "react-hot-toast";
 import ModalDialog from "../../components/UI/Modal/ModalDialog";
 import ProgressIndicator from "../../components/UI/ProgressIndicator";
 import { Span } from "../../components/Typography";
 import FormFactory from "../../components/UI/FormFactory";
-import { getInitialValues, patchInitialValues } from "../../utils/form_factory";
+import { getInitialValues } from "../../utils/form_factory";
 import uniqueId from "../../utils/generateId";
-import {
-  DeliveryRecordFormFields,
-  WeighbridgeRecordFormFields,
-  SupplierPaymentFormFields,
-  PaymentPreferenceFormFields,
-} from "./SourcingFormFields";
-import {
-  DeliveryRecordFormValidations,
-  WeighbridgeRecordFormValidations,
-  SupplierPaymentFormValidations,
-  PaymentPreferenceFormValidations,
-} from "./SourcingFormValidations";
+import { DeliveryRecordFormFields } from "./SourcingFormFields";
+import { DeliveryRecordFormValidations } from "./SourcingFormValidations";
 import { SourcingService } from "./Sourcing.service";
-import {
-  IDeliveryFormProps,
-  IWeighbridgeFormProps,
-  IPaymentFormProps,
-  IPaymentPreferenceFormProps,
-} from "./Sourcing.interface";
+import { IDeliveryFormProps } from "./Sourcing.interface";
 import { TOption } from "../../@types/common";
-
-// ============================================================
-// DELIVERY RECORD FORM
-// ============================================================
+import { Box } from "@mui/material";
 
 export const DeliveryRecordForm: FC<IDeliveryFormProps> = ({
   handleClose,
@@ -45,48 +27,66 @@ export const DeliveryRecordForm: FC<IDeliveryFormProps> = ({
 }) => {
   const formRef = useRef<HTMLFormElement | null>(null);
   const [loading, setLoading] = useState<boolean>(false);
+  const [optionsLoading, setOptionsLoading] = useState<boolean>(true); // ✅ NEW
+  
   const [sourceOrders, setSourceOrders] = useState<TOption[]>([]);
   const [hubs, setHubs] = useState<TOption[]>([]);
 
+  // ✅ FIX: Load all options on mount
   useEffect(() => {
-    fetchSourceOrders();
-    fetchHubs();
+    loadAllOptions();
   }, []);
 
-  const fetchSourceOrders = async (search = '') => {
+  async function loadAllOptions() {
+    setOptionsLoading(true);
+    await Promise.all([
+      loadSourceOrders(),
+      loadHubs()
+    ]);
+    setOptionsLoading(false);
+  }
+
+  async function loadSourceOrders(search?: string) {
     try {
-      const response = await SourcingService.getSourceOrders({ 
+      const data = await SourcingService.getSourceOrders({ 
         search, 
-        status: 'in_transit' 
+        status: 'in_transit',
+        page_size: 50
       });
-      const options = response.results.map((order: any) => ({
-        value: order.id,
-        label: `${order.order_number} - ${order.supplier_name}`,
-      }));
-      setSourceOrders(options);
+      setSourceOrders(
+        data.results.map((order: any) => ({
+          label: `${order.order_number} - ${order.supplier_name}`,
+          value: order.id,
+        }))
+      );
     } catch (error) {
-      console.error("Error fetching orders:", error);
+      console.error("Error loading orders:", error);
     }
-  };
+  }
 
-  const fetchHubs = async () => {
+  async function loadHubs(search?: string) {
     try {
-      const response = await fetch('/api/hubs/hubs/');
-      const data = await response.json();
-      const options = data.results.map((hub: any) => ({
-        value: hub.id,
-        label: hub.name,
-      }));
-      setHubs(options);
+      const data = await SourcingService.getHubs(search);
+      setHubs(
+        data.results.map((hub: any) => ({
+          label: hub.name,
+          value: hub.id,
+        }))
+      );
     } catch (error) {
-      console.error("Error fetching hubs:", error);
+      console.error("Error loading hubs:", error);
     }
-  };
+  }
 
+  function handleOrderSearch(value: any) {
+    loadSourceOrders(value);
+  }
+
+  // ✅ Generate formFields WITH loaded options
   const formFields = DeliveryRecordFormFields(
     sourceOrders,
     hubs,
-    (value: string) => fetchSourceOrders(value)
+    handleOrderSearch
   );
 
   const deliveryForm = useFormik({
@@ -94,6 +94,10 @@ export const DeliveryRecordForm: FC<IDeliveryFormProps> = ({
       ? { ...getInitialValues(formFields), source_order_id: sourceOrderId }
       : getInitialValues(formFields),
     validationSchema: DeliveryRecordFormValidations,
+    validateOnChange: false,
+    validateOnMount: false,
+    validateOnBlur: false,
+    enableReinitialize: true,
     onSubmit: async (values: any) => {
       setLoading(true);
       try {
@@ -113,28 +117,52 @@ export const DeliveryRecordForm: FC<IDeliveryFormProps> = ({
     },
   });
 
+  const ActionBtns: FC = () => {
+    return (
+      <>
+        <Button onClick={handleClose} disabled={loading || optionsLoading}>
+          Close
+        </Button>
+        <Button 
+          onClick={() => deliveryForm.handleSubmit()} 
+          variant="contained" 
+          disabled={loading || optionsLoading}
+        >
+          {loading || optionsLoading ? (
+            <>
+              <ProgressIndicator color="inherit" size={20} />{" "}
+              <Span sx={{ ml: 1 }}>
+                {optionsLoading ? "Loading..." : "Saving..."}
+              </Span>
+            </>
+          ) : (
+            "Record Delivery"
+          )}
+        </Button>
+      </>
+    );
+  };
+
   return (
     <ModalDialog
       title="Record Delivery"
       onClose={handleClose}
       id={uniqueId()}
-      ActionButtons={() => (
-        <>
-          <Button onClick={handleClose} disabled={loading}>Close</Button>
-          <Button onClick={() => deliveryForm.handleSubmit()} variant="contained" disabled={loading}>
-            {loading ? <><ProgressIndicator color="inherit" size={20} /> <Span sx={{ ml: 1 }}>Loading...</Span></> : "Record Delivery"}
-          </Button>
-        </>
-      )}
+      ActionButtons={ActionBtns}
     >
-      <form ref={formRef} onSubmit={deliveryForm.handleSubmit}>
-        <FormFactory
-          formikInstance={deliveryForm}
-          formFields={formFields}
-          validationSchema={DeliveryRecordFormValidations}
-        />
-      </form>
+      {optionsLoading ? (
+        <Box sx={{ display: 'flex', justifyContent: 'center', p: 4 }}>
+          <ProgressIndicator />
+        </Box>
+      ) : (
+        <form ref={formRef} onSubmit={deliveryForm.handleSubmit}>
+          <FormFactory
+            formikInstance={deliveryForm}
+            formFields={formFields}
+            validationSchema={DeliveryRecordFormValidations}
+          />
+        </form>
+      )}
     </ModalDialog>
   );
 };
-
