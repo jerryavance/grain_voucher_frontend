@@ -85,7 +85,9 @@ const SourceOrders = () => {
       setFormData({
         suppliers: (suppliersResponse.results || suppliersResponse).map((supplier: any) => ({
           value: supplier.id,
-          label: `${supplier.business_name} (${supplier.user.phone_number})`
+          label: supplier.user?.phone_number
+            ? `${supplier.business_name} (${supplier.user.phone_number})`
+            : supplier.business_name,
         })),
         hubs: (hubsResponse.results || hubsResponse).map((hub: any) => ({
           value: hub.id,
@@ -118,7 +120,9 @@ const SourceOrders = () => {
           ...prev,
           suppliers: (results.results || results).map((supplier: any) => ({
             value: supplier.id,
-            label: `${supplier.business_name} (${supplier.user.phone_number})`
+            label: supplier.user?.phone_number
+              ? `${supplier.business_name} (${supplier.user.phone_number})`
+              : supplier.business_name,
           }))
         }));
       } catch (error) {

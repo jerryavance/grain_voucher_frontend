@@ -11,7 +11,6 @@ import {
   useMediaQuery,
   Theme,
   alpha,
-  IconButton,
 } from "@mui/material";
 import { FC, useState } from "react";
 import { useNavigate } from "react-router-dom";
@@ -22,7 +21,7 @@ import { CanViewHubMembers } from "../../utils/permissions";
 import { MenuList, IMenuItem } from "./MenuList";
 import ExpandLess from "@mui/icons-material/ExpandLess";
 import ExpandMore from "@mui/icons-material/ExpandMore";
-import MenuIcon from "@mui/icons-material/Menu";
+import useAuth from "../../hooks/useAuth";
 
 // Custom styled components
 const MainMenu = styled(Box)(({ theme }) => ({
@@ -38,10 +37,10 @@ const MainMenu = styled(Box)(({ theme }) => ({
   },
 }));
 
-const LogoImage = styled('img')(({ theme }) => ({
+const LogoImage = styled("img")(({ theme }) => ({
   maxHeight: 30,
   maxWidth: 80,
-  objectFit: 'contain',
+  objectFit: "contain",
   [theme.breakpoints.down("md")]: {
     maxWidth: 60,
   },
@@ -53,11 +52,18 @@ interface SideNavBarProps {
   toggleMobileSideBar: () => void;
 }
 
-const DashboardSideBar: FC<SideNavBarProps> = ({ showMobileSideBar, closeMobileSideBar, toggleMobileSideBar }) => {
+const DashboardSideBar: FC<SideNavBarProps> = ({
+  showMobileSideBar,
+  closeMobileSideBar,
+  toggleMobileSideBar,
+}) => {
   const navigate = useNavigate();
   const [active, setActive] = useState("Home");
   const [openMenus, setOpenMenus] = useState<{ [key: string]: boolean }>({});
   const downMd = useMediaQuery((theme: Theme) => theme.breakpoints.down("md"));
+
+  const { user } = useAuth();
+  const userRole = user?.role ?? "";
 
   const isHubAdmin = IsHubAdmin();
   const isSuperUser = IsSuperUser();
@@ -70,12 +76,16 @@ const DashboardSideBar: FC<SideNavBarProps> = ({ showMobileSideBar, closeMobileS
     canCreateDeposit,
     canViewHubMembers,
     isHubAdmin,
-    canMakeTrades
+    canMakeTrades,
+    userRole  // ← the fix: was missing, causing farmer/investor menus to never show
   );
 
   const handleActiveMainMenu = (menuItem: IMenuItem) => () => {
     if (menuItem.subMenu) {
-      setOpenMenus((prev) => ({ ...prev, [menuItem.title]: !prev[menuItem.title] }));
+      setOpenMenus((prev) => ({
+        ...prev,
+        [menuItem.title]: !prev[menuItem.title],
+      }));
     }
     if (menuItem.path && !menuItem.isHeader) {
       setActive(menuItem.title);
@@ -93,7 +103,9 @@ const DashboardSideBar: FC<SideNavBarProps> = ({ showMobileSideBar, closeMobileS
             <ListItem
               disablePadding
               sx={{
-                backgroundColor: nav.isHeader ? alpha("#fff", 0.1) : "transparent",
+                backgroundColor: nav.isHeader
+                  ? alpha("#fff", 0.1)
+                  : "transparent",
               }}
             >
               <ListItemButton
@@ -105,7 +117,8 @@ const DashboardSideBar: FC<SideNavBarProps> = ({ showMobileSideBar, closeMobileS
                     : active === nav.title
                     ? "#fff"
                     : "rgba(255, 255, 255, 0.7)",
-                  fontWeight: nav.isHeader || active === nav.title ? "bold" : "normal",
+                  fontWeight:
+                    nav.isHeader || active === nav.title ? "bold" : "normal",
                 }}
               >
                 <ListItemIcon sx={{ minWidth: 30, color: "inherit" }}>
@@ -115,11 +128,16 @@ const DashboardSideBar: FC<SideNavBarProps> = ({ showMobileSideBar, closeMobileS
                   primary={nav.title}
                   primaryTypographyProps={{ fontSize: 10.5, fontWeight: "bold" }}
                 />
-                {nav.subMenu && (openMenus[nav.title] ? <ExpandLess /> : <ExpandMore />)}
+                {nav.subMenu &&
+                  (openMenus[nav.title] ? <ExpandLess /> : <ExpandMore />)}
               </ListItemButton>
             </ListItem>
             {nav.subMenu && (
-              <Collapse in={openMenus[nav.title]} timeout="auto" unmountOnExit>
+              <Collapse
+                in={openMenus[nav.title]}
+                timeout="auto"
+                unmountOnExit
+              >
                 {renderMenuItems(nav.subMenu, depth + 1)}
               </Collapse>
             )}
@@ -156,7 +174,10 @@ const DashboardSideBar: FC<SideNavBarProps> = ({ showMobileSideBar, closeMobileS
         open={showMobileSideBar}
         onClose={closeMobileSideBar}
         PaperProps={{
-          sx: { width: 250, backgroundColor: (theme) => theme.palette.primary.main },
+          sx: {
+            width: 250,
+            backgroundColor: (theme) => theme.palette.primary.main,
+          },
         }}
       >
         {sidebarContent}

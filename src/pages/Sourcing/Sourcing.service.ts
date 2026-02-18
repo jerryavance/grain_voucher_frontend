@@ -33,79 +33,38 @@ export const SourcingService = {
   async verifySupplier(id: string): Promise<ISupplierProfile> {
     return instance.post(`sourcing/suppliers/${id}/verify/`).then(r => r.data);
   },
-//   async getMySupplierProfile(): Promise<ISupplierProfile> {
-//     return instance.get("sourcing/suppliers/me/").then(r => r.data);
-//   },
 
-  // ============================================================================
-  // SUPPLIER-SPECIFIC METHODS (for farmer users)
-  // ============================================================================
+  // ── Supplier-specific methods (farmer users) ──────────────────────────────
   async getMySupplierProfile() {
-    return instance
-      .get("sourcing/supplier-profiles/")
-      .then((response) => {
-        const data = response.data;
-        
-        // Handle paginated response
-        if (data.results && Array.isArray(data.results)) {
-          if (data.results.length === 0) {
-            throw new Error("No supplier profile found");
-          }
-          return data.results[0]; // Get first (only) result
-        }
-        
-        return data;
-      });
+    return instance.get("sourcing/suppliers/").then((response) => {
+      const data = response.data;
+      if (data.results && Array.isArray(data.results)) {
+        if (data.results.length === 0) throw new Error("No supplier profile found");
+        return data.results[0];
+      }
+      return data;
+    });
   },
 
-  /**
-   * Get the authenticated supplier's orders
-   * Backend automatically filters to show only current supplier's orders
-   */
   async getMySupplierOrders(filters?: any) {
-    return instance
-      .get("sourcing/source-orders/", { params: filters })
-      .then((response) => response.data);
+    return instance.get("sourcing/source-orders/", { params: filters }).then(r => r.data);
   },
 
-  /**
-   * Get the authenticated supplier's payment preferences
-   * Backend automatically filters to show only current supplier's preferences
-   */
   async getMyPaymentPreferences(filters?: any) {
-    return instance
-      .get("sourcing/payment-preferences/", { params: filters })
-      .then((response) => response.data);
+    return instance.get("sourcing/payment-preferences/", { params: filters }).then(r => r.data);
   },
 
-  /**
-   * Get the authenticated supplier's invoices
-   * Backend automatically filters to show only current supplier's invoices
-   */
   async getMySupplierInvoices(filters?: any) {
-    return instance
-      .get("sourcing/supplier-invoices/", { params: filters })
-      .then((response) => response.data);
+    return instance.get("sourcing/supplier-invoices/", { params: filters }).then(r => r.data);
   },
 
-  /**
-   * Accept a source order (supplier action)
-   */
   async acceptOrder(orderId: string) {
-    return instance
-      .post(`sourcing/source-orders/${orderId}/accept/`)
-      .then((response) => response.data);
+    return instance.post(`sourcing/source-orders/${orderId}/accept/`).then(r => r.data);
   },
 
-  /**
-   * Reject a source order (supplier action)
-   */
   async rejectOrder(orderId: string, reason: string) {
-    return instance
-      .post(`sourcing/source-orders/${orderId}/reject/`, { reason })
-      .then((response) => response.data);
+    return instance.post(`sourcing/source-orders/${orderId}/reject/`, { reason }).then(r => r.data);
   },
-
 
   // ── Payment Preferences ───────────────────────────────────────────────────
   async getPaymentPreferences(filters: Record<string, any>): Promise<{ results: IPaymentPreference[]; count: number }> {
@@ -143,14 +102,6 @@ export const SourcingService = {
   async sendToSupplier(id: string): Promise<ISourceOrder> {
     return instance.post(`sourcing/source-orders/${id}/send_to_supplier/`).then(r => r.data);
   },
-//   async acceptOrder(id: string): Promise<ISourceOrder> {
-//     return instance.post(`sourcing/source-orders/${id}/accept/`).then(r => r.data);
-//   },
-//   async rejectOrder(id: string, reason?: string): Promise<ISourceOrder> {
-//     return instance
-//       .post(`sourcing/source-orders/${id}/reject/`, { reason })
-//       .then((response) => response.data);
-//   },
   async markInTransit(id: string): Promise<ISourceOrder> {
     return instance.post(`sourcing/source-orders/${id}/mark_in_transit/`).then(r => r.data);
   },
@@ -210,17 +161,27 @@ export const SourcingService = {
   async confirmSupplierPayment(id: string): Promise<ISupplierPayment> {
     return instance.post(`sourcing/supplier-payments/${id}/confirm/`).then(r => r.data);
   },
-  // kept for backwards compat – calls the new confirm endpoint
   async markPaymentCompleted(id: string): Promise<ISupplierPayment> {
     return instance.post(`sourcing/supplier-payments/${id}/confirm/`).then(r => r.data);
   },
 
-  // ── NEW: Investor Accounts (lookup) ──────────────────────────────────────
+  // ── Investor Accounts (lookup) ────────────────────────────────────────────
   async getInvestorAccounts(search?: string): Promise<{ results: IInvestorAccount[]; count: number }> {
     return instance.get("investors/accounts/", { params: { search, page_size: 50 } }).then(r => r.data);
   },
 
-  // ── NEW: Investor Allocations ─────────────────────────────────────────────
+  /**
+   * Get the current investor's own account ID.
+   * Used internally to resolve "me" → real UUID before filtering allocations.
+   */
+  async getMyInvestorAccountId(): Promise<string> {
+    const response = await instance.get("investors/accounts/", { params: { page_size: 1 } });
+    const results = response.data?.results;
+    if (!results || results.length === 0) throw new Error("No investor account found");
+    return results[0].id;
+  },
+
+  // ── Investor Allocations ──────────────────────────────────────────────────
   async getInvestorAllocations(filters: Record<string, any>): Promise<IInvestorAllocationsResults> {
     return instance.get("sourcing/investor-allocations/", { params: filters }).then(r => r.data);
   },
@@ -236,7 +197,19 @@ export const SourcingService = {
     return instance.post("sourcing/investor-allocations/", payload).then(r => r.data);
   },
 
-  // ── NEW: Sale Lots ────────────────────────────────────────────────────────
+  /**
+   * Investor-facing: fetch own allocations without needing to pass an account ID.
+   * Resolves the account ID automatically, then filters by it.
+   * Use this instead of getInvestorAllocations() when the caller is an investor.
+   */
+  async getMyInvestorAllocations(filters: Record<string, any> = {}): Promise<IInvestorAllocationsResults> {
+    const accountId = await SourcingService.getMyInvestorAccountId();
+    return instance.get("sourcing/investor-allocations/", {
+      params: { ...filters, investor_account: accountId },
+    }).then(r => r.data);
+  },
+
+  // ── Sale Lots ─────────────────────────────────────────────────────────────
   async getSaleLots(filters: Record<string, any>): Promise<ISaleLotsResults> {
     return instance.get("sourcing/sale-lots/", { params: filters }).then(r => r.data);
   },
@@ -247,7 +220,7 @@ export const SourcingService = {
     return instance.get("sourcing/sale-lots/available/", { params: filters }).then(r => r.data);
   },
 
-  // ── NEW: Buyer Orders ─────────────────────────────────────────────────────
+  // ── Buyer Orders ──────────────────────────────────────────────────────────
   async getBuyerOrders(filters: Record<string, any>): Promise<IBuyerOrdersResults> {
     return instance.get("sourcing/buyer-orders/", { params: filters }).then(r => r.data);
   },
@@ -288,7 +261,7 @@ export const SourcingService = {
     return instance.get(`sourcing/buyer-orders/${id}/pl_summary/`).then(r => r.data);
   },
 
-  // ── NEW: Buyer Invoices ───────────────────────────────────────────────────
+  // ── Buyer Invoices ────────────────────────────────────────────────────────
   async getBuyerInvoices(filters: Record<string, any>): Promise<IBuyerInvoicesResults> {
     return instance.get("sourcing/buyer-invoices/", { params: filters }).then(r => r.data);
   },
@@ -299,7 +272,7 @@ export const SourcingService = {
     return instance.post(`sourcing/buyer-invoices/${id}/mark_overdue/`).then(r => r.data);
   },
 
-  // ── NEW: Buyer Payments ───────────────────────────────────────────────────
+  // ── Buyer Payments ────────────────────────────────────────────────────────
   async getBuyerPayments(filters: Record<string, any>): Promise<IBuyerPaymentsResults> {
     return instance.get("sourcing/buyer-payments/", { params: filters }).then(r => r.data);
   },
@@ -313,7 +286,7 @@ export const SourcingService = {
     return instance.post(`sourcing/buyer-payments/${id}/reverse/`).then(r => r.data);
   },
 
-  // ── NEW: Sale Expenses ────────────────────────────────────────────────────
+  // ── Sale Expenses ─────────────────────────────────────────────────────────
   async getSaleExpenses(filters: Record<string, any>): Promise<{ results: ISaleExpense[]; count: number }> {
     return instance.get("sourcing/sale-expenses/", { params: filters }).then(r => r.data);
   },
@@ -321,7 +294,7 @@ export const SourcingService = {
     return instance.delete(`sourcing/sale-expenses/${id}/`).then(r => r.data);
   },
 
-  // ── NEW: Trade Settlements ────────────────────────────────────────────────
+  // ── Trade Settlements ─────────────────────────────────────────────────────
   async getTradeSettlements(filters: Record<string, any>): Promise<ITradeSettlementsResults> {
     return instance.get("sourcing/trade-settlements/", { params: filters }).then(r => r.data);
   },

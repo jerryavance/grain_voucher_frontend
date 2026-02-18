@@ -1,4 +1,4 @@
-import { FC, useEffect, useRef, useState } from "react";
+import { FC, useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import {
   Box, Card, CardContent, Typography, Grid, Chip, Button,
@@ -32,6 +32,14 @@ interface TabPanelProps { children?: React.ReactNode; index: number; value: numb
 function TabPanel({ children, value, index }: TabPanelProps) {
   return <div role="tabpanel" hidden={value !== index}>{value === index && <Box sx={{ p: 3 }}>{children}</Box>}</div>;
 }
+
+const LOGISTICS_LABELS: Record<string, string> = {
+  supplier: "Supplier Arranged",
+  supplier_driver: "Supplier Driver",
+  bennu_truck: "Bennu Truck",
+  third_party: "Third Party",
+  company: "Company Arranged",
+};
 
 // ─── Investor Allocation Form ──────────────────────────────────────────────
 const InvestorAllocationForm: FC<{
@@ -89,7 +97,9 @@ const InvestorAllocationForm: FC<{
     <>
       <Button onClick={handleClose} disabled={loading}>Cancel</Button>
       <Button variant="contained" onClick={() => form.handleSubmit()} disabled={loading || optionsLoading || !sufficient}>
-        {loading ? <><ProgressIndicator color="inherit" size={20} /><Span sx={{ ml: 1 }}>Allocating...</Span></> : "Allocate Investor"}
+        {loading
+          ? <><ProgressIndicator color="inherit" size={20} /><Span sx={{ ml: 1 }}>Allocating...</Span></>
+          : "Allocate Investor"}
       </Button>
     </>
   );
@@ -103,7 +113,6 @@ const InvestorAllocationForm: FC<{
           <Alert severity="info">
             Committing investor capital to fund this purchase. Funds + margin are returned once the grain is sold.
           </Alert>
-
           <FormControl fullWidth error={Boolean(form.errors.investor_account)}>
             <InputLabel>Investor Account *</InputLabel>
             <Select value={form.values.investor_account} label="Investor Account *"
@@ -115,21 +124,18 @@ const InvestorAllocationForm: FC<{
               ))}
             </Select>
           </FormControl>
-
           {selected && (
             <Alert severity={sufficient ? "success" : "error"}>
               Available balance: <strong>{formatCurrency(selected.available_balance)}</strong>
               {!sufficient && " — Insufficient funds for this allocation"}
             </Alert>
           )}
-
           <TextField label="Amount Allocated (UGX) *" type="number" fullWidth
             value={form.values.amount_allocated}
             onChange={e => form.setFieldValue("amount_allocated", e.target.value)}
             error={Boolean(form.errors.amount_allocated)}
             helperText={(form.errors.amount_allocated as string) || `Order total cost: ${formatCurrency(order.total_cost)}`}
           />
-
           <TextField label="Notes" multiline rows={2} fullWidth
             value={form.values.notes} onChange={e => form.setFieldValue("notes", e.target.value)} />
         </Box>
@@ -173,6 +179,12 @@ const SourceOrderDetails = () => {
   if (loading) return <LoadingScreen />;
   if (!order) return null;
 
+  // The backend returns nested objects for the detail endpoint per ISourceOrder interface
+  const createdBy = order.created_by;
+  const hub = order.hub;
+  const grainType = order.grain_type;
+  const supplier = order.supplier;
+
   return (
     <Box pt={2} pb={4}>
       {/* Header */}
@@ -181,12 +193,14 @@ const SourceOrderDetails = () => {
           Back
         </Button>
         <Typography variant="h4">{order.order_number}</Typography>
-        <Chip label={order.status_display} color={ORDER_STATUS_COLORS[order.status]} sx={{ ml: 1 }} />
-        {order.has_investor_allocation ? (
-          <Chip label="Investor Assigned" color="success" size="small" icon={<AccountBalanceIcon />} variant="outlined" />
-        ) : (
-          <Chip label="No Investor" color="warning" size="small" variant="outlined" />
-        )}
+        <Chip
+          label={order.status_display ?? order.status}
+          color={ORDER_STATUS_COLORS[order.status]}
+          sx={{ ml: 1 }}
+        />
+        {order.has_investor_allocation
+          ? <Chip label="Investor Assigned" color="success" size="small" icon={<AccountBalanceIcon />} variant="outlined" />
+          : <Chip label="No Investor" color="warning" size="small" variant="outlined" />}
         {order.has_sale_lot && <Chip label="Stock Created" color="info" size="small" variant="outlined" />}
       </Box>
 
@@ -212,7 +226,6 @@ const SourceOrderDetails = () => {
         )}
         {order.status === "accepted" && (
           <>
-            {/* Assign investor before transit if not already assigned */}
             {!order.has_investor_allocation && (
               <Button variant="contained" color="secondary" startIcon={<AccountBalanceIcon />}
                 onClick={() => setShowAllocationForm(true)}>
@@ -225,7 +238,6 @@ const SourceOrderDetails = () => {
             </Button>
           </>
         )}
-        {/* Can always assign investor on accepted/in_transit if not yet assigned */}
         {order.status === "in_transit" && !order.has_investor_allocation && (
           <Button variant="outlined" color="secondary" startIcon={<AccountBalanceIcon />}
             onClick={() => setShowAllocationForm(true)}>
@@ -245,7 +257,6 @@ const SourceOrderDetails = () => {
         )}
       </Box>
 
-      {/* No investor alert on accepted orders */}
       {order.status === "accepted" && !order.has_investor_allocation && (
         <Alert severity="warning" sx={{ mb: 2 }} action={
           <Button color="inherit" size="small" onClick={() => setShowAllocationForm(true)}>Assign Now</Button>
@@ -260,6 +271,7 @@ const SourceOrderDetails = () => {
         <Tab label="Invoice & Payments" />
       </Tabs>
 
+      {/* ── Tab 0: Order Details ─────────────────────────────────────────── */}
       <TabPanel value={tabValue} index={0}>
         <Grid container spacing={3}>
           <Grid item xs={12} md={6}>
@@ -267,17 +279,19 @@ const SourceOrderDetails = () => {
               <CardContent>
                 <Typography variant="h6" gutterBottom>Order Information</Typography>
                 <Divider sx={{ mb: 2 }} />
-                {[
+                {([
                   ["Order Number", order.order_number],
-                  ["Hub", order.hub.name],
-                  ["Grain Type", order.grain_type.name],
+                  ["Hub", hub?.name ?? "—"],
+                  ["Grain Type", grainType?.name ?? "—"],
                   ["Quantity", formatWeight(order.quantity_kg)],
                   ["Price per kg", formatCurrency(order.offered_price_per_kg)],
-                  ["Created By", `${order.created_by.first_name} ${order.created_by.last_name}`],
+                  ["Created By", createdBy ? `${createdBy.first_name} ${createdBy.last_name}` : "—"],
                   ["Created At", formatDateToDDMMYYYY(order.created_at)],
-                  ...(order.expected_delivery_date ? [["Expected Delivery", formatDateToDDMMYYYY(order.expected_delivery_date)]] : []),
-                ].map(([label, value]) => (
-                  <Box key={label as string} sx={styles.infoRow}>
+                  ...(order.expected_delivery_date
+                    ? [["Expected Delivery", formatDateToDDMMYYYY(order.expected_delivery_date)]]
+                    : []),
+                ] as [string, string][]).map(([label, value]) => (
+                  <Box key={label} sx={styles.infoRow}>
                     <Span sx={styles.label}>{label}:</Span>
                     <Span sx={styles.value}>{value}</Span>
                   </Box>
@@ -291,14 +305,14 @@ const SourceOrderDetails = () => {
               <CardContent>
                 <Typography variant="h6" gutterBottom>Cost Breakdown</Typography>
                 <Divider sx={{ mb: 2 }} />
-                {[
+                {([
                   ["Grain Cost", formatCurrency(order.grain_cost)],
                   ["Weighbridge Cost", formatCurrency(order.weighbridge_cost)],
                   ["Logistics Cost", formatCurrency(order.logistics_cost)],
                   ["Handling Cost", formatCurrency(order.handling_cost)],
                   ["Other Costs", formatCurrency(order.other_costs)],
-                ].map(([label, value]) => (
-                  <Box key={label as string} sx={styles.infoRow}>
+                ] as [string, string][]).map(([label, value]) => (
+                  <Box key={label} sx={styles.infoRow}>
                     <Span sx={styles.label}>{label}:</Span>
                     <Span sx={styles.value}>{value}</Span>
                   </Box>
@@ -319,9 +333,22 @@ const SourceOrderDetails = () => {
                   <Typography variant="h6" gutterBottom>Logistics</Typography>
                   <Divider sx={{ mb: 2 }} />
                   <Grid container spacing={2}>
-                    <Grid item xs={12} md={4}><Span sx={styles.label}>Type:</Span><Span sx={styles.value}> {order.logistics_type_display}</Span></Grid>
-                    {order.driver_name && <Grid item xs={12} md={4}><Span sx={styles.label}>Driver:</Span><Span sx={styles.value}> {order.driver_name}</Span></Grid>}
-                    {order.driver_phone && <Grid item xs={12} md={4}><Span sx={styles.label}>Phone:</Span><Span sx={styles.value}> {order.driver_phone}</Span></Grid>}
+                    <Grid item xs={12} md={4}>
+                      <Span sx={styles.label}>Type:</Span>
+                      <Span sx={styles.value}> {LOGISTICS_LABELS[order.logistics_type] ?? order.logistics_type}</Span>
+                    </Grid>
+                    {order.driver_name && (
+                      <Grid item xs={12} md={4}>
+                        <Span sx={styles.label}>Driver:</Span>
+                        <Span sx={styles.value}> {order.driver_name}</Span>
+                      </Grid>
+                    )}
+                    {order.driver_phone && (
+                      <Grid item xs={12} md={4}>
+                        <Span sx={styles.label}>Phone:</Span>
+                        <Span sx={styles.value}> {order.driver_phone}</Span>
+                      </Grid>
+                    )}
                   </Grid>
                 </CardContent>
               </Card>
@@ -332,33 +359,51 @@ const SourceOrderDetails = () => {
             <Grid item xs={12}>
               <Card><CardContent>
                 <Typography variant="h6" gutterBottom>Notes</Typography>
-                <Divider sx={{ mb: 2 }} /><Typography>{order.notes}</Typography>
+                <Divider sx={{ mb: 2 }} />
+                <Typography>{order.notes}</Typography>
               </CardContent></Card>
             </Grid>
           )}
         </Grid>
       </TabPanel>
 
+      {/* ── Tab 1: Supplier Info ─────────────────────────────────────────── */}
       <TabPanel value={tabValue} index={1}>
         <Card><CardContent>
           <Typography variant="h6" gutterBottom>Supplier Information</Typography>
           <Divider sx={{ mb: 2 }} />
           <Grid container spacing={2}>
             <Grid item xs={12} md={6}>
-              <Box sx={styles.infoRow}><Span sx={styles.label}>Business Name:</Span><Span sx={styles.value}>{order.supplier.business_name}</Span></Box>
-              <Box sx={styles.infoRow}><Span sx={styles.label}>Contact Person:</Span><Span sx={styles.value}>{order.supplier.user.first_name} {order.supplier.user.last_name}</Span></Box>
+              <Box sx={styles.infoRow}>
+                <Span sx={styles.label}>Business Name:</Span>
+                <Span sx={styles.value}>{supplier?.business_name ?? "—"}</Span>
+              </Box>
+              <Box sx={styles.infoRow}>
+                <Span sx={styles.label}>Contact Person:</Span>
+                <Span sx={styles.value}>
+                  {supplier?.user ? `${supplier.user.first_name} ${supplier.user.last_name}` : "—"}
+                </Span>
+              </Box>
             </Grid>
             <Grid item xs={12} md={6}>
-              <Box sx={styles.infoRow}><Span sx={styles.label}>Primary Hub:</Span><Span sx={styles.value}>{order.supplier.hub?.name || "Not Set"}</Span></Box>
+              <Box sx={styles.infoRow}>
+                <Span sx={styles.label}>Primary Hub:</Span>
+                <Span sx={styles.value}>{supplier?.hub?.name ?? "Not Set"}</Span>
+              </Box>
               <Box sx={styles.infoRow}>
                 <Span sx={styles.label}>Verified:</Span>
-                <Chip label={order.supplier.is_verified ? "Verified" : "Not Verified"} color={order.supplier.is_verified ? "success" : "warning"} size="small" />
+                <Chip
+                  label={supplier?.is_verified ? "Verified" : "Not Verified"}
+                  color={supplier?.is_verified ? "success" : "warning"}
+                  size="small"
+                />
               </Box>
             </Grid>
           </Grid>
         </CardContent></Card>
       </TabPanel>
 
+      {/* ── Tab 2: Invoice & Payments ────────────────────────────────────── */}
       <TabPanel value={tabValue} index={2}>
         {order.has_invoice
           ? <Alert severity="info">View invoice details in the Supplier Invoices section.</Alert>

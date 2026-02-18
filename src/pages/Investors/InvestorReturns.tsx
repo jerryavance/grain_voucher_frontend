@@ -5,7 +5,7 @@ import TrendingUpIcon from "@mui/icons-material/TrendingUp";
 import AccountBalanceIcon from "@mui/icons-material/AccountBalance";
 import useTitle from "../../hooks/useTitle";
 import { SourcingService } from "../Sourcing/Sourcing.service";
-import { IInvestorAllocation, IInvestorAllocationsResults } from "../Sourcing/Sourcing.interface";
+import { IInvestorAllocationsResults } from "../Sourcing/Sourcing.interface";
 import CustomTable from "../../components/UI/CustomTable";
 import { INITIAL_PAGE_SIZE } from "../../api/constants";
 import { formatCurrency } from "../Sourcing/SourcingConstants";
@@ -18,7 +18,7 @@ const InvestorReturns = () => {
   const [filters, setFilters] = useState<any>({
     page: 1,
     page_size: INITIAL_PAGE_SIZE,
-    status: "settled", // Only show settled allocations
+    status: "settled",
   });
   const [loading, setLoading] = useState(false);
   const [totalStats, setTotalStats] = useState({
@@ -35,14 +35,10 @@ const InvestorReturns = () => {
   const fetchAllocations = async () => {
     try {
       setLoading(true);
-      // Filter by current investor's account
-      const response = await SourcingService.getInvestorAllocations({
-        ...filters,
-        investor_account: "me",
-      });
+      // ✅ FIX: use getMyInvestorAllocations — resolves account UUID automatically
+      const response = await SourcingService.getMyInvestorAllocations(filters);
       setAllocations(response);
 
-      // Calculate totals
       if (response.results) {
         const totals = response.results.reduce(
           (acc, alloc) => ({
@@ -53,14 +49,11 @@ const InvestorReturns = () => {
           { totalAllocated: 0, totalReturned: 0, totalMargin: 0 }
         );
 
-        const roi = totals.totalAllocated > 0 
-          ? (totals.totalMargin / totals.totalAllocated) * 100 
+        const roi = totals.totalAllocated > 0
+          ? (totals.totalMargin / totals.totalAllocated) * 100
           : 0;
 
-        setTotalStats({
-          ...totals,
-          roi,
-        });
+        setTotalStats({ ...totals, roi });
       }
     } catch (error) {
       console.error("Error fetching returns:", error);
@@ -169,9 +162,7 @@ const InvestorReturns = () => {
           <CardContent>
             <Box sx={{ display: "flex", alignItems: "center", mb: 1 }}>
               <AccountBalanceIcon sx={{ mr: 1, color: "primary.main" }} />
-              <Typography variant="overline" color="text.secondary">
-                Total Allocated
-              </Typography>
+              <Typography variant="overline" color="text.secondary">Total Allocated</Typography>
             </Box>
             <Typography variant="h5">{formatCurrency(totalStats.totalAllocated)}</Typography>
           </CardContent>
@@ -181,9 +172,7 @@ const InvestorReturns = () => {
           <CardContent>
             <Box sx={{ display: "flex", alignItems: "center", mb: 1 }}>
               <TrendingUpIcon sx={{ mr: 1, color: "success.main" }} />
-              <Typography variant="overline" color="text.secondary">
-                Total Margin Earned
-              </Typography>
+              <Typography variant="overline" color="text.secondary">Total Margin Earned</Typography>
             </Box>
             <Typography variant="h5" color="success.main">
               {formatCurrency(totalStats.totalMargin)}
@@ -195,9 +184,7 @@ const InvestorReturns = () => {
           <CardContent>
             <Box sx={{ display: "flex", alignItems: "center", mb: 1 }}>
               <AccountBalanceIcon sx={{ mr: 1, color: "info.main" }} />
-              <Typography variant="overline" color="text.secondary">
-                Total Returned
-              </Typography>
+              <Typography variant="overline" color="text.secondary">Total Returned</Typography>
             </Box>
             <Typography variant="h5">{formatCurrency(totalStats.totalReturned)}</Typography>
           </CardContent>
@@ -207,9 +194,7 @@ const InvestorReturns = () => {
           <CardContent>
             <Box sx={{ display: "flex", alignItems: "center", mb: 1 }}>
               <TrendingUpIcon sx={{ mr: 1, color: "success.main" }} />
-              <Typography variant="overline" color="text.secondary">
-                Average ROI
-              </Typography>
+              <Typography variant="overline" color="text.secondary">Average ROI</Typography>
             </Box>
             <Typography variant="h5" color="success.main">
               {totalStats.roi.toFixed(2)}%
@@ -218,7 +203,6 @@ const InvestorReturns = () => {
         </Card>
       </Box>
 
-      {/* Info Alert */}
       <Alert severity="info" sx={{ mb: 3 }}>
         <Typography variant="body2">
           This shows all your settled investments where capital and profits have been returned to your account.

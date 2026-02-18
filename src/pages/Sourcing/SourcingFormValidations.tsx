@@ -7,14 +7,14 @@ import * as Yup from "yup";
 
 // ============================================================
 // SUPPLIER PROFILE VALIDATION
-// Fields: user_id, hub_id, typical_grain_type_ids
+// Fields: user, hub, typical_grain_type_ids
 // ============================================================
 
 export const SupplierProfileFormValidations = Yup.object().shape({
-  user_id: Yup.string() // ✅ FIXED: Added _id suffix
+  user: Yup.string() // ✅ FIXED: Added _id suffix
     .required("User is required"),
   
-  hub_id: Yup.string() // ✅ FIXED: Added _id suffix
+  hub: Yup.string() // ✅ FIXED: Added _id suffix
     .nullable(),
   
   business_name: Yup.string()
@@ -36,17 +36,17 @@ export const SupplierProfileFormValidations = Yup.object().shape({
 
 // ============================================================
 // SOURCE ORDER VALIDATION
-// Fields: supplier_id, hub_id, grain_type_id, payment_method_id
+// Fields: supplier, hub, grain_type_id, payment_method_id
 // ============================================================
 
 export const SourceOrderFormValidations = Yup.object().shape({
-  supplier_id: Yup.string() // ✅ FIXED: Added _id suffix
+  supplier: Yup.string() // ✅ FIXED: Added _id suffix
     .required("Supplier is required"),
   
-  hub_id: Yup.string() // ✅ FIXED: Added _id suffix
+  hub: Yup.string() // ✅ FIXED: Added _id suffix
     .required("Hub/Destination is required"),
   
-  grain_type_id: Yup.string() // ✅ FIXED: Added _id suffix
+  grain_type: Yup.string() // ✅ FIXED: Added _id suffix
     .required("Grain type is required"),
   
   quantity_kg: Yup.number()
@@ -97,14 +97,14 @@ export const SourceOrderFormValidations = Yup.object().shape({
 
 // ============================================================
 // DELIVERY RECORD VALIDATION
-// Fields: source_order_id, hub_id
+// Fields: source_order_id, hub
 // ============================================================
 
 export const DeliveryRecordFormValidations = Yup.object().shape({
   source_order_id: Yup.string() // ✅ FIXED: Added _id suffix
     .required("Source order is required"),
   
-  hub_id: Yup.string() // ✅ FIXED: Added _id suffix
+  hub: Yup.string() // ✅ FIXED: Added _id suffix
     .required("Hub is required"),
   
   driver_name: Yup.string()

@@ -80,23 +80,29 @@ export const CONDITION_OPTIONS: TOption[] = [
 ];
 
 // ============ Helper Functions ============
-export const formatCurrency = (amount: number | string): string => {
-  const num = typeof amount === 'string' ? parseFloat(amount) : amount;
-  return new Intl.NumberFormat('en-UG', {
-    style: 'currency',
-    currency: 'UGX',
+export const formatCurrency = (amount: number | string | undefined | null): string => {
+  if (amount == null || amount === "") return "UGX 0";
+  const num = typeof amount === "string" ? parseFloat(amount) : amount;
+  if (isNaN(num)) return "UGX 0";
+  return new Intl.NumberFormat("en-UG", {
+    style: "currency",
+    currency: "UGX",
     minimumFractionDigits: 0,
     maximumFractionDigits: 0,
   }).format(num);
 };
 
-export const formatWeight = (kg: number | string): string => {
-  const num = typeof kg === 'string' ? parseFloat(kg) : kg;
-  return `${num.toLocaleString('en-UG', { maximumFractionDigits: 2 })} kg`;
+export const formatWeight = (kg: number | string | undefined | null): string => {
+  if (kg == null || kg === "") return "0 kg";
+  const num = typeof kg === "string" ? parseFloat(kg) : kg;
+  if (isNaN(num)) return "0 kg";
+  return `${num.toLocaleString("en-UG", { maximumFractionDigits: 2 })} kg`;
 };
 
-export const formatPercentage = (value: number | string): string => {
-  const num = typeof value === 'string' ? parseFloat(value) : value;
+export const formatPercentage = (value: number | string | undefined | null): string => {
+  if (value == null || value === "") return "0.00%";
+  const num = typeof value === "string" ? parseFloat(value) : value;
+  if (isNaN(num)) return "0.00%";
   return `${num.toFixed(2)}%`;
 };
 
@@ -106,44 +112,44 @@ export const calculateTotalCost = (values: any): number => {
   const logistics_cost = values.logistics_cost || 0;
   const handling_cost = values.handling_cost || 0;
   const other_costs = values.other_costs || 0;
-  
+
   return grain_cost + weighbridge_cost + logistics_cost + handling_cost + other_costs;
 };
 
 export const getOrderStatusBadgeProps = (status: string) => {
   return {
     color: ORDER_STATUS_COLORS[status] || "default",
-    label: status.replace(/_/g, ' ').toUpperCase(),
+    label: status.replace(/_/g, " ").toUpperCase(),
   };
 };
 
 export const getInvoiceStatusBadgeProps = (status: string) => {
   return {
     color: INVOICE_STATUS_COLORS[status] || "default",
-    label: status.replace(/_/g, ' ').toUpperCase(),
+    label: status.replace(/_/g, " ").toUpperCase(),
   };
 };
 
 export const getPaymentStatusBadgeProps = (status: string) => {
   return {
     color: PAYMENT_STATUS_COLORS[status] || "default",
-    label: status.replace(/_/g, ' ').toUpperCase(),
+    label: status.replace(/_/g, " ").toUpperCase(),
   };
 };
 
 // ============ Permission Helpers ============
 export const canManageOrders = (userRole: string): boolean => {
-  return ['hub_admin', 'bdm', 'finance'].includes(userRole);
+  return ["hub_admin", "bdm", "finance"].includes(userRole);
 };
 
 export const canVerifySuppliers = (userRole: string): boolean => {
-  return ['hub_admin', 'bdm'].includes(userRole);
+  return ["hub_admin", "bdm"].includes(userRole);
 };
 
 export const canProcessPayments = (userRole: string): boolean => {
-  return ['hub_admin', 'finance'].includes(userRole);
+  return ["hub_admin", "finance"].includes(userRole);
 };
 
 export const isSupplier = (userRole: string): boolean => {
-  return userRole === 'farmer';
+  return userRole === "farmer";
 };

@@ -52,16 +52,16 @@ const InvestorTransactions = () => {
     setLoading(true);
     try {
       switch (tabValue) {
-        case 0: // All Transactions - fetch all three
+        case 0:
           await Promise.all([fetchDeposits(), fetchWithdrawals(), fetchAllocations()]);
           break;
-        case 1: // Deposits
+        case 1:
           await fetchDeposits();
           break;
-        case 2: // Withdrawals
+        case 2:
           await fetchWithdrawals();
           break;
-        case 3: // Allocations
+        case 3:
           await fetchAllocations();
           break;
       }
@@ -84,19 +84,16 @@ const InvestorTransactions = () => {
   };
 
   const fetchAllocations = async () => {
-    const response = await SourcingService.getInvestorAllocations({
-      ...filters,
-      investor_account: "me",
-    });
+    // ✅ FIX: use getMyInvestorAllocations — resolves account UUID automatically
+    const response = await SourcingService.getMyInvestorAllocations(filters);
     setAllocations(response);
   };
 
   const handleTabChange = (event: React.SyntheticEvent, newValue: number) => {
     setTabValue(newValue);
-    setFilters({ page: 1, page_size: INITIAL_PAGE_SIZE }); // Reset filters
+    setFilters({ page: 1, page_size: INITIAL_PAGE_SIZE });
   };
 
-  // Columns for Deposits
   const depositColumns = [
     {
       Header: "Date",
@@ -135,7 +132,6 @@ const InvestorTransactions = () => {
     },
   ];
 
-  // Columns for Withdrawals
   const withdrawalColumns = [
     {
       Header: "Date",
@@ -166,11 +162,7 @@ const InvestorTransactions = () => {
       accessor: "status",
       minWidth: 120,
       Cell: ({ value }: any) => {
-        const colors: any = {
-          pending: "warning",
-          approved: "success",
-          rejected: "error",
-        };
+        const colors: any = { pending: "warning", approved: "success", rejected: "error" };
         return <Chip label={value.toUpperCase()} color={colors[value] || "default"} size="small" />;
       },
     },
@@ -181,7 +173,6 @@ const InvestorTransactions = () => {
     },
   ];
 
-  // Columns for Allocations
   const allocationColumns = [
     {
       Header: "Date",
@@ -217,11 +208,7 @@ const InvestorTransactions = () => {
       accessor: "status",
       minWidth: 120,
       Cell: ({ value }: any) => {
-        const colors: any = {
-          active: "info",
-          settled: "success",
-          cancelled: "error",
-        };
+        const colors: any = { active: "info", settled: "success", cancelled: "error" };
         return <Chip label={value.toUpperCase()} color={colors[value] || "default"} size="small" />;
       },
     },
@@ -232,7 +219,6 @@ const InvestorTransactions = () => {
     },
   ];
 
-  // Combined transactions for "All" tab
   const getCombinedTransactions = () => {
     const allTxns: any[] = [];
 
@@ -284,7 +270,6 @@ const InvestorTransactions = () => {
       });
     }
 
-    // Sort by date descending
     return allTxns.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
   };
 
@@ -305,11 +290,9 @@ const InvestorTransactions = () => {
           label={row.original.type}
           size="small"
           color={
-            row.original.type === "Deposit"
-              ? "success"
-              : row.original.type === "Withdrawal"
-              ? "error"
-              : "info"
+            row.original.type === "Deposit" ? "success"
+            : row.original.type === "Withdrawal" ? "error"
+            : "info"
           }
         />
       ),

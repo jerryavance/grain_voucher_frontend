@@ -8,7 +8,7 @@ import { TOption } from "../../@types/common";
 
 // ============================================================
 // SUPPLIER PROFILE FORM FIELDS
-// Backend expects: user_id, hub_id, typical_grain_type_ids
+// Backend expects: user, hub, typical_grain_type
 // ============================================================
 
 export const SupplierProfileFormFields = (
@@ -19,7 +19,7 @@ export const SupplierProfileFormFields = (
   handleHubSearch?: (value: any) => void
 ): IFormField[] => [
   {
-    name: 'user_id', // ✅ FIXED: Added _id suffix
+    name: 'user', // ✅ FIXED: Added _id suffix
     initailValue: '',
     label: 'User Account *',
     type: 'select',
@@ -39,7 +39,7 @@ export const SupplierProfileFormFields = (
     required: true,
   },
   {
-    name: 'hub_id', // ✅ FIXED: Added _id suffix
+    name: 'hub', // ✅ FIXED: Added _id suffix
     initailValue: '',
     label: 'Primary Hub',
     type: 'select',
@@ -59,7 +59,7 @@ export const SupplierProfileFormFields = (
     rows: 2,
   },
   {
-    name: 'typical_grain_type_ids',
+    name: 'typical_grain_type',
     initailValue: '',
     label: 'Grain Types Supplied',
     type: 'select',
@@ -71,7 +71,7 @@ export const SupplierProfileFormFields = (
 
 // ============================================================
 // SOURCE ORDER FORM FIELDS
-// Backend expects: supplier_id, hub_id, grain_type_id, payment_method_id
+// Backend expects: supplier, hub, grain_type, payment_method_id
 // ============================================================
 
 export const SourceOrderFormFields = (
@@ -84,7 +84,7 @@ export const SourceOrderFormFields = (
   handleGrainTypeSearch?: (value: any) => void
 ): IFormField[] => [
   {
-    name: 'supplier_id', // ✅ FIXED: Added _id suffix
+    name: 'supplier', // ✅ FIXED: Added _id suffix
     initailValue: '',
     label: 'Supplier *',
     type: 'select',
@@ -95,7 +95,7 @@ export const SourceOrderFormFields = (
     handleSearch: handleSupplierSearch,
   },
   {
-    name: 'hub_id', // ✅ FIXED: Added _id suffix
+    name: 'hub', // ✅ FIXED: Added _id suffix
     initailValue: '',
     label: 'Destination Hub *',
     type: 'select',
@@ -106,7 +106,7 @@ export const SourceOrderFormFields = (
     handleSearch: handleHubSearch,
   },
   {
-    name: 'grain_type_id', // ✅ FIXED: Added _id suffix
+    name: 'grain_type', // ✅ FIXED: Added _id suffix
     initailValue: '',
     label: 'Grain Type *',
     type: 'select',
@@ -226,7 +226,7 @@ export const SourceOrderFormFields = (
 
 // ============================================================
 // DELIVERY RECORD FORM FIELDS
-// Backend expects: source_order_id, hub_id
+// Backend expects: source_order_id, hub
 // ============================================================
 
 export const DeliveryRecordFormFields = (
@@ -246,7 +246,7 @@ export const DeliveryRecordFormFields = (
     handleSearch: handleOrderSearch,
   },
   {
-    name: 'hub_id', // ✅ FIXED: Added _id suffix
+    name: 'hub', // ✅ FIXED: Added _id suffix
     initailValue: '',
     label: 'Hub *',
     type: 'select',
@@ -565,7 +565,7 @@ export const PaymentPreferenceFormFields = (
 
 // // ============================================================
 // // SUPPLIER PROFILE FORM FIELDS
-// // Backend expects: user_id, hub_id, typical_grain_type_ids
+// // Backend expects: user, hub, typical_grain_type
 // // ============================================================
 
 // export const SupplierProfileFormFields = (
@@ -576,7 +576,7 @@ export const PaymentPreferenceFormFields = (
 //   handleHubSearch?: (value: any) => void
 // ): IFormField[] => [
 //   {
-//     name: 'user_id', // ✅ FIXED: Added _id suffix
+//     name: 'user', // ✅ FIXED: Added _id suffix
 //     initailValue: '',
 //     label: 'User Account *',
 //     type: 'select',
@@ -596,7 +596,7 @@ export const PaymentPreferenceFormFields = (
 //     required: true,
 //   },
 //   {
-//     name: 'hub_id', // ✅ FIXED: Added _id suffix
+//     name: 'hub', // ✅ FIXED: Added _id suffix
 //     initailValue: '',
 //     label: 'Primary Hub',
 //     type: 'select',
@@ -616,7 +616,7 @@ export const PaymentPreferenceFormFields = (
 //     rows: 2,
 //   },
 //   {
-//     name: 'typical_grain_type_ids', // ✅ FIXED: Added _ids suffix for array
+//     name: 'typical_grain_type', // ✅ FIXED: Added _ids suffix for array
 //     initailValue: [],
 //     label: 'Grain Types Supplied',
 //     type: 'select',
@@ -628,7 +628,7 @@ export const PaymentPreferenceFormFields = (
 
 // // ============================================================
 // // SOURCE ORDER FORM FIELDS
-// // Backend expects: supplier_id, hub_id, grain_type_id, payment_method_id
+// // Backend expects: supplier, hub, grain_type, payment_method_id
 // // ============================================================
 
 // export const SourceOrderFormFields = (
@@ -641,7 +641,7 @@ export const PaymentPreferenceFormFields = (
 //   handleGrainTypeSearch?: (value: any) => void
 // ): IFormField[] => [
 //   {
-//     name: 'supplier_id', // ✅ FIXED: Added _id suffix
+//     name: 'supplier', // ✅ FIXED: Added _id suffix
 //     initailValue: '',
 //     label: 'Supplier *',
 //     type: 'select',
@@ -652,7 +652,7 @@ export const PaymentPreferenceFormFields = (
 //     handleSearch: handleSupplierSearch,
 //   },
 //   {
-//     name: 'hub_id', // ✅ FIXED: Added _id suffix
+//     name: 'hub', // ✅ FIXED: Added _id suffix
 //     initailValue: '',
 //     label: 'Destination Hub *',
 //     type: 'select',
@@ -663,7 +663,7 @@ export const PaymentPreferenceFormFields = (
 //     handleSearch: handleHubSearch,
 //   },
 //   {
-//     name: 'grain_type_id', // ✅ FIXED: Added _id suffix
+//     name: 'grain_type', // ✅ FIXED: Added _id suffix
 //     initailValue: '',
 //     label: 'Grain Type *',
 //     type: 'select',
@@ -783,7 +783,7 @@ export const PaymentPreferenceFormFields = (
 
 // // ============================================================
 // // DELIVERY RECORD FORM FIELDS
-// // Backend expects: source_order_id, hub_id
+// // Backend expects: source_order_id, hub
 // // ============================================================
 
 // export const DeliveryRecordFormFields = (
@@ -803,7 +803,7 @@ export const PaymentPreferenceFormFields = (
 //     handleSearch: handleOrderSearch,
 //   },
 //   {
-//     name: 'hub_id', // ✅ FIXED: Added _id suffix
+//     name: 'hub', // ✅ FIXED: Added _id suffix
 //     initailValue: '',
 //     label: 'Hub *',
 //     type: 'select',
@@ -1123,7 +1123,7 @@ export const PaymentPreferenceFormFields = (
 
 // // ============================================================
 // // SUPPLIER PROFILE FORM FIELDS
-// // Backend expects: user_id, hub_id, typical_grain_type_ids
+// // Backend expects: user, hub, typical_grain_type
 // // ============================================================
 
 // export const SupplierProfileFormFields = (
@@ -1134,7 +1134,7 @@ export const PaymentPreferenceFormFields = (
 //   handleHubSearch?: (value: any) => void
 // ): IFormField[] => [
 //   {
-//     name: 'user_id', // ✅ FIXED: Added _id suffix
+//     name: 'user', // ✅ FIXED: Added _id suffix
 //     initailValue: '',
 //     label: 'User Account *',
 //     type: 'select',
@@ -1154,7 +1154,7 @@ export const PaymentPreferenceFormFields = (
 //     required: true,
 //   },
 //   {
-//     name: 'hub_id', // ✅ FIXED: Added _id suffix
+//     name: 'hub', // ✅ FIXED: Added _id suffix
 //     initailValue: '',
 //     label: 'Primary Hub',
 //     type: 'select',
@@ -1174,7 +1174,7 @@ export const PaymentPreferenceFormFields = (
 //     rows: 2,
 //   },
 //   {
-//     name: 'typical_grain_type_ids', // ✅ FIXED: Added _ids suffix for array
+//     name: 'typical_grain_type', // ✅ FIXED: Added _ids suffix for array
 //     initailValue: [],
 //     label: 'Grain Types Supplied',
 //     type: 'select',
@@ -1186,7 +1186,7 @@ export const PaymentPreferenceFormFields = (
 
 // // ============================================================
 // // SOURCE ORDER FORM FIELDS
-// // Backend expects: supplier_id, hub_id, grain_type_id, payment_method_id
+// // Backend expects: supplier, hub, grain_type, payment_method_id
 // // ============================================================
 
 // export const SourceOrderFormFields = (
@@ -1199,7 +1199,7 @@ export const PaymentPreferenceFormFields = (
 //   handleGrainTypeSearch?: (value: any) => void
 // ): IFormField[] => [
 //   {
-//     name: 'supplier_id', // ✅ FIXED: Added _id suffix
+//     name: 'supplier', // ✅ FIXED: Added _id suffix
 //     initailValue: '',
 //     label: 'Supplier *',
 //     type: 'select',
@@ -1210,7 +1210,7 @@ export const PaymentPreferenceFormFields = (
 //     handleSearch: handleSupplierSearch,
 //   },
 //   {
-//     name: 'hub_id', // ✅ FIXED: Added _id suffix
+//     name: 'hub', // ✅ FIXED: Added _id suffix
 //     initailValue: '',
 //     label: 'Destination Hub *',
 //     type: 'select',
@@ -1221,7 +1221,7 @@ export const PaymentPreferenceFormFields = (
 //     handleSearch: handleHubSearch,
 //   },
 //   {
-//     name: 'grain_type_id', // ✅ FIXED: Added _id suffix
+//     name: 'grain_type', // ✅ FIXED: Added _id suffix
 //     initailValue: '',
 //     label: 'Grain Type *',
 //     type: 'select',
@@ -1341,7 +1341,7 @@ export const PaymentPreferenceFormFields = (
 
 // // ============================================================
 // // DELIVERY RECORD FORM FIELDS
-// // Backend expects: source_order_id, hub_id
+// // Backend expects: source_order_id, hub
 // // ============================================================
 
 // export const DeliveryRecordFormFields = (
@@ -1361,7 +1361,7 @@ export const PaymentPreferenceFormFields = (
 //     handleSearch: handleOrderSearch,
 //   },
 //   {
-//     name: 'hub_id', // ✅ FIXED: Added _id suffix
+//     name: 'hub', // ✅ FIXED: Added _id suffix
 //     initailValue: '',
 //     label: 'Hub *',
 //     type: 'select',

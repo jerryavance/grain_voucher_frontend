@@ -25,7 +25,7 @@ import LocalShippingIcon from "@mui/icons-material/LocalShipping";
 import CheckCircleIcon from "@mui/icons-material/CheckCircle";
 import NotificationsIcon from "@mui/icons-material/Notifications";
 import useTitle from "../../hooks/useTitle";
-import { SourcingService } from "./Sourcing.service";       
+import { SourcingService } from "./Sourcing.service";
 import { ISupplierDashboard } from "./Sourcing.interface";
 import { formatCurrency, formatWeight, ORDER_STATUS_COLORS, INVOICE_STATUS_COLORS } from "./SourcingConstants";
 import { formatDateToDDMMYYYY } from "../../utils/date_formatter";
@@ -55,7 +55,7 @@ const SupplierDashboard = () => {
 
   if (loading) {
     return (
-      <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '60vh' }}>
+      <Box sx={{ display: "flex", justifyContent: "center", alignItems: "center", minHeight: "60vh" }}>
         <CircularProgress />
       </Box>
     );
@@ -69,50 +69,54 @@ const SupplierDashboard = () => {
     );
   }
 
+  // Safe defaults so nothing crashes if the API omits fields
+  const recentOrders = dashboard.recent_orders ?? [];
+  const recentInvoices = dashboard.recent_invoices ?? [];
+
   const statCards = [
     {
       title: "Total Orders",
-      value: dashboard.total_orders,
-      icon: <LocalShippingIcon sx={{ fontSize: 40, color: 'primary.main' }} />,
+      value: dashboard.total_orders ?? 0,
+      icon: <LocalShippingIcon sx={{ fontSize: 40, color: "primary.main" }} />,
       color: "primary.light",
     },
     {
       title: "Pending Orders",
-      value: dashboard.pending_orders,
-      icon: <ReceiptIcon sx={{ fontSize: 40, color: 'warning.main' }} />,
+      value: dashboard.pending_orders ?? 0,
+      icon: <ReceiptIcon sx={{ fontSize: 40, color: "warning.main" }} />,
       color: "warning.light",
     },
     {
       title: "Completed Orders",
-      value: dashboard.completed_orders,
-      icon: <CheckCircleIcon sx={{ fontSize: 40, color: 'success.main' }} />,
+      value: dashboard.completed_orders ?? 0,
+      icon: <CheckCircleIcon sx={{ fontSize: 40, color: "success.main" }} />,
       color: "success.light",
     },
     {
       title: "Total Supplied",
-      value: formatWeight(dashboard.total_supplied_kg),
-      icon: <LocalShippingIcon sx={{ fontSize: 40, color: 'info.main' }} />,
+      value: formatWeight(dashboard.total_supplied_kg ?? 0),
+      icon: <LocalShippingIcon sx={{ fontSize: 40, color: "info.main" }} />,
       color: "info.light",
     },
     {
       title: "Total Earned",
-      value: formatCurrency(dashboard.total_earned),
-      icon: <MonetizationOnIcon sx={{ fontSize: 40, color: 'success.main' }} />,
+      value: formatCurrency(dashboard.total_earned ?? 0),
+      icon: <MonetizationOnIcon sx={{ fontSize: 40, color: "success.main" }} />,
       color: "success.light",
     },
     {
       title: "Pending Payment",
-      value: formatCurrency(dashboard.pending_payment),
-      icon: <MonetizationOnIcon sx={{ fontSize: 40, color: 'error.main' }} />,
+      value: formatCurrency(dashboard.pending_payment ?? 0),
+      icon: <MonetizationOnIcon sx={{ fontSize: 40, color: "error.main" }} />,
       color: "error.light",
     },
   ];
 
   return (
     <Box pt={2} pb={4}>
-      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
+      <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 3 }}>
         <Typography variant="h4">Supplier Dashboard</Typography>
-        {dashboard.unread_notifications > 0 && (
+        {(dashboard.unread_notifications ?? 0) > 0 && (
           <Chip
             icon={<NotificationsIcon />}
             label={`${dashboard.unread_notifications} unread notifications`}
@@ -128,7 +132,7 @@ const SupplierDashboard = () => {
           <Grid item xs={12} sm={6} md={4} key={index}>
             <Card>
               <CardContent>
-                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
                   <Box>
                     <Typography color="text.secondary" gutterBottom variant="overline">
                       {stat.title}
@@ -150,13 +154,13 @@ const SupplierDashboard = () => {
         <Grid item xs={12} lg={7}>
           <Card>
             <CardContent>
-              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+              <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 2 }}>
                 <Typography variant="h6">Recent Orders</Typography>
                 <Button size="small" onClick={() => navigate("/supplier/orders")}>
                   View All
                 </Button>
               </Box>
-              
+
               <TableContainer>
                 <Table size="small">
                   <TableHead>
@@ -170,18 +174,18 @@ const SupplierDashboard = () => {
                     </TableRow>
                   </TableHead>
                   <TableBody>
-                    {dashboard.recent_orders.length === 0 ? (
+                    {recentOrders.length === 0 ? (
                       <TableRow>
                         <TableCell colSpan={6} align="center">
                           <Typography color="text.secondary">No orders yet</Typography>
                         </TableCell>
                       </TableRow>
                     ) : (
-                      dashboard.recent_orders.map((order) => (
-                        <TableRow 
+                      recentOrders.map((order) => (
+                        <TableRow
                           key={order.id}
                           hover
-                          sx={{ cursor: 'pointer' }}
+                          sx={{ cursor: "pointer" }}
                           onClick={() => navigate(`/supplier/orders/${order.id}`)}
                         >
                           <TableCell>{order.order_number}</TableCell>
@@ -189,10 +193,10 @@ const SupplierDashboard = () => {
                           <TableCell align="right">{formatWeight(order.quantity_kg)}</TableCell>
                           <TableCell align="right">{formatCurrency(order.total_cost)}</TableCell>
                           <TableCell>
-                            <Chip 
-                              label={order.status_display} 
-                              size="small" 
-                              color={ORDER_STATUS_COLORS[order.status]} 
+                            <Chip
+                              label={order.status_display}
+                              size="small"
+                              color={ORDER_STATUS_COLORS[order.status]}
                             />
                           </TableCell>
                           <TableCell>{formatDateToDDMMYYYY(order.created_at)}</TableCell>
@@ -210,13 +214,13 @@ const SupplierDashboard = () => {
         <Grid item xs={12} lg={5}>
           <Card>
             <CardContent>
-              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+              <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 2 }}>
                 <Typography variant="h6">Recent Invoices</Typography>
                 <Button size="small" onClick={() => navigate("/supplier/invoices")}>
                   View All
                 </Button>
               </Box>
-              
+
               <TableContainer>
                 <Table size="small">
                   <TableHead>
@@ -228,28 +232,28 @@ const SupplierDashboard = () => {
                     </TableRow>
                   </TableHead>
                   <TableBody>
-                    {dashboard.recent_invoices.length === 0 ? (
+                    {recentInvoices.length === 0 ? (
                       <TableRow>
                         <TableCell colSpan={4} align="center">
                           <Typography color="text.secondary">No invoices yet</Typography>
                         </TableCell>
                       </TableRow>
                     ) : (
-                      dashboard.recent_invoices.map((invoice) => (
-                        <TableRow 
+                      recentInvoices.map((invoice) => (
+                        <TableRow
                           key={invoice.id}
                           hover
-                          sx={{ cursor: 'pointer' }}
+                          sx={{ cursor: "pointer" }}
                           onClick={() => navigate(`/supplier/invoices/${invoice.id}`)}
                         >
                           <TableCell>{invoice.invoice_number}</TableCell>
                           <TableCell align="right">{formatCurrency(invoice.amount_due)}</TableCell>
                           <TableCell align="right">{formatCurrency(invoice.balance_due)}</TableCell>
                           <TableCell>
-                            <Chip 
-                              label={invoice.status_display} 
-                              size="small" 
-                              color={INVOICE_STATUS_COLORS[invoice.status]} 
+                            <Chip
+                              label={invoice.status_display}
+                              size="small"
+                              color={INVOICE_STATUS_COLORS[invoice.status]}
                             />
                           </TableCell>
                         </TableRow>
