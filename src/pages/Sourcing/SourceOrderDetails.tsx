@@ -3,6 +3,7 @@ import { useParams, useNavigate } from "react-router-dom";
 import {
   Box, Card, CardContent, Typography, Grid, Chip, Button,
   Divider, Tab, Tabs, Alert, TextField,
+  Dialog, DialogTitle, DialogContent, DialogActions,
 } from "@mui/material";
 import { useFormik } from "formik";
 import * as Yup from "yup";
@@ -14,7 +15,7 @@ import CloseIcon from "@mui/icons-material/Close";
 import LocalShippingIcon from "@mui/icons-material/LocalShipping";
 import ScaleIcon from "@mui/icons-material/Scale";
 import AccountBalanceIcon from "@mui/icons-material/AccountBalance";
-import { FormControl, InputLabel, Select, MenuItem } from "@mui/material";
+import { FormControl, InputLabel, Select, MenuItem, FormHelperText } from "@mui/material";
 import useTitle from "../../hooks/useTitle";
 import { SourcingService } from "./Sourcing.service";
 import { ISourceOrder, IInvestorAccount } from "./Sourcing.interface";
@@ -23,8 +24,6 @@ import { formatDateToDDMMYYYY } from "../../utils/date_formatter";
 import { Span } from "../../components/Typography";
 import LoadingScreen from "../../components/LoadingScreen";
 import ProgressIndicator from "../../components/UI/ProgressIndicator";
-import ModalDialog from "../../components/UI/Modal/ModalDialog";
-import uniqueId from "../../utils/generateId";
 import { DeliveryRecordForm } from "./DeliveryRecordForm";
 import { WeighbridgeRecordForm } from "./WeighbridgeRecordForm";
 
@@ -43,18 +42,21 @@ const LOGISTICS_LABELS: Record<string, string> = {
 
 // ─── Investor Allocation Form ──────────────────────────────────────────────
 const InvestorAllocationForm: FC<{
-  order: ISourceOrder; handleClose: () => void; callBack?: () => void;
-}> = ({ order, handleClose, callBack }) => {
+  open: boolean; order: ISourceOrder; handleClose: () => void; callBack?: () => void;
+}> = ({ open, order, handleClose, callBack }) => {
   const [loading, setLoading] = useState(false);
-  const [optionsLoading, setOptionsLoading] = useState(true);
+  const [optionsLoading, setOptionsLoading] = useState(false);
   const [investorAccounts, setInvestorAccounts] = useState<IInvestorAccount[]>([]);
 
+  // Fetch investor accounts whenever the dialog opens
   useEffect(() => {
+    if (!open) return;
+    setOptionsLoading(true);
     SourcingService.getInvestorAccounts()
-      .then(r => setInvestorAccounts(r.results || (r as any)))
+      .then(r => setInvestorAccounts(r.results ?? (r as any)))
       .catch(() => toast.error("Failed to load investor accounts"))
       .finally(() => setOptionsLoading(false));
-  }, []);
+  }, [open]);
 
   const form = useFormik({
     initialValues: {
@@ -65,8 +67,12 @@ const InvestorAllocationForm: FC<{
     },
     validationSchema: Yup.object({
       investor_account: Yup.string().required("Investor account is required"),
-      amount_allocated: Yup.number().positive("Must be positive").required("Amount is required"),
+      amount_allocated: Yup.number()
+        .typeError("Must be a number")
+        .positive("Must be positive")
+        .required("Amount is required"),
     }),
+    enableReinitialize: true,
     onSubmit: async (values) => {
       setLoading(true);
       try {
@@ -77,6 +83,7 @@ const InvestorAllocationForm: FC<{
           notes: values.notes,
         });
         toast.success("Investor allocated successfully");
+        form.resetForm();
         callBack?.();
         handleClose();
       } catch (e: any) {
@@ -84,63 +91,121 @@ const InvestorAllocationForm: FC<{
           e.response?.data?.amount_allocated?.[0] ||
           e.response?.data?.non_field_errors?.[0] ||
           e.response?.data?.source_order?.[0] ||
+          e.response?.data?.detail ||
           "Failed to create allocation";
         toast.error(msg);
-      } finally { setLoading(false); }
+      } finally {
+        setLoading(false);
+      }
     },
   });
 
-  const selected = investorAccounts.find(a => a.id === form.values.investor_account);
-  const sufficient = selected ? selected.available_balance >= Number(form.values.amount_allocated) : true;
+  const handleDialogClose = () => {
+    if (loading) return;
+    form.resetForm();
+    handleClose();
+  };
 
-  const ActionBtns: FC = () => (
-    <>
-      <Button onClick={handleClose} disabled={loading}>Cancel</Button>
-      <Button variant="contained" onClick={() => form.handleSubmit()} disabled={loading || optionsLoading || !sufficient}>
-        {loading
-          ? <><ProgressIndicator color="inherit" size={20} /><Span sx={{ ml: 1 }}>Allocating...</Span></>
-          : "Allocate Investor"}
-      </Button>
-    </>
-  );
+  const selected = investorAccounts.find(a => a.id === form.values.investor_account);
+  const sufficient = selected
+    ? selected.available_balance >= Number(form.values.amount_allocated)
+    : true;
 
   return (
-    <ModalDialog title="Assign Investor to Order" onClose={handleClose} id={uniqueId()} ActionButtons={ActionBtns}>
-      {optionsLoading ? (
-        <Box sx={{ display: "flex", justifyContent: "center", p: 4 }}><ProgressIndicator /></Box>
-      ) : (
-        <Box sx={{ display: "flex", flexDirection: "column", gap: 2, pt: 1 }}>
-          <Alert severity="info">
-            Committing investor capital to fund this purchase. Funds + margin are returned once the grain is sold.
-          </Alert>
-          <FormControl fullWidth error={Boolean(form.errors.investor_account)}>
-            <InputLabel>Investor Account *</InputLabel>
-            <Select value={form.values.investor_account} label="Investor Account *"
-              onChange={e => form.setFieldValue("investor_account", e.target.value)}>
-              {investorAccounts.map(a => (
-                <MenuItem key={a.id} value={a.id}>
-                  {a.investor.first_name} {a.investor.last_name} — Balance: {formatCurrency(a.available_balance)}
-                </MenuItem>
-              ))}
-            </Select>
-          </FormControl>
-          {selected && (
-            <Alert severity={sufficient ? "success" : "error"}>
-              Available balance: <strong>{formatCurrency(selected.available_balance)}</strong>
-              {!sufficient && " — Insufficient funds for this allocation"}
+    <Dialog open={open} onClose={handleDialogClose} maxWidth="sm" fullWidth>
+      <DialogTitle sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+        <AccountBalanceIcon color="secondary" />
+        Assign Investor to Order
+      </DialogTitle>
+
+      <DialogContent dividers>
+        {optionsLoading ? (
+          <Box sx={{ display: "flex", justifyContent: "center", alignItems: "center", py: 6, gap: 2 }}>
+            <ProgressIndicator />
+            <Span>Loading investor accounts...</Span>
+          </Box>
+        ) : (
+          <Box sx={{ display: "flex", flexDirection: "column", gap: 2.5, pt: 1 }}>
+            <Alert severity="info">
+              Committing investor capital to fund this purchase. Funds + margin are returned once the grain is sold.
             </Alert>
-          )}
-          <TextField label="Amount Allocated (UGX) *" type="number" fullWidth
-            value={form.values.amount_allocated}
-            onChange={e => form.setFieldValue("amount_allocated", e.target.value)}
-            error={Boolean(form.errors.amount_allocated)}
-            helperText={(form.errors.amount_allocated as string) || `Order total cost: ${formatCurrency(order.total_cost)}`}
-          />
-          <TextField label="Notes" multiline rows={2} fullWidth
-            value={form.values.notes} onChange={e => form.setFieldValue("notes", e.target.value)} />
-        </Box>
-      )}
-    </ModalDialog>
+
+            {investorAccounts.length === 0 ? (
+              <Alert severity="warning">
+                No investor accounts found. Please create an investor account first.
+              </Alert>
+            ) : (
+              <FormControl fullWidth error={Boolean(form.touched.investor_account && form.errors.investor_account)}>
+                <InputLabel id="investor-account-label">Investor Account *</InputLabel>
+                <Select
+                  labelId="investor-account-label"
+                  value={form.values.investor_account}
+                  label="Investor Account *"
+                  onChange={e => form.setFieldValue("investor_account", e.target.value)}
+                  onBlur={() => form.setFieldTouched("investor_account", true)}
+                >
+                  {investorAccounts.map(a => (
+                    <MenuItem key={a.id} value={a.id}>
+                      {a.investor.first_name} {a.investor.last_name}
+                      &nbsp;—&nbsp;Balance: {formatCurrency(a.available_balance)}
+                    </MenuItem>
+                  ))}
+                </Select>
+                {form.touched.investor_account && form.errors.investor_account && (
+                  <FormHelperText>{form.errors.investor_account as string}</FormHelperText>
+                )}
+              </FormControl>
+            )}
+
+            {selected && (
+              <Alert severity={sufficient ? "success" : "error"}>
+                Available balance: <strong>{formatCurrency(selected.available_balance)}</strong>
+                {!sufficient && " — Insufficient funds for this allocation amount"}
+              </Alert>
+            )}
+
+            <TextField
+              label="Amount Allocated (UGX) *"
+              type="number"
+              fullWidth
+              value={form.values.amount_allocated}
+              onChange={e => form.setFieldValue("amount_allocated", e.target.value)}
+              onBlur={() => form.setFieldTouched("amount_allocated", true)}
+              error={Boolean(form.touched.amount_allocated && form.errors.amount_allocated)}
+              helperText={
+                (form.touched.amount_allocated && form.errors.amount_allocated as string) ||
+                `Order total cost: ${formatCurrency(order.total_cost)}`
+              }
+              inputProps={{ min: 1 }}
+            />
+
+            <TextField
+              label="Notes (optional)"
+              multiline
+              rows={2}
+              fullWidth
+              value={form.values.notes}
+              onChange={e => form.setFieldValue("notes", e.target.value)}
+              placeholder="Any additional notes about this allocation..."
+            />
+          </Box>
+        )}
+      </DialogContent>
+
+      <DialogActions sx={{ px: 3, py: 2, gap: 1 }}>
+        <Button onClick={handleDialogClose} disabled={loading}>
+          Cancel
+        </Button>
+        <Button
+          variant="contained"
+          onClick={() => form.handleSubmit()}
+          disabled={loading || optionsLoading || !sufficient || investorAccounts.length === 0}
+          startIcon={loading ? <ProgressIndicator color="inherit" size={18} /> : <AccountBalanceIcon />}
+        >
+          {loading ? "Allocating..." : "Allocate Investor"}
+        </Button>
+      </DialogActions>
+    </Dialog>
   );
 };
 
@@ -411,9 +476,12 @@ const SourceOrderDetails = () => {
       </TabPanel>
 
       {/* Modals */}
-      {showAllocationForm && (
-        <InvestorAllocationForm order={order} handleClose={() => setShowAllocationForm(false)} callBack={fetchOrderDetails} />
-      )}
+      <InvestorAllocationForm
+        open={showAllocationForm}
+        order={order}
+        handleClose={() => setShowAllocationForm(false)}
+        callBack={fetchOrderDetails}
+      />
       {showDeliveryForm && (
         <DeliveryRecordForm sourceOrderId={order.id}
           callBack={() => { setShowDeliveryForm(false); fetchOrderDetails(); }}

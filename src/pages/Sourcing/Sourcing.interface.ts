@@ -8,11 +8,18 @@ export interface IQualityGrade { id: string; name: string; min_moisture: number;
 
 // ============ Payment Preference ============
 export interface IPaymentPreference {
-  id: string; supplier: string;
+  id: string;
+  supplier: string;
   method: 'mobile_money' | 'bank_transfer' | 'cash' | 'check';
   method_display: string;
-  details: { phone?: string; account_number?: string; bank_name?: string; account_name?: string; [key: string]: any; };
-  is_default: boolean; is_active: boolean; created_at: string; updated_at: string;
+  account_number?: string;
+  account_name?: string;
+  phone?: string;
+  bank_name?: string;
+  is_default: boolean;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
 }
 
 // ============ Supplier Profile ============

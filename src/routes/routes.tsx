@@ -40,7 +40,7 @@ const routes = [
       { path: "dashboard", element: <LazyLoader.SupplierDashboard /> },
       { path: "orders", element: <LazyLoader.SupplierOrders /> },
       { path: "orders/:id", element: <LazyLoader.SupplierOrderDetails /> },
-      // { path: "invoices", element: <LazyLoader.SupplierInvoicesView /> },
+      { path: "invoices", element: <LazyLoader.SupplierInvoicesView /> },
       { path: "payment-methods", element: <LazyLoader.SupplierPaymentPreferences /> },
       { path: "profile", element: <LazyLoader.SupplierProfile /> },
       // { path: "notifications", element: <LazyLoader.SupplierNotifications /> },

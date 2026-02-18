@@ -330,13 +330,13 @@ const SupplierDetails = () => {
                   </Box>
                   <Divider sx={{ my: 1 }} />
                   {pref.method === "mobile_money" && (
-                    <Typography>Phone: {pref.details?.phone ?? "—"}</Typography>
+                    <Typography>Phone: {pref?.phone ?? "—"}</Typography>
                   )}
                   {pref.method === "bank_transfer" && (
                     <>
-                      <Typography>Bank: {pref.details?.bank_name ?? "—"}</Typography>
-                      <Typography>Account: {pref.details?.account_number ?? "—"}</Typography>
-                      <Typography>Name: {pref.details?.account_name ?? "—"}</Typography>
+                      <Typography>Bank: {pref?.bank_name ?? "—"}</Typography>
+                      <Typography>Account: {pref?.account_number ?? "—"}</Typography>
+                      <Typography>Name: {pref?.account_name ?? "—"}</Typography>
                     </>
                   )}
                 </CardContent></Card>

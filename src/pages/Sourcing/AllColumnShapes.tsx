@@ -33,12 +33,12 @@ export const SupplierInvoiceColumnShape = (actions: IDropdownAction[]) => [
   },
   {
     Header: "Order Number",
-    accessor: "source_order.order_number",
+    accessor: "order_number",
     minWidth: 160,
   },
   {
     Header: "Supplier",
-    accessor: "supplier.business_name",
+    accessor: "supplier_name",
     minWidth: 150,
   },
   {

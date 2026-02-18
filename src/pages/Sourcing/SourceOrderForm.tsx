@@ -214,7 +214,10 @@ const SourceOrderForm: FC<ISourceOrderFormProps> = ({
             <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
               <Span>Grain Cost:</Span>
               <Span sx={{ fontWeight: 600 }}>
-                {formatCurrency((orderForm.values.quantity_kg || 0) * (orderForm.values.offered_price_per_kg || 0))}
+                {formatCurrency(
+                  (parseFloat(orderForm.values.quantity_kg) || 0) *
+                  (parseFloat(orderForm.values.offered_price_per_kg) || 0)
+                )}
               </Span>
             </Box>
             <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>

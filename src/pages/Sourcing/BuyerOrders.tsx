@@ -1,4 +1,4 @@
-import { FC, useEffect, useState } from "react";
+import { FC, useEffect, useRef, useState } from "react";
 import {
   Box, Button, Chip, FormControl, Grid, InputLabel,
   MenuItem, Select, TextField, Typography,
@@ -42,6 +42,8 @@ const CreateBuyerOrderForm: FC<{
   callBack?: () => void;
 }> = ({ hubs, handleClose, callBack }) => {
   const [loading, setLoading] = useState(false);
+  // FIX 1: Stable modal ID — generated once on mount, never changes on re-render
+  const modalId = useRef(uniqueId()).current;
 
   const form = useFormik({
     initialValues: {
@@ -66,6 +68,10 @@ const CreateBuyerOrderForm: FC<{
     },
   });
 
+  // FIX 2: ActionBtns must remain a React.FC because ModalDialog calls it as <ActionButtons />.
+  // Defined outside JSX but still as a function component to satisfy the prop type.
+  // The loading/handleClose values it closes over are always current because the whole
+  // CreateBuyerOrderForm remounts fresh each time showCreateForm flips to true.
   const ActionBtns: FC = () => (
     <>
       <Button onClick={handleClose} disabled={loading}>Cancel</Button>
@@ -76,7 +82,17 @@ const CreateBuyerOrderForm: FC<{
   );
 
   return (
-    <ModalDialog title="New Buyer Order" onClose={handleClose} id={uniqueId()} ActionButtons={ActionBtns} maxWidth="md">
+    <ModalDialog
+      title="New Buyer Order"
+      onClose={handleClose}
+      id={modalId}
+      // FIX 3 (ROOT CAUSE): ModalDialog checks `showModal` from context OR the `open` prop.
+      // Since we manage visibility via local state (showCreateForm), the context's showModal
+      // is never set to true — so the modal always returned null without this prop.
+      open={true}
+      ActionButtons={ActionBtns}
+      maxWidth="md"
+    >
       <Grid container spacing={2} sx={{ pt: 1 }}>
         <Grid item xs={12} md={6}>
           <TextField fullWidth label="Buyer / Company Name *"
@@ -142,9 +158,11 @@ const BuyerOrders: FC = () => {
 
   useEffect(() => { fetchData(filters); }, [filters]);
   useEffect(() => {
-    SourcingService.getHubs().then(r =>
-      setHubs((r.results || r).map((h: any) => ({ value: h.id, label: h.name })))
-    );
+    SourcingService.getHubs()
+      .then(r =>
+        setHubs((r.results || r).map((h: any) => ({ value: h.id, label: h.name })))
+      )
+      .catch(() => toast.error("Failed to load hubs"));
   }, []);
 
   const fetchData = async (params?: any) => {

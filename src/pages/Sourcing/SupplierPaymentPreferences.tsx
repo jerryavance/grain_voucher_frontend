@@ -204,7 +204,7 @@ const SupplierPaymentPreferences = () => {
                   </Typography>
 
                   {/* Account Details */}
-                  {preference.details.account_number && (
+                  {preference.account_number && (
                     <Box sx={{ mb: 1 }}>
                       <Typography variant="caption" color="text.secondary">
                         {preference.method === "mobile_money"
@@ -212,17 +212,17 @@ const SupplierPaymentPreferences = () => {
                           : "Account Number"}
                       </Typography>
                       <Typography variant="body1" fontWeight="medium">
-                        {preference.details.account_number}
+                        {preference.account_number}
                       </Typography>
                     </Box>
                   )}
 
-                  {preference.details.account_name && (
+                  {preference.account_name && (
                     <Box sx={{ mb: 2 }}>
                       <Typography variant="caption" color="text.secondary">
                         Account Name
                       </Typography>
-                      <Typography variant="body1">{preference.details.account_name}</Typography>
+                      <Typography variant="body1">{preference.account_name}</Typography>
                     </Box>
                   )}
 

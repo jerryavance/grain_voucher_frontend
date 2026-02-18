@@ -107,13 +107,15 @@ export const formatPercentage = (value: number | string | undefined | null): str
 };
 
 export const calculateTotalCost = (values: any): number => {
-  const grain_cost = (values.quantity_kg || 0) * (values.offered_price_per_kg || 0);
-  const weighbridge_cost = values.weighbridge_cost || 0;
-  const logistics_cost = values.logistics_cost || 0;
-  const handling_cost = values.handling_cost || 0;
-  const other_costs = values.other_costs || 0;
+  const quantity = parseFloat(values.quantity_kg) || 0;
+  const price = parseFloat(values.offered_price_per_kg) || 0;
+  const weighbridge = parseFloat(values.weighbridge_cost) || 0;
+  const logistics = parseFloat(values.logistics_cost) || 0;
+  const handling = parseFloat(values.handling_cost) || 0;
+  const other = parseFloat(values.other_costs) || 0;
 
-  return grain_cost + weighbridge_cost + logistics_cost + handling_cost + other_costs;
+  const grain_cost = quantity * price;
+  return grain_cost + weighbridge + logistics + handling + other;
 };
 
 export const getOrderStatusBadgeProps = (status: string) => {

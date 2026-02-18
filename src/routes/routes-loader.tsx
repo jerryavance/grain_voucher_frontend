@@ -2,6 +2,7 @@ import { lazy, Suspense as ReactSuspense } from "react";
 import LoadingScreen from "../components/LoadingScreen";
 import JournalEntries from "../pages/Accounting/JournalEntries/JournalEntries";
 import SupplierDashboard from "../pages/Sourcing/SupplierDashboard";
+import SupplierInvoicesView from "../pages/Sourcing/SupplierInvoicesView";
 
 const Suspense: any = ReactSuspense;
 
@@ -84,6 +85,7 @@ const RouteLazyLoader = {
   SourceOrders: Loadable(lazy(() => import("../pages/Sourcing/SourceOrders"))),
   SourceOrderDetails: Loadable(lazy(() => import("../pages/Sourcing/SourceOrderDetails"))),
   SupplierInvoices: Loadable(lazy(() => import("../pages/Sourcing/SupplierInvoices"))),
+  SupplierInvoicesView: Loadable(lazy(() => import("../pages/Sourcing/SupplierInvoicesView"))),
   SupplierInvoiceDetails: Loadable(lazy(() => import("../pages/Sourcing/SupplierInvoiceDetails"))),
   DeliveryRecords: Loadable(lazy(() => import("../pages/Sourcing/DeliveryRecords"))),
   WeighbridgeRecords: Loadable(lazy(() => import("../pages/Sourcing/WeighbridgeRecords"))),
