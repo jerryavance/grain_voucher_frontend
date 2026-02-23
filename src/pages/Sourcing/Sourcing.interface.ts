@@ -1,4 +1,3 @@
-import { TOption } from "../../@types/common";
 import { IHub } from "../Hub/Hub.interface";
 import { IUser } from "../Users/Users.interface";
 
@@ -102,7 +101,7 @@ export interface ISupplierPayment {
 }
 export interface ISupplierPaymentsResults { results: ISupplierPayment[]; count: number; }
 
-// ============ NEW: Investor Allocation ============
+// ============ Investor Allocation ============
 export interface IInvestorAllocation {
   id: string; allocation_number: string; investor_account: string; investor_name: string;
   source_order: string; source_order_number: string; source_order_total_cost: number;
@@ -118,7 +117,7 @@ export interface IInvestorAccount {
   total_utilized: number; total_margin_earned: number;
 }
 
-// ============ NEW: Sale Lot ============
+// ============ Sale Lot ============
 export interface ISaleLot {
   id: string; lot_number: string; source_order: string; source_order_number: string;
   investor_allocation: string | null; investor_name: string | null;
@@ -130,7 +129,83 @@ export interface ISaleLot {
 }
 export interface ISaleLotsResults { results: ISaleLot[]; count: number; }
 
-// ============ NEW: Buyer Order ============
+// ============ Buyer Profile ============
+export type TBuyerType = 'grain_company'|'trader'|'processor'|'exporter'|'retailer'|'other';
+
+export interface IBuyerContactPreference {
+  id: string;
+  buyer: string;
+  role: 'procurement'|'finance'|'operations'|'management'|'other';
+  role_display: string;
+  name: string;
+  phone: string;
+  email: string;
+  is_primary: boolean;
+  created_at: string;
+}
+
+export interface IBuyerProfile {
+  id: string;
+  business_name: string;
+  buyer_type: TBuyerType;
+  buyer_type_display: string;
+  registration_number: string;
+  contact_name: string;
+  phone: string;
+  email: string;
+  physical_address: string;
+  district: string;
+  country: string;
+  default_credit_terms_days: number;
+  credit_limit: number;
+  outstanding_balance: number;
+  credit_available: number;
+  preferred_hubs: string[];
+  typical_grain_types: string[];
+  is_verified: boolean;
+  is_active: boolean;
+  verified_by: string | null;
+  verified_at: string | null;
+  notes: string;
+  created_by: string | null;
+  created_at: string;
+  updated_at: string;
+  total_orders?: number;
+  total_revenue?: number;
+  contacts?: IBuyerContactPreference[];
+}
+
+export interface IBuyerProfileMinimal {
+  id: string;
+  business_name: string;
+  buyer_type_display: string;
+  phone: string;
+  email: string;
+  default_credit_terms_days: number;
+  outstanding_balance: number;
+  credit_available: number;
+}
+
+export interface IBuyerProfilesResults { results: IBuyerProfile[]; count: number; }
+
+export interface IBuyerDashboard {
+  total_orders: number;
+  completed_orders: number;
+  pending_payment: number;
+  total_revenue: number;
+  outstanding_balance: number;
+  credit_available: number;
+  recent_orders: IBuyerOrderList[];
+}
+
+export interface IBuyerCreditStatus {
+  credit_limit: number;
+  outstanding_balance: number;
+  credit_available: number;
+  credit_limit_enforced: boolean;
+}
+
+// ============ Buyer Order ============
 export type TBuyerOrderStatus = 'draft'|'confirmed'|'dispatched'|'delivered'|'invoiced'|'completed'|'cancelled';
 
 export interface IBuyerOrderLine {
@@ -148,8 +223,13 @@ export interface ISaleExpense {
 }
 
 export interface IBuyerOrder {
-  id: string; order_number: string; buyer_name: string; buyer_contact_name: string;
-  buyer_phone: string; buyer_email: string; buyer_address: string;
+  id: string; order_number: string;
+  // Flat buyer fields (ad-hoc / fallback)
+  buyer_name: string; buyer_contact_name: string; buyer_phone: string;
+  buyer_email: string; buyer_address: string;
+  // FK to profile (preferred)
+  buyer: string | null;
+  buyer_detail: IBuyerProfileMinimal | null;
   hub: string; hub_name: string; created_by: string; credit_terms_days: number;
   subtotal: number; total_cogs: number; total_selling_expenses: number; gross_profit: number;
   status: TBuyerOrderStatus; notes: string; invoice_status: string | null;
@@ -160,13 +240,17 @@ export interface IBuyerOrder {
 }
 
 export interface IBuyerOrderList {
-  id: string; order_number: string; buyer_name: string; hub: string; hub_name: string;
+  id: string; order_number: string;
+  buyer_name: string;
+  buyer: string | null;
+  buyer_detail: IBuyerProfileMinimal | null;
+  hub: string; hub_name: string;
   subtotal: number; gross_profit: number; status: TBuyerOrderStatus;
   invoice_status: string | null; invoice_balance_due: number | null; created_at: string;
 }
 export interface IBuyerOrdersResults { results: IBuyerOrderList[]; count: number; }
 
-// ============ NEW: Buyer Invoice ============
+// ============ Buyer Invoice ============
 export type TBuyerInvoiceStatus = 'draft'|'issued'|'partial'|'paid'|'overdue'|'cancelled';
 export interface IBuyerInvoice {
   id: string; invoice_number: string; buyer_order: string; order_number: string;
@@ -178,7 +262,7 @@ export interface IBuyerInvoice {
 }
 export interface IBuyerInvoicesResults { results: IBuyerInvoice[]; count: number; }
 
-// ============ NEW: Buyer Payment ============
+// ============ Buyer Payment ============
 export interface IBuyerPayment {
   id: string; payment_number: string; buyer_invoice: string; invoice_number: string;
   buyer_name: string; amount: number; method: 'bank_transfer'|'mobile_money'|'cash'|'cheque';
@@ -188,7 +272,7 @@ export interface IBuyerPayment {
 }
 export interface IBuyerPaymentsResults { results: IBuyerPayment[]; count: number; }
 
-// ============ NEW: Trade Settlement ============
+// ============ Trade Settlement ============
 export interface ITradeSettlement {
   id: string; settlement_number: string; buyer_order: string; order_number: string;
   buyer_invoice: string; invoice_number: string; buyer_revenue: number;

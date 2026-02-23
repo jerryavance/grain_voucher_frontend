@@ -1,7 +1,7 @@
 import { FC, useEffect, useRef, useState } from "react";
 import {
-  Box, Button, Chip, FormControl, Grid, InputLabel,
-  MenuItem, Select, TextField, Typography,
+  Alert, Autocomplete, Box, Button, Chip, CircularProgress, FormControl,
+  Grid, InputLabel, MenuItem, Select, TextField, Typography,
 } from "@mui/material";
 import { useFormik } from "formik";
 import * as Yup from "yup";
@@ -12,19 +12,21 @@ import CheckCircleIcon from "@mui/icons-material/CheckCircle";
 import DeleteIcon from "@mui/icons-material/Delete";
 import LocalShippingIcon from "@mui/icons-material/LocalShipping";
 import VisibilityIcon from "@mui/icons-material/Visibility";
-import { Span } from "../../components/Typography";
+import BusinessIcon from "@mui/icons-material/Business";
+import PersonIcon from "@mui/icons-material/Person";
 import CustomTable from "../../components/UI/CustomTable";
 import DropdownActionBtn, { IDropdownAction } from "../../components/UI/DropdownActionBtn";
 import ModalDialog from "../../components/UI/Modal/ModalDialog";
 import ProgressIndicator from "../../components/UI/ProgressIndicator";
 import SearchInput from "../../components/SearchInput";
+import { Span } from "../../components/Typography";
 import useTitle from "../../hooks/useTitle";
 import uniqueId from "../../utils/generateId";
 import { formatDateToDDMMYYYY } from "../../utils/date_formatter";
 import { INITIAL_PAGE_SIZE } from "../../api/constants";
 import { SourcingService } from "./Sourcing.service";
 import { formatCurrency } from "./SourcingConstants";
-import { IBuyerOrderList, IBuyerOrdersResults } from "./Sourcing.interface";
+import { IBuyerOrderList, IBuyerOrdersResults, IBuyerProfile } from "./Sourcing.interface";
 
 const BUYER_ORDER_STATUS_COLORS: Record<string, any> = {
   draft: "default", confirmed: "primary", dispatched: "warning",
@@ -35,48 +37,106 @@ const BUYER_INVOICE_STATUS_COLORS: Record<string, any> = {
   paid: "success", overdue: "error", cancelled: "error",
 };
 
-// ─── Create Buyer Order Form ──────────────────────────────────────────────
+// ── Create Buyer Order Form ────────────────────────────────────────────────
 const CreateBuyerOrderForm: FC<{
-  hubs: any[];
+  hubs: { value: string; label: string }[];
   handleClose: () => void;
   callBack?: () => void;
 }> = ({ hubs, handleClose, callBack }) => {
+  const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
-  // FIX 1: Stable modal ID — generated once on mount, never changes on re-render
+  const [buyerMode, setBuyerMode] = useState<"profile" | "adhoc">("profile");
+  const [buyers, setBuyers] = useState<IBuyerProfile[]>([]);
+  const [buyerSearch, setBuyerSearch] = useState("");
+  const [buyersLoading, setBuyersLoading] = useState(false);
+  const [selectedBuyer, setSelectedBuyer] = useState<IBuyerProfile | null>(null);
   const modalId = useRef(uniqueId()).current;
+
+  // Fetch buyers on mount and on search
+  useEffect(() => {
+    let cancelled = false;
+    setBuyersLoading(true);
+    SourcingService.getBuyers({ search: buyerSearch, is_active: true, page_size: 30 })
+      .then(r => { if (!cancelled) setBuyers(r.results); })
+      .catch(() => {})
+      .finally(() => { if (!cancelled) setBuyersLoading(false); });
+    return () => { cancelled = true; };
+  }, [buyerSearch]);
 
   const form = useFormik({
     initialValues: {
-      buyer_name: "", buyer_contact_name: "", buyer_phone: "",
-      buyer_email: "", buyer_address: "", hub: "", credit_terms_days: 0, notes: "",
+      // Profile FK (preferred)
+      buyer: "",
+      // Ad-hoc fields (fallback)
+      buyer_name: "",
+      buyer_contact_name: "",
+      buyer_phone: "",
+      buyer_email: "",
+      buyer_address: "",
+      hub: "",
+      credit_terms_days: 0,
+      notes: "",
     },
     validationSchema: Yup.object({
-      buyer_name: Yup.string().required("Buyer name is required"),
       hub: Yup.string().required("Hub is required"),
-    }),
+      buyer: Yup.string().nullable(),
+      buyer_name: Yup.string().nullable(),
+      buyer_contact_name: Yup.string().nullable(),
+      buyer_phone: Yup.string().nullable(),
+      buyer_email: Yup.string().nullable(),
+      buyer_address: Yup.string().nullable(),
+      credit_terms_days: Yup.number().required(),
+      notes: Yup.string().nullable(),
+    }).test(
+      "buyer-required",
+      "Select a buyer profile or enter a buyer name",
+      function (values) {
+        if (buyerMode === "profile" && !values.buyer) {
+          return this.createError({ path: "buyer", message: "Select a buyer profile" });
+        }
+        if (buyerMode === "adhoc" && !values.buyer_name) {
+          return this.createError({ path: "buyer_name", message: "Buyer name is required" });
+        }
+        return true;
+      }
+    ),
     onSubmit: async (values) => {
       setLoading(true);
       try {
-        const order = await SourcingService.createBuyerOrder(values as any);
+        const payload: any = { hub: values.hub, notes: values.notes, credit_terms_days: values.credit_terms_days };
+        if (buyerMode === "profile" && values.buyer) {
+          payload.buyer = values.buyer;
+        } else {
+          payload.buyer_name = values.buyer_name;
+          payload.buyer_contact_name = values.buyer_contact_name;
+          payload.buyer_phone = values.buyer_phone;
+          payload.buyer_email = values.buyer_email;
+          payload.buyer_address = values.buyer_address;
+        }
+        const order = await SourcingService.createBuyerOrder(payload);
         toast.success(`Order ${order.order_number} created`);
         callBack?.();
-      } catch {
-        toast.error("Failed to create order");
-      } finally {
-        setLoading(false);
-      }
+        navigate(`/admin/sourcing/buyer-orders/${order.id}`);
+      } catch (e: any) {
+        const err = e?.response?.data;
+        toast.error(err?.non_field_errors?.[0] || err?.buyer?.[0] || "Failed to create order");
+      } finally { setLoading(false); }
     },
   });
 
-  // FIX 2: ActionBtns must remain a React.FC because ModalDialog calls it as <ActionButtons />.
-  // Defined outside JSX but still as a function component to satisfy the prop type.
-  // The loading/handleClose values it closes over are always current because the whole
-  // CreateBuyerOrderForm remounts fresh each time showCreateForm flips to true.
+  // Auto-fill credit terms from selected buyer profile
+  useEffect(() => {
+    if (selectedBuyer) {
+      form.setFieldValue("buyer", selectedBuyer.id);
+      form.setFieldValue("credit_terms_days", selectedBuyer.default_credit_terms_days);
+    }
+  }, [selectedBuyer]);
+
   const ActionBtns: FC = () => (
     <>
       <Button onClick={handleClose} disabled={loading}>Cancel</Button>
       <Button variant="contained" onClick={() => form.handleSubmit()} disabled={loading}>
-        {loading ? <ProgressIndicator color="inherit" size={20} /> : "Create Order"}
+        {loading ? <ProgressIndicator color="inherit" size={20} /> : "Create & Open Order"}
       </Button>
     </>
   );
@@ -86,54 +146,142 @@ const CreateBuyerOrderForm: FC<{
       title="New Buyer Order"
       onClose={handleClose}
       id={modalId}
-      // FIX 3 (ROOT CAUSE): ModalDialog checks `showModal` from context OR the `open` prop.
-      // Since we manage visibility via local state (showCreateForm), the context's showModal
-      // is never set to true — so the modal always returned null without this prop.
       open={true}
       ActionButtons={ActionBtns}
       maxWidth="md"
     >
       <Grid container spacing={2} sx={{ pt: 1 }}>
-        <Grid item xs={12} md={6}>
-          <TextField fullWidth label="Buyer / Company Name *"
-            value={form.values.buyer_name}
-            onChange={e => form.setFieldValue("buyer_name", e.target.value)}
-            error={Boolean(form.errors.buyer_name)} helperText={form.errors.buyer_name} />
+        {/* Buyer mode toggle */}
+        <Grid item xs={12}>
+          <Box sx={{ display: "flex", gap: 1, mb: 1 }}>
+            <Button
+              variant={buyerMode === "profile" ? "contained" : "outlined"}
+              size="small"
+              startIcon={<BusinessIcon />}
+              onClick={() => { setBuyerMode("profile"); form.setFieldValue("buyer_name", ""); }}
+            >
+              Select Registered Buyer
+            </Button>
+            <Button
+              variant={buyerMode === "adhoc" ? "contained" : "outlined"}
+              size="small"
+              color="secondary"
+              startIcon={<PersonIcon />}
+              onClick={() => { setBuyerMode("adhoc"); form.setFieldValue("buyer", ""); setSelectedBuyer(null); }}
+            >
+              Ad-hoc / Walk-in Buyer
+            </Button>
+          </Box>
+          <Typography variant="caption" color="text.secondary">
+            {buyerMode === "profile"
+              ? "Select an existing buyer profile to link credit terms and track their history."
+              : "For one-off buyers not in the system. You can register them later."}
+          </Typography>
         </Grid>
-        <Grid item xs={12} md={6}>
-          <TextField fullWidth label="Contact Person"
-            value={form.values.buyer_contact_name}
-            onChange={e => form.setFieldValue("buyer_contact_name", e.target.value)} />
-        </Grid>
-        <Grid item xs={12} md={6}>
-          <TextField fullWidth label="Phone"
-            value={form.values.buyer_phone}
-            onChange={e => form.setFieldValue("buyer_phone", e.target.value)} />
-        </Grid>
-        <Grid item xs={12} md={6}>
-          <TextField fullWidth label="Email"
-            value={form.values.buyer_email}
-            onChange={e => form.setFieldValue("buyer_email", e.target.value)} />
-        </Grid>
+
+        {/* Buyer profile selector */}
+        {buyerMode === "profile" && (
+          <Grid item xs={12}>
+            <Autocomplete
+              options={buyers}
+              loading={buyersLoading}
+              value={selectedBuyer}
+              onChange={(_, val) => setSelectedBuyer(val)}
+              onInputChange={(_, val) => setBuyerSearch(val)}
+              getOptionLabel={b => `${b.business_name} — ${b.buyer_type_display}`}
+              isOptionEqualToValue={(a, b) => a.id === b.id}
+              renderOption={(props, b) => (
+                <li {...props} key={b.id}>
+                  <Box sx={{ width: "100%" }}>
+                    <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                      <Typography variant="body2" sx={{ fontWeight: 600 }}>{b.business_name}</Typography>
+                      <Chip label={b.buyer_type_display} size="small" sx={{ ml: 1 }} />
+                    </Box>
+                    <Typography variant="caption" color="text.secondary">
+                      {b.contact_name} · {b.phone}
+                      {b.outstanding_balance > 0 && ` · AR: ${formatCurrency(b.outstanding_balance)}`}
+                    </Typography>
+                  </Box>
+                </li>
+              )}
+              renderInput={params => (
+                <TextField
+                  {...params}
+                  label="Search buyer by name or type *"
+                  error={Boolean(form.errors.buyer)}
+                  helperText={form.errors.buyer as string}
+                  InputProps={{
+                    ...params.InputProps,
+                    endAdornment: (
+                      <>
+                        {buyersLoading && <CircularProgress color="inherit" size={18} />}
+                        {params.InputProps.endAdornment}
+                      </>
+                    ),
+                  }}
+                />
+              )}
+            />
+            {selectedBuyer && (
+              <Alert severity={selectedBuyer.credit_limit > 0 && selectedBuyer.outstanding_balance >= selectedBuyer.credit_limit ? "error" : "info"} sx={{ mt: 1 }}>
+                <strong>{selectedBuyer.business_name}</strong>
+                {" · "}Credit Terms: <strong>{selectedBuyer.default_credit_terms_days === 0 ? "Cash" : `Net ${selectedBuyer.default_credit_terms_days}d`}</strong>
+                {" · "}Outstanding AR: <strong>{formatCurrency(selectedBuyer.outstanding_balance)}</strong>
+                {selectedBuyer.credit_limit > 0 && ` · Limit: ${formatCurrency(selectedBuyer.credit_limit)}`}
+                {selectedBuyer.credit_limit > 0 && selectedBuyer.outstanding_balance >= selectedBuyer.credit_limit && " — CREDIT LIMIT REACHED"}
+              </Alert>
+            )}
+          </Grid>
+        )}
+
+        {/* Ad-hoc buyer fields */}
+        {buyerMode === "adhoc" && (
+          <>
+            <Grid item xs={12} md={6}>
+              <TextField fullWidth label="Buyer / Company Name *"
+                value={form.values.buyer_name}
+                onChange={e => form.setFieldValue("buyer_name", e.target.value)}
+                error={Boolean(form.errors.buyer_name)} helperText={form.errors.buyer_name as string} />
+            </Grid>
+            <Grid item xs={12} md={6}>
+              <TextField fullWidth label="Contact Person"
+                value={form.values.buyer_contact_name}
+                onChange={e => form.setFieldValue("buyer_contact_name", e.target.value)} />
+            </Grid>
+            <Grid item xs={12} md={6}>
+              <TextField fullWidth label="Phone"
+                value={form.values.buyer_phone}
+                onChange={e => form.setFieldValue("buyer_phone", e.target.value)} />
+            </Grid>
+            <Grid item xs={12} md={6}>
+              <TextField fullWidth label="Email"
+                value={form.values.buyer_email}
+                onChange={e => form.setFieldValue("buyer_email", e.target.value)} />
+            </Grid>
+            <Grid item xs={12}>
+              <TextField fullWidth label="Address" multiline rows={2}
+                value={form.values.buyer_address}
+                onChange={e => form.setFieldValue("buyer_address", e.target.value)} />
+            </Grid>
+          </>
+        )}
+
+        {/* Hub & terms — always shown */}
         <Grid item xs={12} md={6}>
           <FormControl fullWidth error={Boolean(form.errors.hub)}>
-            <InputLabel>Hub *</InputLabel>
-            <Select value={form.values.hub} label="Hub *"
+            <InputLabel>Hub (Dispatch Point) *</InputLabel>
+            <Select value={form.values.hub} label="Hub (Dispatch Point) *"
               onChange={e => form.setFieldValue("hub", e.target.value)}>
               {hubs.map(h => <MenuItem key={h.value} value={h.value}>{h.label}</MenuItem>)}
             </Select>
+            {form.errors.hub && <Typography variant="caption" color="error">{form.errors.hub as string}</Typography>}
           </FormControl>
         </Grid>
         <Grid item xs={12} md={6}>
           <TextField fullWidth label="Credit Terms (Days)" type="number"
             value={form.values.credit_terms_days}
             onChange={e => form.setFieldValue("credit_terms_days", parseInt(e.target.value) || 0)}
-            helperText="0 = cash on delivery, 30 / 60 / 90 = net terms" />
-        </Grid>
-        <Grid item xs={12}>
-          <TextField fullWidth label="Address" multiline rows={2}
-            value={form.values.buyer_address}
-            onChange={e => form.setFieldValue("buyer_address", e.target.value)} />
+            helperText="0 = cash on delivery. Pre-filled from buyer profile." />
         </Grid>
         <Grid item xs={12}>
           <TextField fullWidth label="Notes" multiline rows={2}
@@ -145,7 +293,7 @@ const CreateBuyerOrderForm: FC<{
   );
 };
 
-// ─── Main List Page ───────────────────────────────────────────────────────
+// ── Main List Page ─────────────────────────────────────────────────────────
 const BuyerOrders: FC = () => {
   useTitle("Buyer Orders");
   const navigate = useNavigate();
@@ -154,14 +302,12 @@ const BuyerOrders: FC = () => {
   const [loading, setLoading] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [showCreateForm, setShowCreateForm] = useState(false);
-  const [hubs, setHubs] = useState<any[]>([]);
+  const [hubs, setHubs] = useState<{ value: string; label: string }[]>([]);
 
   useEffect(() => { fetchData(filters); }, [filters]);
   useEffect(() => {
     SourcingService.getHubs()
-      .then(r =>
-        setHubs((r.results || r).map((h: any) => ({ value: h.id, label: h.name })))
-      )
+      .then(r => setHubs((r.results || r).map((h: any) => ({ value: h.id, label: h.name }))))
       .catch(() => toast.error("Failed to load hubs"));
   }, []);
 
@@ -218,21 +364,36 @@ const BuyerOrders: FC = () => {
     {
       Header: "Order #", accessor: "order_number", minWidth: 170,
       Cell: ({ row }: any) => (
-        <Typography
-          color="primary" variant="h6"
-          sx={{ cursor: "pointer", "&:hover": { textDecoration: "underline" } }}
-          onClick={() => navigate(`/admin/sourcing/buyer-orders/${row.original.id}`)}
-        >
+        <Typography color="primary" variant="body2" sx={{ fontWeight: 700, cursor: "pointer", "&:hover": { textDecoration: "underline" } }}
+          onClick={() => navigate(`/admin/sourcing/buyer-orders/${row.original.id}`)}>
           {row.original.order_number}
         </Typography>
       ),
     },
-    { Header: "Buyer", accessor: "buyer_name", minWidth: 160 },
+    {
+      Header: "Buyer", accessor: "buyer_name", minWidth: 200,
+      Cell: ({ row }: any) => {
+        const o: IBuyerOrderList = row.original;
+        return (
+          <Box>
+            <Typography variant="body2" sx={{ fontWeight: 600 }}>
+              {o.buyer_detail?.business_name || o.buyer_name}
+            </Typography>
+            {o.buyer_detail && (
+              <Typography
+                variant="caption" color="primary" sx={{ cursor: "pointer", "&:hover": { textDecoration: "underline" } }}
+                onClick={(e) => { e.stopPropagation(); navigate(`/admin/sourcing/buyers/${o.buyer}`); }}
+              >
+                View profile →
+              </Typography>
+            )}
+          </Box>
+        );
+      },
+    },
     {
       Header: "Revenue", accessor: "subtotal", minWidth: 130,
-      Cell: ({ row }: any) => (
-        <Span sx={{ fontWeight: 600 }}>{formatCurrency(row.original.subtotal)}</Span>
-      ),
+      Cell: ({ row }: any) => <Span sx={{ fontWeight: 600 }}>{formatCurrency(row.original.subtotal)}</Span>,
     },
     {
       Header: "Gross Profit", accessor: "gross_profit", minWidth: 130,
@@ -255,10 +416,8 @@ const BuyerOrders: FC = () => {
       ),
     },
     {
-      Header: "Created", accessor: "created_at", minWidth: 120,
-      Cell: ({ row }: any) => (
-        <Span sx={{ fontSize: 13 }}>{formatDateToDDMMYYYY(row.original.created_at)}</Span>
-      ),
+      Header: "Created", accessor: "created_at", minWidth: 110,
+      Cell: ({ row }: any) => <Span sx={{ fontSize: 12 }}>{formatDateToDDMMYYYY(row.original.created_at)}</Span>,
     },
     {
       Header: "Action", accessor: "action", minWidth: 80,
@@ -270,7 +429,7 @@ const BuyerOrders: FC = () => {
     <Box pt={2} pb={4}>
       <Box sx={{ display: "flex", alignItems: "center", gap: 2, mb: 2, flexWrap: "wrap" }}>
         <SearchInput
-          value={searchQuery} type="text" placeholder="Search buyer name or order number..."
+          value={searchQuery} type="text" placeholder="Search buyer or order number..."
           onChange={(e: any) => setSearchQuery(e.target.value)}
           onKeyPress={(e: any) => {
             if (e.key === "Enter") setFilters({ ...filters, search: searchQuery, page: 1 });
@@ -278,10 +437,8 @@ const BuyerOrders: FC = () => {
         />
         <FormControl size="small" sx={{ minWidth: 160 }}>
           <InputLabel>Status</InputLabel>
-          <Select
-            value={filters.status || ""} label="Status"
-            onChange={e => setFilters({ ...filters, status: e.target.value || undefined, page: 1 })}
-          >
+          <Select value={filters.status || ""} label="Status"
+            onChange={e => setFilters({ ...filters, status: e.target.value || undefined, page: 1 })}>
             <MenuItem value="">All</MenuItem>
             {["draft", "confirmed", "dispatched", "delivered", "invoiced", "completed", "cancelled"].map(s => (
               <MenuItem key={s} value={s}>{s.charAt(0).toUpperCase() + s.slice(1)}</MenuItem>

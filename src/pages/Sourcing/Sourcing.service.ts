@@ -10,6 +10,9 @@ import {
   IBuyerInvoice, IBuyerInvoicesResults,
   IBuyerPayment, IBuyerPaymentsResults,
   ITradeSettlement, ITradeSettlementsResults, IHubPLSummary,
+  // Buyer profile
+  IBuyerProfile, IBuyerProfilesResults, IBuyerContactPreference,
+  IBuyerDashboard, IBuyerCreditStatus,
 } from "./Sourcing.interface";
 
 export const SourcingService = {
@@ -161,24 +164,16 @@ export const SourcingService = {
   async confirmSupplierPayment(id: string): Promise<ISupplierPayment> {
     return instance.post(`sourcing/supplier-payments/${id}/confirm/`).then(r => r.data);
   },
-  async markPaymentCompleted(id: string): Promise<ISupplierPayment> {
-    return instance.post(`sourcing/supplier-payments/${id}/confirm/`).then(r => r.data);
-  },
 
-  // ── Investor Accounts (lookup) ────────────────────────────────────────────
-  async getInvestorAccounts(search?: string): Promise<{ results: IInvestorAccount[]; count: number }> {
-    return instance.get("investors/accounts/", { params: { search, page_size: 50 } }).then(r => r.data);
+  // ── Investor Accounts ─────────────────────────────────────────────────────
+  async getInvestorAccounts(filters?: Record<string, any>): Promise<{ results: IInvestorAccount[]; count: number }> {
+    return instance.get("investors/accounts/", { params: filters }).then(r => r.data);
   },
-
-  /**
-   * Get the current investor's own account ID.
-   * Used internally to resolve "me" → real UUID before filtering allocations.
-   */
   async getMyInvestorAccountId(): Promise<string> {
-    const response = await instance.get("investors/accounts/", { params: { page_size: 1 } });
-    const results = response.data?.results;
-    if (!results || results.length === 0) throw new Error("No investor account found");
-    return results[0].id;
+    const data = await instance.get("investors/accounts/").then(r => r.data);
+    const accounts = data.results || data;
+    if (!accounts || accounts.length === 0) throw new Error("No investor account found");
+    return accounts[0].id;
   },
 
   // ── Investor Allocations ──────────────────────────────────────────────────
@@ -196,12 +191,6 @@ export const SourcingService = {
   }): Promise<IInvestorAllocation> {
     return instance.post("sourcing/investor-allocations/", payload).then(r => r.data);
   },
-
-  /**
-   * Investor-facing: fetch own allocations without needing to pass an account ID.
-   * Resolves the account ID automatically, then filters by it.
-   * Use this instead of getInvestorAllocations() when the caller is an investor.
-   */
   async getMyInvestorAllocations(filters: Record<string, any> = {}): Promise<IInvestorAllocationsResults> {
     const accountId = await SourcingService.getMyInvestorAccountId();
     return instance.get("sourcing/investor-allocations/", {
@@ -218,6 +207,58 @@ export const SourcingService = {
   },
   async getAvailableSaleLots(filters?: Record<string, any>): Promise<ISaleLot[]> {
     return instance.get("sourcing/sale-lots/available/", { params: filters }).then(r => r.data);
+  },
+
+  // ── Buyer Profiles ────────────────────────────────────────────────────────
+  async getBuyers(filters: Record<string, any>): Promise<IBuyerProfilesResults> {
+    return instance.get("sourcing/buyers/", { params: filters }).then(r => r.data);
+  },
+  async getBuyerDetails(id: string): Promise<IBuyerProfile> {
+    return instance.get(`sourcing/buyers/${id}/`).then(r => r.data);
+  },
+  async createBuyer(payload: Partial<IBuyerProfile>): Promise<IBuyerProfile> {
+    return instance.post("sourcing/buyers/", payload).then(r => r.data);
+  },
+  async updateBuyer(id: string, payload: Partial<IBuyerProfile>): Promise<IBuyerProfile> {
+    return instance.patch(`sourcing/buyers/${id}/`, payload).then(r => r.data);
+  },
+  async deleteBuyer(id: string): Promise<void> {
+    return instance.delete(`sourcing/buyers/${id}/`).then(r => r.data);
+  },
+  async verifyBuyer(id: string): Promise<IBuyerProfile> {
+    return instance.post(`sourcing/buyers/${id}/verify/`).then(r => r.data);
+  },
+  async deactivateBuyer(id: string): Promise<IBuyerProfile> {
+    return instance.post(`sourcing/buyers/${id}/deactivate/`).then(r => r.data);
+  },
+  async reactivateBuyer(id: string): Promise<IBuyerProfile> {
+    return instance.post(`sourcing/buyers/${id}/reactivate/`).then(r => r.data);
+  },
+  async getBuyerDashboard(id: string): Promise<IBuyerDashboard> {
+    return instance.get(`sourcing/buyers/${id}/dashboard/`).then(r => r.data);
+  },
+  async getBuyerOrders_byProfile(id: string, filters?: Record<string, any>): Promise<IBuyerOrdersResults> {
+    return instance.get(`sourcing/buyers/${id}/orders/`, { params: filters }).then(r => r.data);
+  },
+  async getBuyerInvoices_byProfile(id: string, filters?: Record<string, any>): Promise<IBuyerInvoicesResults> {
+    return instance.get(`sourcing/buyers/${id}/invoices/`, { params: filters }).then(r => r.data);
+  },
+  async getBuyerCreditStatus(id: string): Promise<IBuyerCreditStatus> {
+    return instance.get(`sourcing/buyers/${id}/credit_status/`).then(r => r.data);
+  },
+
+  // ── Buyer Contacts ────────────────────────────────────────────────────────
+  async getBuyerContacts(filters: Record<string, any>): Promise<{ results: IBuyerContactPreference[]; count: number }> {
+    return instance.get("sourcing/buyer-contacts/", { params: filters }).then(r => r.data);
+  },
+  async createBuyerContact(payload: Partial<IBuyerContactPreference>): Promise<IBuyerContactPreference> {
+    return instance.post("sourcing/buyer-contacts/", payload).then(r => r.data);
+  },
+  async updateBuyerContact(id: string, payload: Partial<IBuyerContactPreference>): Promise<IBuyerContactPreference> {
+    return instance.patch(`sourcing/buyer-contacts/${id}/`, payload).then(r => r.data);
+  },
+  async deleteBuyerContact(id: string): Promise<void> {
+    return instance.delete(`sourcing/buyer-contacts/${id}/`).then(r => r.data);
   },
 
   // ── Buyer Orders ──────────────────────────────────────────────────────────

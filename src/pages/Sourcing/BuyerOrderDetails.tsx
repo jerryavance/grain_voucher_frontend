@@ -1,10 +1,10 @@
 import { FC, useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import {
-  Alert, Box, Button, Card, CardContent, Chip, Divider,
-  FormControl, Grid, IconButton, InputLabel, MenuItem, Paper,
-  Select, Tab, Tabs, Table, TableBody, TableCell, TableHead,
-  TableRow, TextField, Typography,
+  Alert, Box, Button, Card, CardContent, Chip, Dialog, DialogActions,
+  DialogContent, DialogTitle, Divider, FormControl, FormHelperText,
+  Grid, IconButton, InputLabel, MenuItem, Paper, Select, Tab, Tabs,
+  Table, TableBody, TableCell, TableHead, TableRow, TextField, Typography,
 } from "@mui/material";
 import { useFormik } from "formik";
 import * as Yup from "yup";
@@ -13,14 +13,13 @@ import ArrowBackIcon from "@mui/icons-material/ArrowBack";
 import AddIcon from "@mui/icons-material/Add";
 import CheckCircleIcon from "@mui/icons-material/CheckCircle";
 import DeleteIcon from "@mui/icons-material/Delete";
+import LaunchIcon from "@mui/icons-material/Launch";
 import LocalShippingIcon from "@mui/icons-material/LocalShipping";
 import ReceiptIcon from "@mui/icons-material/Receipt";
 import LoadingScreen from "../../components/LoadingScreen";
-import ModalDialog from "../../components/UI/Modal/ModalDialog";
 import ProgressIndicator from "../../components/UI/ProgressIndicator";
 import { Span } from "../../components/Typography";
 import useTitle from "../../hooks/useTitle";
-import uniqueId from "../../utils/generateId";
 import { formatDateToDDMMYYYY } from "../../utils/date_formatter";
 import { SourcingService } from "./Sourcing.service";
 import { formatCurrency, formatWeight } from "./SourcingConstants";
@@ -46,13 +45,14 @@ const InfoRow: FC<{ label: string; value: React.ReactNode }> = ({ label, value }
   </Box>
 );
 
-// ─── Add Line Form ────────────────────────────────────────────────────────
+// ─── Add Line Form ──────────────────────────────────────────────────────────
 const AddLineForm: FC<{
+  open: boolean;
   orderId: string;
   availableLots: ISaleLot[];
   handleClose: () => void;
   callBack?: () => void;
-}> = ({ orderId, availableLots, handleClose, callBack }) => {
+}> = ({ open, orderId, availableLots, handleClose, callBack }) => {
   const [loading, setLoading] = useState(false);
 
   const form = useFormik({
@@ -67,6 +67,7 @@ const AddLineForm: FC<{
       try {
         await SourcingService.addBuyerOrderLine(orderId, values as any);
         toast.success("Line added");
+        form.resetForm();
         callBack?.();
         handleClose();
       } catch (e: any) {
@@ -86,89 +87,114 @@ const AddLineForm: FC<{
   const estCOGS = selectedLot ? qty * selectedLot.cost_per_kg : 0;
   const estProfit = estRevenue - estCOGS;
 
-  const ActionBtns: FC = () => (
-    <>
-      <Button onClick={handleClose} disabled={loading}>Cancel</Button>
-      <Button variant="contained" onClick={() => form.handleSubmit()} disabled={loading}>Add Line</Button>
-    </>
-  );
+  const onClose = () => {
+    form.resetForm();
+    handleClose();
+  };
 
   return (
-    <ModalDialog title="Add Sale Line" onClose={handleClose} id={uniqueId()} ActionButtons={ActionBtns}>
-      <Box sx={{ display: "flex", flexDirection: "column", gap: 2, pt: 1 }}>
-        <FormControl fullWidth error={Boolean(form.errors.sale_lot)}>
-          <InputLabel>Sale Lot *</InputLabel>
-          <Select value={form.values.sale_lot} label="Sale Lot *"
-            onChange={e => form.setFieldValue("sale_lot", e.target.value)}>
-            {availableLots.filter(l => l.status !== "sold").map(l => (
-              <MenuItem key={l.id} value={l.id}>
-                {l.lot_number} — {l.grain_type_name} — {formatWeight(l.available_quantity_kg)} avail — cost {formatCurrency(l.cost_per_kg)}/kg
-              </MenuItem>
-            ))}
-          </Select>
-        </FormControl>
+    <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth>
+      <DialogTitle>Add Sale Line</DialogTitle>
+      <DialogContent>
+        <Box sx={{ display: "flex", flexDirection: "column", gap: 2, pt: 1 }}>
+          <FormControl fullWidth error={Boolean(form.touched.sale_lot && form.errors.sale_lot)}>
+            <InputLabel>Sale Lot *</InputLabel>
+            <Select
+              value={form.values.sale_lot}
+              label="Sale Lot *"
+              onChange={e => form.setFieldValue("sale_lot", e.target.value)}
+            >
+              {availableLots.filter(l => l.status !== "sold").map(l => (
+                <MenuItem key={l.id} value={l.id}>
+                  {l.lot_number} — {l.grain_type_name} — {formatWeight(l.available_quantity_kg)} avail — cost {formatCurrency(l.cost_per_kg)}/kg
+                </MenuItem>
+              ))}
+            </Select>
+            {form.touched.sale_lot && form.errors.sale_lot && (
+              <FormHelperText>{form.errors.sale_lot as string}</FormHelperText>
+            )}
+            {availableLots.filter(l => l.status !== "sold").length === 0 && (
+              <FormHelperText error>No available lots found. Create a sale lot first.</FormHelperText>
+            )}
+          </FormControl>
 
-        {selectedLot && (
-          <Alert severity="info">
-            Available: <strong>{formatWeight(selectedLot.available_quantity_kg)}</strong>
-            {" | "}COGS basis: <strong>{formatCurrency(selectedLot.cost_per_kg)}/kg</strong>
-          </Alert>
-        )}
+          {selectedLot && (
+            <Alert severity="info">
+              Available: <strong>{formatWeight(selectedLot.available_quantity_kg)}</strong>
+              {" | "}COGS basis: <strong>{formatCurrency(selectedLot.cost_per_kg)}/kg</strong>
+            </Alert>
+          )}
 
-        <TextField fullWidth label="Quantity (kg) *" type="number"
-          value={form.values.quantity_kg}
-          onChange={e => form.setFieldValue("quantity_kg", e.target.value)}
-          error={Boolean(form.errors.quantity_kg)} helperText={form.errors.quantity_kg as string} />
+          <TextField
+            fullWidth label="Quantity (kg) *" type="number"
+            value={form.values.quantity_kg}
+            onChange={e => form.setFieldValue("quantity_kg", e.target.value)}
+            error={Boolean(form.touched.quantity_kg && form.errors.quantity_kg)}
+            helperText={form.touched.quantity_kg && form.errors.quantity_kg as string}
+          />
 
-        <TextField fullWidth label="Selling Price per kg (UGX) *" type="number"
-          value={form.values.sale_price_per_kg}
-          onChange={e => form.setFieldValue("sale_price_per_kg", e.target.value)}
-          error={Boolean(form.errors.sale_price_per_kg)} helperText={form.errors.sale_price_per_kg as string} />
+          <TextField
+            fullWidth label="Selling Price per kg (UGX) *" type="number"
+            value={form.values.sale_price_per_kg}
+            onChange={e => form.setFieldValue("sale_price_per_kg", e.target.value)}
+            error={Boolean(form.touched.sale_price_per_kg && form.errors.sale_price_per_kg)}
+            helperText={form.touched.sale_price_per_kg && form.errors.sale_price_per_kg as string}
+          />
 
-        {estRevenue > 0 && (
-          <Card variant="outlined">
-            <CardContent sx={{ p: 1.5, "&:last-child": { pb: 1.5 } }}>
-              <Typography variant="caption" color="text.secondary" display="block" gutterBottom>
-                Live Estimate
-              </Typography>
-              <Box sx={{ display: "flex", gap: 3 }}>
-                <Box>
-                  <Typography variant="caption">Revenue</Typography>
-                  <Typography variant="body2" sx={{ fontWeight: 700, color: "primary.main" }}>
-                    {formatCurrency(estRevenue)}
-                  </Typography>
+          {estRevenue > 0 && (
+            <Card variant="outlined">
+              <CardContent sx={{ p: 1.5, "&:last-child": { pb: 1.5 } }}>
+                <Typography variant="caption" color="text.secondary" display="block" gutterBottom>
+                  Live Estimate
+                </Typography>
+                <Box sx={{ display: "flex", gap: 3 }}>
+                  <Box>
+                    <Typography variant="caption">Revenue</Typography>
+                    <Typography variant="body2" sx={{ fontWeight: 700, color: "primary.main" }}>
+                      {formatCurrency(estRevenue)}
+                    </Typography>
+                  </Box>
+                  <Box>
+                    <Typography variant="caption">COGS</Typography>
+                    <Typography variant="body2" sx={{ color: "text.secondary" }}>
+                      {formatCurrency(estCOGS)}
+                    </Typography>
+                  </Box>
+                  <Box>
+                    <Typography variant="caption">Gross Profit</Typography>
+                    <Typography variant="body2" sx={{ fontWeight: 700, color: estProfit >= 0 ? "success.main" : "error.main" }}>
+                      {formatCurrency(estProfit)}
+                    </Typography>
+                  </Box>
                 </Box>
-                <Box>
-                  <Typography variant="caption">COGS</Typography>
-                  <Typography variant="body2" sx={{ color: "text.secondary" }}>
-                    {formatCurrency(estCOGS)}
-                  </Typography>
-                </Box>
-                <Box>
-                  <Typography variant="caption">Gross Profit</Typography>
-                  <Typography variant="body2" sx={{ fontWeight: 700, color: estProfit >= 0 ? "success.main" : "error.main" }}>
-                    {formatCurrency(estProfit)}
-                  </Typography>
-                </Box>
-              </Box>
-            </CardContent>
-          </Card>
-        )}
+              </CardContent>
+            </Card>
+          )}
 
-        <TextField fullWidth label="Notes" multiline rows={2}
-          value={form.values.notes}
-          onChange={e => form.setFieldValue("notes", e.target.value)} />
-      </Box>
-    </ModalDialog>
+          <TextField
+            fullWidth label="Notes" multiline rows={2}
+            value={form.values.notes}
+            onChange={e => form.setFieldValue("notes", e.target.value)}
+          />
+        </Box>
+      </DialogContent>
+      <DialogActions>
+        <Button onClick={onClose} disabled={loading}>Cancel</Button>
+        <Button variant="contained" onClick={() => form.handleSubmit()} disabled={loading}>
+          {loading ? <ProgressIndicator color="inherit" size={20} /> : "Add Line"}
+        </Button>
+      </DialogActions>
+    </Dialog>
   );
 };
 
-// ─── Add Expense Form ─────────────────────────────────────────────────────
+// ─── Add Expense Form ───────────────────────────────────────────────────────
 const AddExpenseForm: FC<{
+  open: boolean;
   orderId: string;
   handleClose: () => void;
   callBack?: () => void;
-}> = ({ orderId, handleClose, callBack }) => {
+}> = ({ open, orderId, handleClose, callBack }) => {
   const [loading, setLoading] = useState(false);
 
   const form = useFormik({
@@ -182,6 +208,7 @@ const AddExpenseForm: FC<{
       try {
         await SourcingService.addSaleExpense(orderId, values as any);
         toast.success("Expense added");
+        form.resetForm();
         callBack?.();
         handleClose();
       } catch { toast.error("Failed to add expense"); }
@@ -189,89 +216,134 @@ const AddExpenseForm: FC<{
     },
   });
 
-  const ActionBtns: FC = () => (
-    <>
-      <Button onClick={handleClose} disabled={loading}>Cancel</Button>
-      <Button variant="contained" onClick={() => form.handleSubmit()} disabled={loading}>Add Expense</Button>
-    </>
-  );
+  const onClose = () => {
+    form.resetForm();
+    handleClose();
+  };
 
   return (
-    <ModalDialog title="Add Selling Expense" onClose={handleClose} id={uniqueId()} ActionButtons={ActionBtns}>
-      <Box sx={{ display: "flex", flexDirection: "column", gap: 2, pt: 1 }}>
-        <FormControl fullWidth>
-          <InputLabel>Category *</InputLabel>
-          <Select value={form.values.category} label="Category *"
-            onChange={e => form.setFieldValue("category", e.target.value)}>
-            {Object.entries(EXPENSE_CATEGORY_LABELS).map(([v, l]) => (
-              <MenuItem key={v} value={v}>{l}</MenuItem>
-            ))}
-          </Select>
-        </FormControl>
-        <TextField fullWidth label="Description *" value={form.values.description}
-          onChange={e => form.setFieldValue("description", e.target.value)}
-          error={Boolean(form.errors.description)} helperText={form.errors.description as string} />
-        <TextField fullWidth label="Amount (UGX) *" type="number" value={form.values.amount}
-          onChange={e => form.setFieldValue("amount", e.target.value)}
-          error={Boolean(form.errors.amount)} helperText={form.errors.amount as string} />
-        <TextField fullWidth label="Receipt Reference" value={form.values.receipt_reference}
-          onChange={e => form.setFieldValue("receipt_reference", e.target.value)} />
-        <TextField fullWidth label="Notes" multiline rows={2}
-          value={form.values.notes}
-          onChange={e => form.setFieldValue("notes", e.target.value)} />
-      </Box>
-    </ModalDialog>
+    <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth>
+      <DialogTitle>Add Selling Expense</DialogTitle>
+      <DialogContent>
+        <Box sx={{ display: "flex", flexDirection: "column", gap: 2, pt: 1 }}>
+          <FormControl fullWidth>
+            <InputLabel>Category *</InputLabel>
+            <Select
+              value={form.values.category}
+              label="Category *"
+              onChange={e => form.setFieldValue("category", e.target.value)}
+            >
+              {Object.entries(EXPENSE_CATEGORY_LABELS).map(([v, l]) => (
+                <MenuItem key={v} value={v}>{l}</MenuItem>
+              ))}
+            </Select>
+          </FormControl>
+
+          <TextField
+            fullWidth label="Description *"
+            value={form.values.description}
+            onChange={e => form.setFieldValue("description", e.target.value)}
+            error={Boolean(form.touched.description && form.errors.description)}
+            helperText={form.touched.description && form.errors.description as string}
+          />
+
+          <TextField
+            fullWidth label="Amount (UGX) *" type="number"
+            value={form.values.amount}
+            onChange={e => form.setFieldValue("amount", e.target.value)}
+            error={Boolean(form.touched.amount && form.errors.amount)}
+            helperText={form.touched.amount && form.errors.amount as string}
+          />
+
+          <TextField
+            fullWidth label="Receipt Reference"
+            value={form.values.receipt_reference}
+            onChange={e => form.setFieldValue("receipt_reference", e.target.value)}
+          />
+
+          <TextField
+            fullWidth label="Notes" multiline rows={2}
+            value={form.values.notes}
+            onChange={e => form.setFieldValue("notes", e.target.value)}
+          />
+        </Box>
+      </DialogContent>
+      <DialogActions>
+        <Button onClick={onClose} disabled={loading}>Cancel</Button>
+        <Button variant="contained" onClick={() => form.handleSubmit()} disabled={loading}>
+          {loading ? <ProgressIndicator color="inherit" size={20} /> : "Add Expense"}
+        </Button>
+      </DialogActions>
+    </Dialog>
   );
 };
 
-// ─── Issue Invoice Form ───────────────────────────────────────────────────
+// ─── Issue Invoice Form ─────────────────────────────────────────────────────
 const IssueInvoiceForm: FC<{
+  open: boolean;
   order: IBuyerOrder;
   handleClose: () => void;
   callBack?: () => void;
-}> = ({ order, handleClose, callBack }) => {
+}> = ({ open, order, handleClose, callBack }) => {
   const [loading, setLoading] = useState(false);
   const [terms, setTerms] = useState(order.credit_terms_days);
   const [notes, setNotes] = useState("");
 
-  const ActionBtns: FC = () => (
-    <>
-      <Button onClick={handleClose} disabled={loading}>Cancel</Button>
-      <Button variant="contained" color="secondary" startIcon={<ReceiptIcon />}
-        disabled={loading}
-        onClick={async () => {
-          setLoading(true);
-          try {
-            const inv = await SourcingService.issueBuyerInvoice(order.id, { payment_terms_days: terms, notes });
-            toast.success(`Invoice ${inv.invoice_number} issued`);
-            callBack?.();
-          } catch (e: any) {
-            toast.error(e?.response?.data?.error || "Failed to issue invoice");
-          } finally { setLoading(false); }
-        }}>
-        {loading ? <ProgressIndicator color="inherit" size={20} /> : "Issue Invoice"}
-      </Button>
-    </>
-  );
+  const onClose = () => {
+    setTerms(order.credit_terms_days);
+    setNotes("");
+    handleClose();
+  };
+
+  const handleIssue = async () => {
+    setLoading(true);
+    try {
+      const inv = await SourcingService.issueBuyerInvoice(order.id, { payment_terms_days: terms, notes });
+      toast.success(`Invoice ${inv.invoice_number} issued`);
+      callBack?.();
+    } catch (e: any) {
+      toast.error(e?.response?.data?.error || "Failed to issue invoice");
+    } finally { setLoading(false); }
+  };
 
   return (
-    <ModalDialog title="Issue Buyer Invoice" onClose={handleClose} id={uniqueId()} ActionButtons={ActionBtns}>
-      <Box sx={{ display: "flex", flexDirection: "column", gap: 2, pt: 1 }}>
-        <Alert severity="info">
-          <strong>Invoice Amount: {formatCurrency(order.subtotal)}</strong><br />
-          This creates a receivable for the buyer.
-        </Alert>
-        <TextField fullWidth label="Payment Terms (Days)" type="number"
-          value={terms} onChange={e => setTerms(parseInt(e.target.value) || 0)}
-          helperText="0 = immediate, 30 / 60 / 90 = net terms" />
-        <TextField fullWidth label="Notes" multiline rows={2}
-          value={notes} onChange={e => setNotes(e.target.value)} />
-      </Box>
-    </ModalDialog>
+    <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth>
+      <DialogTitle>Issue Buyer Invoice</DialogTitle>
+      <DialogContent>
+        <Box sx={{ display: "flex", flexDirection: "column", gap: 2, pt: 1 }}>
+          <Alert severity="info">
+            <strong>Invoice Amount: {formatCurrency(order.subtotal)}</strong><br />
+            This creates a receivable for the buyer.
+          </Alert>
+          <TextField
+            fullWidth label="Payment Terms (Days)" type="number"
+            value={terms}
+            onChange={e => setTerms(parseInt(e.target.value) || 0)}
+            helperText="0 = immediate, 30 / 60 / 90 = net terms"
+          />
+          <TextField
+            fullWidth label="Notes" multiline rows={2}
+            value={notes}
+            onChange={e => setNotes(e.target.value)}
+          />
+        </Box>
+      </DialogContent>
+      <DialogActions>
+        <Button onClick={onClose} disabled={loading}>Cancel</Button>
+        <Button
+          variant="contained" color="secondary"
+          startIcon={loading ? undefined : <ReceiptIcon />}
+          disabled={loading}
+          onClick={handleIssue}
+        >
+          {loading ? <ProgressIndicator color="inherit" size={20} /> : "Issue Invoice"}
+        </Button>
+      </DialogActions>
+    </Dialog>
   );
 };
 
-// ─── Main Page ────────────────────────────────────────────────────────────
+// ─── Main Page ──────────────────────────────────────────────────────────────
 const BuyerOrderDetails: FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
@@ -328,6 +400,8 @@ const BuyerOrderDetails: FC = () => {
     ? (order.gross_profit / order.subtotal * 100).toFixed(1)
     : "0.0";
 
+  const buyerDisplayName = order.buyer_detail?.business_name || order.buyer_name;
+
   return (
     <Box pt={2} pb={4}>
       {/* Header */}
@@ -335,24 +409,43 @@ const BuyerOrderDetails: FC = () => {
         <Button startIcon={<ArrowBackIcon />} onClick={() => navigate("/admin/sourcing/buyer-orders")} sx={{ mr: 1 }}>
           Back
         </Button>
-        <Typography variant="h4">{order.order_number}</Typography>
-        <Chip label={order.status.toUpperCase()} color={BUYER_ORDER_STATUS_COLORS[order.status]} sx={{ ml: 1 }} />
-        {order.invoice_status && (
-          <Chip
-            label={`Invoice: ${order.invoice_status.toUpperCase()}`}
-            color={BUYER_INVOICE_STATUS_COLORS[order.invoice_status]}
-            variant="outlined"
-          />
-        )}
+        <Box sx={{ flex: 1 }}>
+          <Box sx={{ display: "flex", alignItems: "center", gap: 1, flexWrap: "wrap" }}>
+            <Typography variant="h5" sx={{ fontWeight: 700 }}>{order.order_number}</Typography>
+            <Chip label={order.status.toUpperCase()} color={BUYER_ORDER_STATUS_COLORS[order.status]} />
+            {order.invoice_status && (
+              <Chip
+                label={`Invoice: ${order.invoice_status.toUpperCase()}`}
+                color={BUYER_INVOICE_STATUS_COLORS[order.invoice_status]}
+                variant="outlined"
+              />
+            )}
+          </Box>
+          <Box sx={{ display: "flex", alignItems: "center", gap: 1, mt: 0.5 }}>
+            <Typography variant="body2" color="text.secondary">Buyer:</Typography>
+            <Typography variant="body2" sx={{ fontWeight: 600 }}>{buyerDisplayName}</Typography>
+            {order.buyer && (
+              <Button
+                size="small" startIcon={<LaunchIcon sx={{ fontSize: 14 }} />}
+                sx={{ fontSize: 12, py: 0, minHeight: 0 }}
+                onClick={() => navigate(`/admin/sourcing/buyers/${order.buyer}`)}
+              >
+                View Profile
+              </Button>
+            )}
+          </Box>
+        </Box>
       </Box>
 
       {/* Action Buttons */}
       <Box sx={{ display: "flex", gap: 1, mb: 3, flexWrap: "wrap" }}>
         {order.status === "draft" && (
           <>
-            <Button variant="contained" color="success" startIcon={<CheckCircleIcon />}
+            <Button
+              variant="contained" color="success" startIcon={<CheckCircleIcon />}
               onClick={() => handleAction("confirm")}
-              disabled={actionLoading || order.lines.length === 0}>
+              disabled={actionLoading || order.lines.length === 0}
+            >
               Confirm Order
             </Button>
             <Button variant="outlined" startIcon={<AddIcon />} onClick={() => setShowAddLine(true)}>
@@ -361,9 +454,11 @@ const BuyerOrderDetails: FC = () => {
             <Button variant="outlined" startIcon={<AddIcon />} onClick={() => setShowAddExpense(true)}>
               Add Expense
             </Button>
-            <Button variant="outlined" color="error"
+            <Button
+              variant="outlined" color="error"
               onClick={() => { if (window.confirm("Cancel this order?")) handleAction("cancel"); }}
-              disabled={actionLoading}>
+              disabled={actionLoading}
+            >
               Cancel Order
             </Button>
           </>
@@ -374,20 +469,26 @@ const BuyerOrderDetails: FC = () => {
           </Button>
         )}
         {order.status === "confirmed" && (
-          <Button variant="contained" color="warning" startIcon={<LocalShippingIcon />}
-            onClick={() => handleAction("dispatch")} disabled={actionLoading}>
+          <Button
+            variant="contained" color="warning" startIcon={<LocalShippingIcon />}
+            onClick={() => handleAction("dispatch")} disabled={actionLoading}
+          >
             Mark Dispatched
           </Button>
         )}
         {order.status === "dispatched" && (
-          <Button variant="contained" color="info"
-            onClick={() => handleAction("deliver")} disabled={actionLoading}>
+          <Button
+            variant="contained" color="info"
+            onClick={() => handleAction("deliver")} disabled={actionLoading}
+          >
             Mark Delivered
           </Button>
         )}
         {["confirmed", "dispatched", "delivered"].includes(order.status) && !order.invoice_status && (
-          <Button variant="contained" color="secondary" startIcon={<ReceiptIcon />}
-            onClick={() => setShowIssueInvoice(true)}>
+          <Button
+            variant="contained" color="secondary" startIcon={<ReceiptIcon />}
+            onClick={() => setShowIssueInvoice(true)}
+          >
             Issue Invoice
           </Button>
         )}
@@ -428,7 +529,7 @@ const BuyerOrderDetails: FC = () => {
         <Tab label="Order Info" />
       </Tabs>
 
-      {/* Lines */}
+      {/* Lines Tab */}
       {tab === 0 && (
         <Paper variant="outlined">
           <Table size="small">
@@ -448,7 +549,9 @@ const BuyerOrderDetails: FC = () => {
                 </TableRow>
               ) : order.lines.map((line: IBuyerOrderLine) => (
                 <TableRow key={line.id} hover>
-                  <TableCell><Typography variant="body2" sx={{ fontFamily: "monospace" }}>{line.lot_number}</Typography></TableCell>
+                  <TableCell>
+                    <Typography variant="body2" sx={{ fontFamily: "monospace" }}>{line.lot_number}</Typography>
+                  </TableCell>
                   <TableCell>{line.grain_type}</TableCell>
                   <TableCell>{formatWeight(line.quantity_kg)}</TableCell>
                   <TableCell>{formatCurrency(line.sale_price_per_kg)}</TableCell>
@@ -472,7 +575,7 @@ const BuyerOrderDetails: FC = () => {
         </Paper>
       )}
 
-      {/* Expenses */}
+      {/* Expenses Tab */}
       {tab === 1 && (
         <Paper variant="outlined">
           <Table size="small">
@@ -506,58 +609,105 @@ const BuyerOrderDetails: FC = () => {
         </Paper>
       )}
 
-      {/* Info */}
+      {/* Order Info Tab */}
       {tab === 2 && (
         <Grid container spacing={2}>
           <Grid item xs={12} md={6}>
-            <Card variant="outlined"><CardContent>
-              <Typography variant="h6" gutterBottom>Buyer Details</Typography>
-              <Divider sx={{ mb: 2 }} />
-              <InfoRow label="Buyer Name" value={order.buyer_name} />
-              {order.buyer_contact_name && <InfoRow label="Contact Person" value={order.buyer_contact_name} />}
-              {order.buyer_phone && <InfoRow label="Phone" value={order.buyer_phone} />}
-              {order.buyer_email && <InfoRow label="Email" value={order.buyer_email} />}
-              <InfoRow
-                label="Credit Terms"
-                value={order.credit_terms_days === 0 ? "Cash on Delivery" : `Net ${order.credit_terms_days} days`}
-              />
-            </CardContent></Card>
+            <Card variant="outlined">
+              <CardContent>
+                <Typography variant="h6" gutterBottom>Buyer Details</Typography>
+                <Divider sx={{ mb: 2 }} />
+                <InfoRow label="Buyer Name" value={
+                  <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+                    <span>{buyerDisplayName}</span>
+                    {order.buyer && (
+                      <Button
+                        size="small" variant="outlined" startIcon={<LaunchIcon sx={{ fontSize: 12 }} />}
+                        sx={{ fontSize: 11, py: 0.2, px: 1, minHeight: 0 }}
+                        onClick={() => navigate(`/admin/sourcing/buyers/${order.buyer}`)}
+                      >
+                        Profile
+                      </Button>
+                    )}
+                  </Box>
+                } />
+                {order.buyer_detail && (
+                  <>
+                    <InfoRow label="Buyer Type" value={order.buyer_detail.buyer_type_display} />
+                    <InfoRow label="Phone" value={order.buyer_detail.phone} />
+                    {order.buyer_detail.email && <InfoRow label="Email" value={order.buyer_detail.email} />}
+                    <InfoRow label="Outstanding AR" value={
+                      <Span sx={{ fontWeight: 700, color: order.buyer_detail.outstanding_balance > 0 ? "error.main" : "success.main" }}>
+                        {formatCurrency(order.buyer_detail.outstanding_balance)}
+                      </Span>
+                    } />
+                  </>
+                )}
+                {!order.buyer_detail && (
+                  <>
+                    {order.buyer_contact_name && <InfoRow label="Contact Person" value={order.buyer_contact_name} />}
+                    {order.buyer_phone && <InfoRow label="Phone" value={order.buyer_phone} />}
+                    {order.buyer_email && <InfoRow label="Email" value={order.buyer_email} />}
+                    {order.buyer_address && <InfoRow label="Address" value={order.buyer_address} />}
+                  </>
+                )}
+                <InfoRow
+                  label="Credit Terms"
+                  value={order.credit_terms_days === 0 ? "Cash on Delivery" : `Net ${order.credit_terms_days} days`}
+                />
+              </CardContent>
+            </Card>
           </Grid>
           <Grid item xs={12} md={6}>
-            <Card variant="outlined"><CardContent>
-              <Typography variant="h6" gutterBottom>Timeline</Typography>
-              <Divider sx={{ mb: 2 }} />
-              <InfoRow label="Created" value={formatDateToDDMMYYYY(order.created_at)} />
-              {order.confirmed_at && <InfoRow label="Confirmed" value={formatDateToDDMMYYYY(order.confirmed_at)} />}
-              {order.dispatched_at && <InfoRow label="Dispatched" value={formatDateToDDMMYYYY(order.dispatched_at)} />}
-              {order.delivered_at && <InfoRow label="Delivered" value={formatDateToDDMMYYYY(order.delivered_at)} />}
-              {order.completed_at && <InfoRow label="Completed" value={formatDateToDDMMYYYY(order.completed_at)} />}
-            </CardContent></Card>
+            <Card variant="outlined">
+              <CardContent>
+                <Typography variant="h6" gutterBottom>Timeline</Typography>
+                <Divider sx={{ mb: 2 }} />
+                <InfoRow label="Created" value={formatDateToDDMMYYYY(order.created_at)} />
+                {order.confirmed_at && <InfoRow label="Confirmed" value={formatDateToDDMMYYYY(order.confirmed_at)} />}
+                {order.dispatched_at && <InfoRow label="Dispatched" value={formatDateToDDMMYYYY(order.dispatched_at)} />}
+                {order.delivered_at && <InfoRow label="Delivered" value={formatDateToDDMMYYYY(order.delivered_at)} />}
+                {order.completed_at && <InfoRow label="Completed" value={formatDateToDDMMYYYY(order.completed_at)} />}
+                <Divider sx={{ my: 1 }} />
+                <InfoRow label="Hub" value={order.hub_name} />
+              </CardContent>
+            </Card>
           </Grid>
           {order.notes && (
             <Grid item xs={12}>
-              <Card variant="outlined"><CardContent>
-                <Typography variant="h6" gutterBottom>Notes</Typography>
-                <Divider sx={{ mb: 2 }} />
-                <Typography>{order.notes}</Typography>
-              </CardContent></Card>
+              <Card variant="outlined">
+                <CardContent>
+                  <Typography variant="h6" gutterBottom>Notes</Typography>
+                  <Divider sx={{ mb: 2 }} />
+                  <Typography>{order.notes}</Typography>
+                </CardContent>
+              </Card>
             </Grid>
           )}
         </Grid>
       )}
 
-      {/* Sub-forms */}
-      {showAddLine && (
-        <AddLineForm orderId={id!} availableLots={availableLots}
-          handleClose={() => setShowAddLine(false)} callBack={fetchOrder} />
-      )}
-      {showAddExpense && (
-        <AddExpenseForm orderId={id!} handleClose={() => setShowAddExpense(false)} callBack={fetchOrder} />
-      )}
-      {showIssueInvoice && (
-        <IssueInvoiceForm order={order}
+      {/* ── Dialogs — always mounted, controlled by open prop ── */}
+      <AddLineForm
+        open={showAddLine}
+        orderId={id!}
+        availableLots={availableLots}
+        handleClose={() => setShowAddLine(false)}
+        callBack={fetchOrder}
+      />
+      <AddExpenseForm
+        open={showAddExpense}
+        orderId={id!}
+        handleClose={() => setShowAddExpense(false)}
+        callBack={fetchOrder}
+      />
+      {order && (
+        <IssueInvoiceForm
+          open={showIssueInvoice}
+          order={order}
           handleClose={() => setShowIssueInvoice(false)}
-          callBack={() => { setShowIssueInvoice(false); fetchOrder(); }} />
+          callBack={() => { setShowIssueInvoice(false); fetchOrder(); }}
+        />
       )}
     </Box>
   );

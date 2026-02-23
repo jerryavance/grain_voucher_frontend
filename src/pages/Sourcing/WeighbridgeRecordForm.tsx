@@ -113,7 +113,7 @@ export const WeighbridgeRecordForm: FC<IWeighbridgeFormProps> = ({
   const weighbridgeForm = useFormik({
     initialValues: {
       ...getInitialValues(formFields),
-      ...(sourceOrderId && { source_order_id: sourceOrderId }),
+      ...(sourceOrderId && { source_order: sourceOrderId }),
       ...(deliveryId && { delivery_id: deliveryId }),
     },
     validationSchema: WeighbridgeRecordFormValidations,
@@ -149,10 +149,10 @@ export const WeighbridgeRecordForm: FC<IWeighbridgeFormProps> = ({
 
   // Fetch deliveries when order changes
   useEffect(() => {
-    if (weighbridgeForm.values.source_order_id) {
-      loadDeliveries(weighbridgeForm.values.source_order_id);
+    if (weighbridgeForm.values.source_order) {
+      loadDeliveries(weighbridgeForm.values.source_order);
     }
-  }, [weighbridgeForm.values.source_order_id]);
+  }, [weighbridgeForm.values.source_order]);
 
   const ActionBtns: FC = () => {
     return (

@@ -91,7 +91,7 @@ export const DeliveryRecordForm: FC<IDeliveryFormProps> = ({
 
   const deliveryForm = useFormik({
     initialValues: sourceOrderId 
-      ? { ...getInitialValues(formFields), source_order_id: sourceOrderId }
+      ? { ...getInitialValues(formFields), source_order: sourceOrderId }
       : getInitialValues(formFields),
     validationSchema: DeliveryRecordFormValidations,
     validateOnChange: false,

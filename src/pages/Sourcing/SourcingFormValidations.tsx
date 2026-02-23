@@ -97,11 +97,11 @@ export const SourceOrderFormValidations = Yup.object().shape({
 
 // ============================================================
 // DELIVERY RECORD VALIDATION
-// Fields: source_order_id, hub
+// Fields: source_order, hub
 // ============================================================
 
 export const DeliveryRecordFormValidations = Yup.object().shape({
-  source_order_id: Yup.string() // ✅ FIXED: Added _id suffix
+  source_order: Yup.string() // ✅ FIXED: Added _id suffix
     .required("Source order is required"),
   
   hub: Yup.string() // ✅ FIXED: Added _id suffix
@@ -124,14 +124,14 @@ export const DeliveryRecordFormValidations = Yup.object().shape({
 
 // ============================================================
 // WEIGHBRIDGE RECORD VALIDATION
-// Fields: source_order_id, delivery_id, quality_grade_id
+// Fields: source_order, delivery_id, quality_grade_id
 // ============================================================
 
 export const WeighbridgeRecordFormValidations = Yup.object().shape({
-  source_order_id: Yup.string() // ✅ FIXED: Added _id suffix
+  source_order: Yup.string() // ✅ FIXED: Added _id suffix
     .required("Source order is required"),
   
-  delivery_id: Yup.string() // ✅ FIXED: Added _id suffix
+  delivery: Yup.string() // ✅ FIXED: Added _id suffix
     .required("Delivery record is required"),
   
   gross_weight_kg: Yup.number()

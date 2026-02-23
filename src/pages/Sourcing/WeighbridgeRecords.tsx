@@ -1,8 +1,3 @@
-// ============================================================
-// WEIGHBRIDGE RECORDS COMPONENT - COMPLETE FIXED VERSION
-// Loads form data in parent and passes to child form
-// ============================================================
-
 import { Box, Button } from "@mui/material";
 import { useEffect, useState, useCallback } from "react";
 import { toast } from "react-hot-toast";
@@ -20,46 +15,27 @@ import { WeighbridgeRecordColumnShape } from "./AllColumnShapes";
 import { WeighbridgeRecordForm } from "./SourcingForms";
 import { INITIAL_PAGE_SIZE } from "../../api/constants";
 
-// ============================================================
-// INTERFACES
-// ============================================================
-
-interface DropdownOption {
-  value: string;
-  label: string;
+interface FormDataState {
+  sourceOrders: { value: string; label: string }[];
+  deliveries: { value: string; label: string }[];
+  qualityGrades: { value: string; label: string }[];
 }
-
-interface FormData {
-  sourceOrders: DropdownOption[];
-  deliveries: DropdownOption[];
-  qualityGrades: DropdownOption[];
-}
-
-// ============================================================
-// MAIN COMPONENT
-// ============================================================
 
 const WeighbridgeRecords = () => {
   useTitle("Weighbridge Records");
   const { setShowModal } = useModalContext();
 
-  // Table state
   const [searchQuery, setSearchQuery] = useState<string>("");
   const [records, setRecords] = useState<IWeighbridgeRecordsResults>();
   const [filters, setFilters] = useState<any>({ page: 1, page_size: INITIAL_PAGE_SIZE });
   const [loading, setLoading] = useState<boolean>(false);
 
-  // Form data state
-  const [formData, setFormData] = useState<FormData>({
+  const [formData, setFormData] = useState<FormDataState>({
     sourceOrders: [],
     deliveries: [],
     qualityGrades: [],
   });
-  const [formDataLoading, setFormDataLoading] = useState<boolean>(false);
-
-  // ============================================================
-  // EFFECTS
-  // ============================================================
+  const [formDataLoading, setFormDataLoading] = useState<boolean>(true);
 
   useEffect(() => {
     fetchData(filters);
@@ -69,110 +45,97 @@ const WeighbridgeRecords = () => {
     fetchFormData();
   }, []);
 
-  // ============================================================
-  // DATA FETCHING
-  // ============================================================
-
   const fetchData = async (params?: any) => {
     try {
       setLoading(true);
       const resp: IWeighbridgeRecordsResults = await SourcingService.getWeighbridgeRecords(params);
       setRecords(resp);
-      setLoading(false);
     } catch (error) {
-      setLoading(false);
       console.error("Error fetching Weighbridge Records:", error);
       toast.error("Failed to fetch weighbridge records");
+    } finally {
+      setLoading(false);
     }
   };
 
   const fetchFormData = async () => {
     try {
       setFormDataLoading(true);
-      
       const [ordersResponse, gradesResponse] = await Promise.all([
-        SourcingService.getSourceOrders({ status: 'delivered', page_size: 50 }),
+        SourcingService.getSourceOrders({ status: "delivered", page_size: 100 }),
         SourcingService.getQualityGrades(),
       ]);
-
-      setFormData({
-        sourceOrders: (ordersResponse.results || ordersResponse).map((order: any) => ({
+      setFormData(prev => ({
+        ...prev,
+        sourceOrders: (ordersResponse.results || []).map((order: any) => ({
           value: order.id,
-          label: `${order.order_number} - ${order.supplier_name}`
+          label: `${order.order_number} — ${order.supplier_name ?? order.supplier?.business_name ?? "Unknown"}`,
         })),
-        deliveries: [], // Will be loaded when order is selected
-        qualityGrades: (gradesResponse.results || gradesResponse).map((grade: any) => ({
+        qualityGrades: (gradesResponse.results || gradesResponse || []).map((grade: any) => ({
           value: grade.id,
-          label: grade.name
+          label: grade.name,
         })),
-      });
-      
-      setFormDataLoading(false);
+      }));
     } catch (error) {
-      console.error('Error fetching form data:', error);
-      toast.error('Failed to load form data');
+      console.error("Error fetching form data:", error);
+      toast.error("Failed to load form data");
+    } finally {
       setFormDataLoading(false);
     }
   };
 
-  // ============================================================
-  // SEARCH HANDLERS
-  // ============================================================
+  // Mirrors loadPaymentMethods in SourceOrders.tsx exactly
+  const loadDeliveries = async (orderId: string) => {
+    if (!orderId) return;
+    try {
+      const results = await SourcingService.getDeliveryRecords({
+        source_order: orderId,
+        page_size: 100,
+      });
+      setFormData(prev => ({
+        ...prev,
+        deliveries: (results.results || []).map((delivery: any) => ({
+          value: delivery.id,
+          label: `Delivery on ${new Date(delivery.received_at).toLocaleDateString()} — ${delivery.driver_name} (${delivery.vehicle_number})`,
+        })),
+      }));
+    } catch (error) {
+      console.error("Error loading deliveries:", error);
+      toast.error("Failed to load deliveries for selected order");
+    }
+  };
 
   const handleOrderSearch = useCallback(
     debounce(async (query: string) => {
       try {
-        const results = await SourcingService.getSourceOrders({ 
-          search: query, 
-          status: 'delivered',
-          page_size: 50
+        const results = await SourcingService.getSourceOrders({
+          search: query,
+          status: "delivered",
+          page_size: 100,
         });
         setFormData(prev => ({
           ...prev,
-          sourceOrders: (results.results || results).map((order: any) => ({
+          sourceOrders: (results.results || []).map((order: any) => ({
             value: order.id,
-            label: `${order.order_number} - ${order.supplier_name}`
-          }))
+            label: `${order.order_number} — ${order.supplier_name ?? order.supplier?.business_name ?? "Unknown"}`,
+          })),
         }));
       } catch (error) {
-        console.error('Error searching orders:', error);
+        console.error("Error searching orders:", error);
       }
     }, 300),
     []
   );
 
-  const loadDeliveries = async (orderId: string) => {
-    try {
-      const results = await SourcingService.getDeliveryRecords({ 
-        source_order: orderId,
-        page_size: 50
-      });
-      setFormData(prev => ({
-        ...prev,
-        deliveries: (results.results || results).map((delivery: any) => ({
-          value: delivery.id,
-          label: `Delivery at ${delivery.hub.name} - ${new Date(delivery.received_at).toLocaleDateString()}`
-        }))
-      }));
-    } catch (error) {
-      console.error('Error loading deliveries:', error);
-    }
-  };
-
-  // ============================================================
-  // EVENT HANDLERS
-  // ============================================================
-
   const handleRefreshData = async () => {
     await fetchData({ ...filters, search: searchQuery });
   };
 
-  const handleOpenModal = () => {
-    setShowModal(true);
-  };
-
+  const handleOpenModal = () => setShowModal(true);
   const handleCloseModal = () => {
     setShowModal(false);
+    // Reset deliveries when modal closes so next open starts clean
+    setFormData(prev => ({ ...prev, deliveries: [] }));
   };
 
   const handleInputChange = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -183,23 +146,13 @@ const WeighbridgeRecords = () => {
     setFilters({ ...filters, search: searchQuery, page: 1 });
   };
 
-  // ============================================================
-  // TABLE ACTIONS
-  // ============================================================
-
   const tableActions: IDropdownAction[] = [
     {
       label: "View Details",
       icon: <VisibilityIcon color="primary" />,
-      onClick: (record: IWeighbridgeRecord) => {
-        // Navigate to details or show modal
-      },
+      onClick: (_record: IWeighbridgeRecord) => {},
     },
   ];
-
-  // ============================================================
-  // RENDER
-  // ============================================================
 
   return (
     <Box pt={2} pb={4}>
@@ -209,15 +162,12 @@ const WeighbridgeRecords = () => {
             value={searchQuery}
             onChange={handleInputChange}
             onKeyPress={(event) => {
-              if (event.key === "Enter") {
-                handleSearch();
-              }
+              if (event.key === "Enter") handleSearch();
             }}
             type="text"
             placeholder="Search weighbridge records..."
           />
         </Box>
-
         <Button
           sx={{ marginLeft: "auto" }}
           variant="contained"
@@ -244,18 +194,12 @@ const WeighbridgeRecords = () => {
         handleClose={handleCloseModal}
         formData={formData}
         formDataLoading={formDataLoading}
-        searchHandlers={{
-          handleOrderSearch,
-        }}
+        searchHandlers={{ handleOrderSearch }}
         onLoadDeliveries={loadDeliveries}
       />
     </Box>
   );
 };
-
-// ============================================================
-// STYLES
-// ============================================================
 
 const styles = {
   header: {

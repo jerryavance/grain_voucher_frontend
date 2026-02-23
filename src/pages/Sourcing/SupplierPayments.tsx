@@ -68,7 +68,7 @@ const SupplierPayments = () => {
     if (!window.confirm('Mark this payment as completed?')) return;
     
     try {
-      await SourcingService.markPaymentCompleted(payment.id);
+      await SourcingService.confirmSupplierPayment(payment.id);
       toast.success("Payment marked as completed");
       handleRefreshData();
     } catch (error: any) {

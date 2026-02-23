@@ -201,6 +201,12 @@ export const MenuList = (
           visible: isSuperUser,
         },
         {
+          title: "Buyers",
+          Icon: Icons.AddBusinessIcon,
+          path: "/admin/sourcing/buyers",
+          visible: isStaff || isHubAdmin || isSuperUser,
+        },
+        {
           title: "Buyer Orders",
           Icon: Icons.ShoppingCartIcon,
           path: "/admin/sourcing/buyer-orders",

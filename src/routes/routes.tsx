@@ -139,6 +139,10 @@ const routes = [
       
       // Stock/Inventory (Sale Lots)
       { path: "sale-lots", element: <LazyLoader.SaleLots /> },
+
+      // ✅ NEW: Buyer Profiles (must come before buyer-orders)
+      { path: "buyers", element: <LazyLoader.Buyers /> },
+      { path: "buyers/:id", element: <LazyLoader.BuyerDetails /> },
       
       // Buyer Orders (selling to buyers)
       { path: "buyer-orders", element: <LazyLoader.BuyerOrders /> },

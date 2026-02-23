@@ -3,6 +3,8 @@ import LoadingScreen from "../components/LoadingScreen";
 import JournalEntries from "../pages/Accounting/JournalEntries/JournalEntries";
 import SupplierDashboard from "../pages/Sourcing/SupplierDashboard";
 import SupplierInvoicesView from "../pages/Sourcing/SupplierInvoicesView";
+import Buyers from "../pages/Sourcing/Buyers";
+import BuyerDetails from "../pages/Sourcing/BuyerDetails";
 
 const Suspense: any = ReactSuspense;
 
@@ -92,6 +94,9 @@ const RouteLazyLoader = {
   SupplierPayments: Loadable(lazy(() => import("../pages/Sourcing/SupplierPayments"))),
   InvestorAllocations: Loadable(lazy(() => import("../pages/Sourcing/InvestorAllocations"))),
   SaleLots: Loadable(lazy(() => import("../pages/Sourcing/SaleLots"))),
+
+  Buyers: Loadable(lazy(() => import("../pages/Sourcing/Buyers"))),
+  BuyerDetails: Loadable(lazy(() => import("../pages/Sourcing/BuyerDetails"))),
   BuyerOrders: Loadable(lazy(() => import("../pages/Sourcing/BuyerOrders"))),
   BuyerOrderDetails: Loadable(lazy(() => import("../pages/Sourcing/BuyerOrderDetails"))),
   BuyerInvoices: Loadable(lazy(() => import("../pages/Sourcing/BuyerInvoices"))),

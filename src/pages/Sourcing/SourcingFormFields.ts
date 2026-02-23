@@ -226,7 +226,7 @@ export const SourceOrderFormFields = (
 
 // ============================================================
 // DELIVERY RECORD FORM FIELDS
-// Backend expects: source_order_id, hub
+// Backend expects: source_order, hub
 // ============================================================
 
 export const DeliveryRecordFormFields = (
@@ -235,7 +235,7 @@ export const DeliveryRecordFormFields = (
   handleOrderSearch?: (value: any) => void
 ): IFormField[] => [
   {
-    name: 'source_order_id', // ✅ FIXED: Added _id suffix
+    name: 'source_order',
     initailValue: '',
     label: 'Source Order *',
     type: 'select',
@@ -246,7 +246,7 @@ export const DeliveryRecordFormFields = (
     handleSearch: handleOrderSearch,
   },
   {
-    name: 'hub', // ✅ FIXED: Added _id suffix
+    name: 'hub', // 
     initailValue: '',
     label: 'Hub *',
     type: 'select',
@@ -300,7 +300,7 @@ export const DeliveryRecordFormFields = (
 
 // ============================================================
 // WEIGHBRIDGE RECORD FORM FIELDS
-// Backend expects: source_order_id, delivery_id, quality_grade_id
+// Backend expects: source_order, delivery_id, quality_grade_id
 // ============================================================
 
 export const WeighbridgeRecordFormFields = (
@@ -310,7 +310,7 @@ export const WeighbridgeRecordFormFields = (
   handleOrderSearch?: (value: any) => void
 ): IFormField[] => [
   {
-    name: 'source_order_id', // ✅ FIXED: Added _id suffix
+    name: 'source_order',
     initailValue: '',
     label: 'Source Order *',
     type: 'select',
@@ -321,7 +321,7 @@ export const WeighbridgeRecordFormFields = (
     handleSearch: handleOrderSearch,
   },
   {
-    name: 'delivery_id', // ✅ FIXED: Added _id suffix
+    name: 'delivery', 
     initailValue: '',
     label: 'Delivery Record *',
     type: 'select',
@@ -783,7 +783,7 @@ export const PaymentPreferenceFormFields = (
 
 // // ============================================================
 // // DELIVERY RECORD FORM FIELDS
-// // Backend expects: source_order_id, hub
+// // Backend expects: source_order, hub
 // // ============================================================
 
 // export const DeliveryRecordFormFields = (
@@ -792,7 +792,7 @@ export const PaymentPreferenceFormFields = (
 //   handleOrderSearch?: (value: any) => void
 // ): IFormField[] => [
 //   {
-//     name: 'source_order_id', // ✅ FIXED: Added _id suffix
+//     name: 'source_order', // ✅ FIXED: Added _id suffix
 //     initailValue: '',
 //     label: 'Source Order *',
 //     type: 'select',
@@ -857,7 +857,7 @@ export const PaymentPreferenceFormFields = (
 
 // // ============================================================
 // // WEIGHBRIDGE RECORD FORM FIELDS
-// // Backend expects: source_order_id, delivery_id, quality_grade_id
+// // Backend expects: source_order, delivery_id, quality_grade_id
 // // ============================================================
 
 // export const WeighbridgeRecordFormFields = (
@@ -867,7 +867,7 @@ export const PaymentPreferenceFormFields = (
 //   handleOrderSearch?: (value: any) => void
 // ): IFormField[] => [
 //   {
-//     name: 'source_order_id', // ✅ FIXED: Added _id suffix
+//     name: 'source_order', // ✅ FIXED: Added _id suffix
 //     initailValue: '',
 //     label: 'Source Order *',
 //     type: 'select',
@@ -1341,7 +1341,7 @@ export const PaymentPreferenceFormFields = (
 
 // // ============================================================
 // // DELIVERY RECORD FORM FIELDS
-// // Backend expects: source_order_id, hub
+// // Backend expects: source_order, hub
 // // ============================================================
 
 // export const DeliveryRecordFormFields = (
@@ -1350,7 +1350,7 @@ export const PaymentPreferenceFormFields = (
 //   handleOrderSearch?: (value: any) => void
 // ): IFormField[] => [
 //   {
-//     name: 'source_order_id', // ✅ FIXED: Added _id suffix
+//     name: 'source_order', // ✅ FIXED: Added _id suffix
 //     initailValue: '',
 //     label: 'Source Order *',
 //     type: 'select',
@@ -1415,7 +1415,7 @@ export const PaymentPreferenceFormFields = (
 
 // // ============================================================
 // // WEIGHBRIDGE RECORD FORM FIELDS
-// // Backend expects: source_order_id, delivery_id, quality_grade_id
+// // Backend expects: source_order, delivery_id, quality_grade_id
 // // ============================================================
 
 // export const WeighbridgeRecordFormFields = (
@@ -1425,7 +1425,7 @@ export const PaymentPreferenceFormFields = (
 //   handleOrderSearch?: (value: any) => void
 // ): IFormField[] => [
 //   {
-//     name: 'source_order_id', // ✅ FIXED: Added _id suffix
+//     name: 'source_order', // ✅ FIXED: Added _id suffix
 //     initailValue: '',
 //     label: 'Source Order *',
 //     type: 'select',

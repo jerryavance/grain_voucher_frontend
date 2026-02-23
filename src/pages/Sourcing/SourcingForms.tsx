@@ -1,9 +1,3 @@
-// ============================================================
-// SOURCING FORMS - COMPLETE FIXED VERSION
-// DeliveryRecordForm, WeighbridgeRecordForm, SupplierPaymentForm
-// All forms receive data as props from parent components
-// ============================================================
-
 import { FC, useEffect, useRef, useState } from "react";
 import { Box, Button, Alert } from "@mui/material";
 import { useFormik } from "formik";
@@ -25,10 +19,6 @@ import {
   SupplierPaymentFormValidations,
 } from "./SourcingFormValidations";
 import { SourcingService } from "./Sourcing.service";
-
-// ============================================================
-// INTERFACES
-// ============================================================
 
 interface DropdownOption {
   value: string;
@@ -83,8 +73,8 @@ export const DeliveryRecordForm: FC<IDeliveryFormProps> = ({
   );
 
   const deliveryForm = useFormik({
-    initialValues: sourceOrderId 
-      ? { ...getInitialValues(formFields), source_order_id: sourceOrderId }
+    initialValues: sourceOrderId
+      ? { ...getInitialValues(formFields), source_order: sourceOrderId }
       : getInitialValues(formFields),
     validationSchema: DeliveryRecordFormValidations,
     validateOnChange: false,
@@ -100,9 +90,7 @@ export const DeliveryRecordForm: FC<IDeliveryFormProps> = ({
         callBack && callBack();
         handleClose();
       } catch (error: any) {
-        if (error.response?.data) {
-          deliveryForm.setErrors(error.response.data);
-        }
+        if (error.response?.data) deliveryForm.setErrors(error.response.data);
         toast.error(error.message || "An error occurred");
       } finally {
         setLoading(false);
@@ -110,62 +98,28 @@ export const DeliveryRecordForm: FC<IDeliveryFormProps> = ({
     },
   });
 
-  const ActionBtns: FC = () => {
-    return (
-      <>
-        <Button onClick={handleClose} disabled={loading || formDataLoading}>
-          Close
-        </Button>
-        <Button 
-          onClick={() => deliveryForm.handleSubmit()} 
-          variant="contained" 
-          disabled={loading || formDataLoading}
-        >
-          {loading || formDataLoading ? (
-            <>
-              <ProgressIndicator color="inherit" size={20} />{" "}
-              <Span sx={{ ml: 1 }}>
-                {formDataLoading ? "Loading..." : "Saving..."}
-              </Span>
-            </>
-          ) : (
-            "Record Delivery"
-          )}
-        </Button>
-      </>
-    );
-  };
-
-  if (formDataLoading) {
-    return (
-      <ModalDialog
-        title="Record Delivery"
-        onClose={handleClose}
-        id={uniqueId()}
-        ActionButtons={ActionBtns}
-      >
-        <Box sx={{ display: 'flex', justifyContent: 'center', p: 4 }}>
-          <ProgressIndicator />
-          <Span sx={{ ml: 2 }}>Loading form data...</Span>
-        </Box>
-      </ModalDialog>
-    );
-  }
+  const ActionBtns: FC = () => (
+    <>
+      <Button onClick={handleClose} disabled={loading || formDataLoading}>Close</Button>
+      <Button onClick={() => deliveryForm.handleSubmit()} variant="contained" disabled={loading || formDataLoading}>
+        {loading || formDataLoading
+          ? <><ProgressIndicator color="inherit" size={20} /><Span sx={{ ml: 1 }}>{formDataLoading ? "Loading..." : "Saving..."}</Span></>
+          : "Record Delivery"}
+      </Button>
+    </>
+  );
 
   return (
-    <ModalDialog
-      title="Record Delivery"
-      onClose={handleClose}
-      id={uniqueId()}
-      ActionButtons={ActionBtns}
-    >
-      <form ref={formRef} onSubmit={deliveryForm.handleSubmit}>
-        <FormFactory
-          formikInstance={deliveryForm}
-          formFields={formFields}
-          validationSchema={DeliveryRecordFormValidations}
-        />
-      </form>
+    <ModalDialog title="Record Delivery" onClose={handleClose} id={uniqueId()} ActionButtons={ActionBtns}>
+      {formDataLoading ? (
+        <Box sx={{ display: "flex", justifyContent: "center", p: 4 }}>
+          <ProgressIndicator /><Span sx={{ ml: 2 }}>Loading form data...</Span>
+        </Box>
+      ) : (
+        <form ref={formRef} onSubmit={deliveryForm.handleSubmit}>
+          <FormFactory formikInstance={deliveryForm} formFields={formFields} validationSchema={DeliveryRecordFormValidations} />
+        </form>
+      )}
     </ModalDialog>
   );
 };
@@ -201,6 +155,13 @@ export const WeighbridgeRecordForm: FC<IWeighbridgeFormProps> = ({
   const [loading, setLoading] = useState<boolean>(false);
   const [netWeight, setNetWeight] = useState<number>(0);
 
+  // selectedOrderId lives in plain React state — completely isolated from Formik.
+  // This is the ONLY reliable trigger for loading deliveries because:
+  //   - It cannot be reset by enableReinitialize (Formik doesn't know about it)
+  //   - It cannot be affected by formData prop changes
+  //   - The useEffect below watches it directly with no interference
+  const [selectedOrderId, setSelectedOrderId] = useState<string>(sourceOrderId || "");
+
   const formFields = WeighbridgeRecordFormFields(
     formData.sourceOrders,
     formData.deliveries,
@@ -210,27 +171,33 @@ export const WeighbridgeRecordForm: FC<IWeighbridgeFormProps> = ({
 
   const weighbridgeForm = useFormik({
     initialValues: {
-      ...getInitialValues(formFields),
-      ...(sourceOrderId && { source_order_id: sourceOrderId }),
-      ...(deliveryId && { delivery_id: deliveryId }),
+      source_order: sourceOrderId || "",
+      delivery: deliveryId || "",
+      gross_weight_kg: "",
+      tare_weight_kg: 0,
+      moisture_level: "",
+      quality_grade_id: "",
+      notes: "",
     },
     validationSchema: WeighbridgeRecordFormValidations,
     validateOnChange: false,
     validateOnMount: false,
     validateOnBlur: false,
-    enableReinitialize: true,
+    // FALSE — we set all values manually. enableReinitialize: true would reset
+    // source_order to "" every time formData.deliveries changes (i.e. after every
+    // successful loadDeliveries call), making it impossible to ever load deliveries.
+    enableReinitialize: false,
     onSubmit: async (values: any) => {
       setLoading(true);
       try {
         await SourcingService.createWeighbridgeRecord(values);
         toast.success("Weighbridge record created successfully");
         weighbridgeForm.resetForm();
+        setSelectedOrderId("");
         callBack && callBack();
         handleClose();
       } catch (error: any) {
-        if (error.response?.data) {
-          weighbridgeForm.setErrors(error.response.data);
-        }
+        if (error.response?.data) weighbridgeForm.setErrors(error.response.data);
         toast.error(error.message || "An error occurred");
       } finally {
         setLoading(false);
@@ -238,82 +205,75 @@ export const WeighbridgeRecordForm: FC<IWeighbridgeFormProps> = ({
     },
   });
 
-  // Calculate net weight
+  // Intercept FormFactory's field changes by wrapping setFieldValue.
+  // When source_order is set by FormFactory (user picks an order from the select),
+  // we catch it here, update our local selectedOrderId state, and also let Formik
+  // update its own value normally. This is the bridge between FormFactory's
+  // internal Formik calls and our delivery-loading logic.
+  const originalSetFieldValue = weighbridgeForm.setFieldValue.bind(weighbridgeForm);
+  weighbridgeForm.setFieldValue = (field: string, value: any, shouldValidate?: boolean) => {
+    if (field === "source_order") {
+      setSelectedOrderId(value || "");
+    }
+    return originalSetFieldValue(field, value, shouldValidate);
+  };
+
+  // This effect fires ONLY when selectedOrderId changes — a plain string in
+  // React state. Nothing Formik or formData does can reset this.
   useEffect(() => {
-    const gross = weighbridgeForm.values.gross_weight_kg || 0;
-    const tare = weighbridgeForm.values.tare_weight_kg || 0;
+    if (selectedOrderId) {
+      // Clear delivery selection when order changes
+      weighbridgeForm.setFieldValue("delivery", "");
+      onLoadDeliveries(selectedOrderId);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedOrderId]);
+
+  // Net weight
+  useEffect(() => {
+    const gross = Number(weighbridgeForm.values.gross_weight_kg) || 0;
+    const tare = Number(weighbridgeForm.values.tare_weight_kg) || 0;
     setNetWeight(gross - tare);
   }, [weighbridgeForm.values.gross_weight_kg, weighbridgeForm.values.tare_weight_kg]);
 
-  // Fetch deliveries when order changes
-  useEffect(() => {
-    if (weighbridgeForm.values.source_order_id) {
-      onLoadDeliveries(weighbridgeForm.values.source_order_id);
-    }
-  }, [weighbridgeForm.values.source_order_id]);
-
-  const ActionBtns: FC = () => {
-    return (
-      <>
-        <Button onClick={handleClose} disabled={loading || formDataLoading}>
-          Close
-        </Button>
-        <Button 
-          onClick={() => weighbridgeForm.handleSubmit()} 
-          variant="contained" 
-          disabled={loading || formDataLoading}
-        >
-          {loading || formDataLoading ? (
-            <>
-              <ProgressIndicator color="inherit" size={20} />{" "}
-              <Span sx={{ ml: 1 }}>
-                {formDataLoading ? "Loading..." : "Saving..."}
-              </Span>
-            </>
-          ) : (
-            "Create Record"
-          )}
-        </Button>
-      </>
-    );
-  };
-
-  if (formDataLoading) {
-    return (
-      <ModalDialog
-        title="Weighbridge Record"
-        onClose={handleClose}
-        id={uniqueId()}
-        ActionButtons={ActionBtns}
-      >
-        <Box sx={{ display: 'flex', justifyContent: 'center', p: 4 }}>
-          <ProgressIndicator />
-          <Span sx={{ ml: 2 }}>Loading form data...</Span>
-        </Box>
-      </ModalDialog>
-    );
-  }
+  const ActionBtns: FC = () => (
+    <>
+      <Button onClick={handleClose} disabled={loading || formDataLoading}>Close</Button>
+      <Button onClick={() => weighbridgeForm.handleSubmit()} variant="contained" disabled={loading || formDataLoading}>
+        {loading || formDataLoading
+          ? <><ProgressIndicator color="inherit" size={20} /><Span sx={{ ml: 1 }}>{formDataLoading ? "Loading..." : "Saving..."}</Span></>
+          : "Create Record"}
+      </Button>
+    </>
+  );
 
   return (
-    <ModalDialog
-      title="Weighbridge Record"
-      onClose={handleClose}
-      id={uniqueId()}
-      ActionButtons={ActionBtns}
-    >
-      <form ref={formRef} onSubmit={weighbridgeForm.handleSubmit}>
-        <FormFactory
-          formikInstance={weighbridgeForm}
-          formFields={formFields}
-          validationSchema={WeighbridgeRecordFormValidations}
-        />
-        
-        {netWeight > 0 && (
-          <Alert severity="info" sx={{ mt: 2 }}>
-            Calculated Net Weight: <strong>{netWeight.toFixed(2)} kg</strong>
-          </Alert>
-        )}
-      </form>
+    <ModalDialog title="Weighbridge Record" onClose={handleClose} id={uniqueId()} ActionButtons={ActionBtns}>
+      {formDataLoading ? (
+        <Box sx={{ display: "flex", justifyContent: "center", p: 4 }}>
+          <ProgressIndicator /><Span sx={{ ml: 2 }}>Loading form data...</Span>
+        </Box>
+      ) : (
+        <form ref={formRef} onSubmit={weighbridgeForm.handleSubmit}>
+          <FormFactory
+            formikInstance={weighbridgeForm}
+            formFields={formFields}
+            validationSchema={WeighbridgeRecordFormValidations}
+          />
+
+          {selectedOrderId && formData.deliveries.length === 0 && (
+            <Alert severity="warning" sx={{ mt: 2 }}>
+              No delivery records found for this order. Please create a delivery record first.
+            </Alert>
+          )}
+
+          {netWeight > 0 && (
+            <Alert severity="info" sx={{ mt: 2 }}>
+              Calculated Net Weight: <strong>{netWeight.toFixed(2)} kg</strong>
+            </Alert>
+          )}
+        </form>
+      )}
     </ModalDialog>
   );
 };
@@ -345,7 +305,7 @@ export const SupplierPaymentForm: FC<IPaymentFormProps> = ({
   const formFields = SupplierPaymentFormFields(formData.invoices);
 
   const paymentForm = useFormik({
-    initialValues: invoiceId 
+    initialValues: invoiceId
       ? { ...getInitialValues(formFields), supplier_invoice: invoiceId }
       : getInitialValues(formFields),
     validationSchema: SupplierPaymentFormValidations,
@@ -369,9 +329,7 @@ export const SupplierPaymentForm: FC<IPaymentFormProps> = ({
         callBack && callBack();
         handleClose();
       } catch (error: any) {
-        if (error.response?.data) {
-          paymentForm.setErrors(error.response.data);
-        }
+        if (error.response?.data) paymentForm.setErrors(error.response.data);
         toast.error(error.message || "An error occurred");
       } finally {
         setLoading(false);
@@ -379,68 +337,33 @@ export const SupplierPaymentForm: FC<IPaymentFormProps> = ({
     },
   });
 
-  const ActionBtns: FC = () => {
-    return (
-      <>
-        <Button onClick={handleClose} disabled={loading || formDataLoading}>
-          Close
-        </Button>
-        <Button 
-          onClick={() => paymentForm.handleSubmit()} 
-          variant="contained" 
-          disabled={loading || formDataLoading}
-        >
-          {loading || formDataLoading ? (
-            <>
-              <ProgressIndicator color="inherit" size={20} />{" "}
-              <Span sx={{ ml: 1 }}>
-                {formDataLoading ? "Loading..." : "Saving..."}
-              </Span>
-            </>
-          ) : (
-            "Record Payment"
-          )}
-        </Button>
-      </>
-    );
-  };
-
-  if (formDataLoading) {
-    return (
-      <ModalDialog
-        title="Record Payment"
-        onClose={handleClose}
-        id={uniqueId()}
-        ActionButtons={ActionBtns}
-      >
-        <Box sx={{ display: 'flex', justifyContent: 'center', p: 4 }}>
-          <ProgressIndicator />
-          <Span sx={{ ml: 2 }}>Loading form data...</Span>
-        </Box>
-      </ModalDialog>
-    );
-  }
+  const ActionBtns: FC = () => (
+    <>
+      <Button onClick={handleClose} disabled={loading || formDataLoading}>Close</Button>
+      <Button onClick={() => paymentForm.handleSubmit()} variant="contained" disabled={loading || formDataLoading}>
+        {loading || formDataLoading
+          ? <><ProgressIndicator color="inherit" size={20} /><Span sx={{ ml: 1 }}>{formDataLoading ? "Loading..." : "Saving..."}</Span></>
+          : "Record Payment"}
+      </Button>
+    </>
+  );
 
   return (
-    <ModalDialog
-      title="Record Payment"
-      onClose={handleClose}
-      id={uniqueId()}
-      ActionButtons={ActionBtns}
-    >
-      <form ref={formRef} onSubmit={paymentForm.handleSubmit}>
-        {maxAmount > 0 && (
-          <Alert severity="info" sx={{ mb: 2 }}>
-            Maximum payment amount: <strong>{maxAmount.toLocaleString()} UGX</strong>
-          </Alert>
-        )}
-        
-        <FormFactory
-          formikInstance={paymentForm}
-          formFields={formFields}
-          validationSchema={SupplierPaymentFormValidations}
-        />
-      </form>
+    <ModalDialog title="Record Payment" onClose={handleClose} id={uniqueId()} ActionButtons={ActionBtns}>
+      {formDataLoading ? (
+        <Box sx={{ display: "flex", justifyContent: "center", p: 4 }}>
+          <ProgressIndicator /><Span sx={{ ml: 2 }}>Loading form data...</Span>
+        </Box>
+      ) : (
+        <form ref={formRef} onSubmit={paymentForm.handleSubmit}>
+          {maxAmount > 0 && (
+            <Alert severity="info" sx={{ mb: 2 }}>
+              Maximum payment amount: <strong>{maxAmount.toLocaleString()} UGX</strong>
+            </Alert>
+          )}
+          <FormFactory formikInstance={paymentForm} formFields={formFields} validationSchema={SupplierPaymentFormValidations} />
+        </form>
+      )}
     </ModalDialog>
   );
 };
