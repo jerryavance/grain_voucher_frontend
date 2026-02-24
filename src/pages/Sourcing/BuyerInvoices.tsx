@@ -94,6 +94,7 @@ const RecordPaymentForm: FC<{
       title={`Record Payment — ${invoice.invoice_number}`}
       onClose={handleClose}
       id={uniqueId()}
+      open={true}
       ActionButtons={ActionBtns}
     >
       <Box sx={{ display: "flex", flexDirection: "column", gap: 2, pt: 1 }}>

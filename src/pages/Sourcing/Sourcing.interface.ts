@@ -314,8 +314,28 @@ export interface ISupplierDashboard {
 // ============ Form Props ============
 export interface ISupplierFormProps { handleClose: () => void; formType?: 'Save'|'Update'; initialValues?: any; callBack?: () => void; }
 export interface ISourceOrderFormProps { handleClose: () => void; formType?: 'Save'|'Update'; initialValues?: any; callBack?: () => void; }
-export interface IDeliveryFormProps { handleClose: () => void; sourceOrderId?: string; callBack?: () => void; }
-export interface IWeighbridgeFormProps { handleClose: () => void; sourceOrderId?: string; deliveryId?: string; callBack?: () => void; }
+export interface IDeliveryFormProps {
+  handleClose: () => void;
+  sourceOrderId?: string;
+  callBack?: () => void;
+  formData: { sourceOrders: { value: string; label: string }[]; hubs: { value: string; label: string }[] };
+  formDataLoading: boolean;
+  searchHandlers: { handleOrderSearch: (query: string) => void };
+}
+export interface IWeighbridgeFormProps {
+  handleClose: () => void;
+  sourceOrderId?: string;
+  deliveryId?: string;
+  callBack?: () => void;
+  formData: {
+    sourceOrders: { value: string; label: string }[];
+    deliveries: { value: string; label: string }[];
+    qualityGrades: { value: string; label: string }[];
+  };
+  formDataLoading: boolean;
+  searchHandlers: { handleOrderSearch: (query: string) => void };
+  onLoadDeliveries: (orderId: string) => Promise<void>;
+}
 export interface IPaymentFormProps { handleClose: () => void; invoiceId?: string; callBack?: () => void; }
 export interface IPaymentPreferenceFormProps { handleClose: () => void; formType?: 'Save'|'Update'; initialValues?: any; callBack?: () => void; }
 

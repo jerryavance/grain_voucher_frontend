@@ -1,4 +1,5 @@
-import { FC, useEffect, useRef, useState } from "react";
+import { FC, useCallback, useEffect, useRef, useState } from "react";
+import { debounce } from "lodash";
 import { Box, Button, Alert } from "@mui/material";
 import { useFormik } from "formik";
 import { toast } from "react-hot-toast";
@@ -154,13 +155,8 @@ export const WeighbridgeRecordForm: FC<IWeighbridgeFormProps> = ({
   const formRef = useRef<HTMLFormElement | null>(null);
   const [loading, setLoading] = useState<boolean>(false);
   const [netWeight, setNetWeight] = useState<number>(0);
-
-  // selectedOrderId lives in plain React state — completely isolated from Formik.
-  // This is the ONLY reliable trigger for loading deliveries because:
-  //   - It cannot be reset by enableReinitialize (Formik doesn't know about it)
-  //   - It cannot be affected by formData prop changes
-  //   - The useEffect below watches it directly with no interference
-  const [selectedOrderId, setSelectedOrderId] = useState<string>(sourceOrderId || "");
+  // Track the previously seen source_order to avoid re-fetching on unrelated re-renders
+  const prevOrderIdRef = useRef<string>("");
 
   const formFields = WeighbridgeRecordFormFields(
     formData.sourceOrders,
@@ -176,16 +172,15 @@ export const WeighbridgeRecordForm: FC<IWeighbridgeFormProps> = ({
       gross_weight_kg: "",
       tare_weight_kg: 0,
       moisture_level: "",
-      quality_grade_id: "",
+      quality_grade: "",
       notes: "",
     },
     validationSchema: WeighbridgeRecordFormValidations,
     validateOnChange: false,
     validateOnMount: false,
     validateOnBlur: false,
-    // FALSE — we set all values manually. enableReinitialize: true would reset
-    // source_order to "" every time formData.deliveries changes (i.e. after every
-    // successful loadDeliveries call), making it impossible to ever load deliveries.
+    // FALSE — enableReinitialize: true would reset source_order to "" every time
+    // formData.deliveries changes (after every loadDeliveries call), breaking the flow.
     enableReinitialize: false,
     onSubmit: async (values: any) => {
       setLoading(true);
@@ -193,7 +188,7 @@ export const WeighbridgeRecordForm: FC<IWeighbridgeFormProps> = ({
         await SourcingService.createWeighbridgeRecord(values);
         toast.success("Weighbridge record created successfully");
         weighbridgeForm.resetForm();
-        setSelectedOrderId("");
+        prevOrderIdRef.current = "";
         callBack && callBack();
         handleClose();
       } catch (error: any) {
@@ -205,29 +200,22 @@ export const WeighbridgeRecordForm: FC<IWeighbridgeFormProps> = ({
     },
   });
 
-  // Intercept FormFactory's field changes by wrapping setFieldValue.
-  // When source_order is set by FormFactory (user picks an order from the select),
-  // we catch it here, update our local selectedOrderId state, and also let Formik
-  // update its own value normally. This is the bridge between FormFactory's
-  // internal Formik calls and our delivery-loading logic.
-  const originalSetFieldValue = weighbridgeForm.setFieldValue.bind(weighbridgeForm);
-  weighbridgeForm.setFieldValue = (field: string, value: any, shouldValidate?: boolean) => {
-    if (field === "source_order") {
-      setSelectedOrderId(value || "");
-    }
-    return originalSetFieldValue(field, value, shouldValidate);
-  };
-
-  // This effect fires ONLY when selectedOrderId changes — a plain string in
-  // React state. Nothing Formik or formData does can reset this.
+  // Watch values.source_order directly — this is reliable because Formik
+  // always updates its values object when setFieldValue is called, regardless
+  // of how FormFactory invokes it internally.
   useEffect(() => {
-    if (selectedOrderId) {
-      // Clear delivery selection when order changes
+    const orderId = weighbridgeForm.values.source_order;
+    if (orderId && orderId !== prevOrderIdRef.current) {
+      prevOrderIdRef.current = orderId;
+      // Clear stale delivery selection whenever the order changes
       weighbridgeForm.setFieldValue("delivery", "");
-      onLoadDeliveries(selectedOrderId);
+      onLoadDeliveries(orderId);
+    }
+    if (!orderId) {
+      prevOrderIdRef.current = "";
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedOrderId]);
+  }, [weighbridgeForm.values.source_order]);
 
   // Net weight
   useEffect(() => {
@@ -261,7 +249,7 @@ export const WeighbridgeRecordForm: FC<IWeighbridgeFormProps> = ({
             validationSchema={WeighbridgeRecordFormValidations}
           />
 
-          {selectedOrderId && formData.deliveries.length === 0 && (
+          {weighbridgeForm.values.source_order && formData.deliveries.length === 0 && (
             <Alert severity="warning" sx={{ mt: 2 }}>
               No delivery records found for this order. Please create a delivery record first.
             </Alert>
@@ -365,5 +353,163 @@ export const SupplierPaymentForm: FC<IPaymentFormProps> = ({
         </form>
       )}
     </ModalDialog>
+  );
+};
+
+// ============================================================
+// STANDALONE DELIVERY RECORD FORM
+// Self-fetching wrapper — used by SourceOrderDetails where the
+// parent should not have to manage formData / loading state.
+// ============================================================
+
+interface IStandaloneDeliveryFormProps {
+  handleClose: () => void;
+  sourceOrderId?: string;
+  callBack?: () => void;
+}
+
+export const StandaloneDeliveryRecordForm: FC<IStandaloneDeliveryFormProps> = (props) => {
+  const [sourceOrders, setSourceOrders] = useState<DropdownOption[]>([]);
+  const [hubs, setHubs] = useState<DropdownOption[]>([]);
+  const [formDataLoading, setFormDataLoading] = useState(true);
+
+  useEffect(() => {
+    Promise.all([
+      SourcingService.getSourceOrders({ status: "delivered", page_size: 100 }),
+      SourcingService.getHubs(),
+    ])
+      .then(([ordersResp, hubsResp]) => {
+        setSourceOrders(
+          (ordersResp.results || []).map((o: any) => ({
+            value: o.id,
+            label: `${o.order_number} — ${o.supplier_name ?? o.supplier?.business_name ?? "Unknown"}`,
+          }))
+        );
+        setHubs(
+          (hubsResp.results || hubsResp || []).map((h: any) => ({
+            value: h.id,
+            label: h.name,
+          }))
+        );
+      })
+      .catch(() => toast.error("Failed to load form data"))
+      .finally(() => setFormDataLoading(false));
+  }, []);
+
+  const handleOrderSearch = useCallback(
+    debounce(async (query: string) => {
+      try {
+        const results = await SourcingService.getSourceOrders({
+          search: query,
+          status: "delivered",
+          page_size: 100,
+        });
+        setSourceOrders(
+          (results.results || []).map((o: any) => ({
+            value: o.id,
+            label: `${o.order_number} — ${o.supplier_name ?? o.supplier?.business_name ?? "Unknown"}`,
+          }))
+        );
+      } catch { /* swallow search errors */ }
+    }, 300),
+    []
+  );
+
+  return (
+    <DeliveryRecordForm
+      {...props}
+      formData={{ sourceOrders, hubs }}
+      formDataLoading={formDataLoading}
+      searchHandlers={{ handleOrderSearch }}
+    />
+  );
+};
+
+// ============================================================
+// STANDALONE WEIGHBRIDGE RECORD FORM
+// Self-fetching wrapper — used by SourceOrderDetails where the
+// parent should not have to manage formData / loading state.
+// ============================================================
+
+interface IStandaloneWeighbridgeFormProps {
+  handleClose: () => void;
+  sourceOrderId?: string;
+  deliveryId?: string;
+  callBack?: () => void;
+}
+
+export const StandaloneWeighbridgeRecordForm: FC<IStandaloneWeighbridgeFormProps> = (props) => {
+  const [sourceOrders, setSourceOrders] = useState<DropdownOption[]>([]);
+  const [deliveries, setDeliveries] = useState<DropdownOption[]>([]);
+  const [qualityGrades, setQualityGrades] = useState<DropdownOption[]>([]);
+  const [formDataLoading, setFormDataLoading] = useState(true);
+
+  useEffect(() => {
+    Promise.all([
+      SourcingService.getSourceOrders({ status: "delivered", page_size: 100 }),
+      SourcingService.getQualityGrades(),
+    ])
+      .then(([ordersResp, gradesResp]) => {
+        setSourceOrders(
+          (ordersResp.results || []).map((o: any) => ({
+            value: o.id,
+            label: `${o.order_number} — ${o.supplier_name ?? o.supplier?.business_name ?? "Unknown"}`,
+          }))
+        );
+        setQualityGrades(
+          (gradesResp.results || gradesResp || []).map((g: any) => ({
+            value: g.id,
+            label: g.name,
+          }))
+        );
+      })
+      .catch(() => toast.error("Failed to load form data"))
+      .finally(() => setFormDataLoading(false));
+  }, []);
+
+  const loadDeliveries = async (orderId: string): Promise<void> => {
+    try {
+      const results = await SourcingService.getDeliveryRecords({
+        source_order: orderId,
+        page_size: 100,
+      });
+      setDeliveries(
+        (results.results || []).map((d: any) => ({
+          value: d.id,
+          label: `Delivery on ${new Date(d.received_at).toLocaleDateString()} — ${d.driver_name} (${d.vehicle_number})`,
+        }))
+      );
+    } catch {
+      toast.error("Failed to load deliveries for selected order");
+    }
+  };
+
+  const handleOrderSearch = useCallback(
+    debounce(async (query: string) => {
+      try {
+        const results = await SourcingService.getSourceOrders({
+          search: query,
+          status: "delivered",
+          page_size: 100,
+        });
+        setSourceOrders(
+          (results.results || []).map((o: any) => ({
+            value: o.id,
+            label: `${o.order_number} — ${o.supplier_name ?? o.supplier?.business_name ?? "Unknown"}`,
+          }))
+        );
+      } catch { /* swallow search errors */ }
+    }, 300),
+    []
+  );
+
+  return (
+    <WeighbridgeRecordForm
+      {...props}
+      formData={{ sourceOrders, deliveries, qualityGrades }}
+      formDataLoading={formDataLoading}
+      searchHandlers={{ handleOrderSearch }}
+      onLoadDeliveries={loadDeliveries}
+    />
   );
 };

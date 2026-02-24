@@ -75,8 +75,11 @@ export const WeighbridgeRecordForm: FC<IWeighbridgeFormProps> = ({
       });
       setDeliveries(
         data.results.map((delivery: any) => ({
-          label: `Delivery at ${delivery.hub.name} - ${new Date(delivery.received_at).toLocaleDateString()}`,
+          label: delivery.has_weighbridge_record
+            ? `[Already weighed] Delivery on ${new Date(delivery.received_at).toLocaleDateString()} — ${delivery.driver_name} (${delivery.vehicle_number})`
+            : `Delivery on ${new Date(delivery.received_at).toLocaleDateString()} — ${delivery.driver_name} (${delivery.vehicle_number})`,
           value: delivery.id,
+          disabled: delivery.has_weighbridge_record,
         }))
       );
     } catch (error) {
@@ -150,7 +153,11 @@ export const WeighbridgeRecordForm: FC<IWeighbridgeFormProps> = ({
   // Fetch deliveries when order changes
   useEffect(() => {
     if (weighbridgeForm.values.source_order) {
+      weighbridgeForm.setFieldValue("delivery", ""); // clear stale delivery selection
+      setDeliveries([]); // clear list while loading
       loadDeliveries(weighbridgeForm.values.source_order);
+    } else {
+      setDeliveries([]);
     }
   }, [weighbridgeForm.values.source_order]);
 

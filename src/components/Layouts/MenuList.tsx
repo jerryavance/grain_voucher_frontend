@@ -177,13 +177,13 @@ export const MenuList = (
           visible: isStaff || isHubAdmin || isSuperUser,
         },
         {
-          title: "Invoices",
+          title: "Supplier Invoices",
           Icon: Icons.ReceiptIcon,
           path: "/admin/sourcing/invoices",
           visible: isStaff || isHubAdmin || isSuperUser,
         },
         {
-          title: "Payments",
+          title: "Supplier Payments",
           Icon: Icons.PaymentsIcon,
           path: "/admin/sourcing/payments",
           visible: isSuperUser,

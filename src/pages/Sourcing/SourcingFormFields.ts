@@ -300,7 +300,7 @@ export const DeliveryRecordFormFields = (
 
 // ============================================================
 // WEIGHBRIDGE RECORD FORM FIELDS
-// Backend expects: source_order, delivery_id, quality_grade_id
+// Backend expects: source_order, delivery_id, quality_grade
 // ============================================================
 
 export const WeighbridgeRecordFormFields = (
@@ -357,7 +357,7 @@ export const WeighbridgeRecordFormFields = (
     required: true,
   },
   {
-    name: 'quality_grade_id', // ✅ FIXED: Added _id suffix
+    name: 'quality_grade', // ✅ FIXED: Added _id suffix
     initailValue: '',
     label: 'Quality Grade *',
     type: 'select',
@@ -857,7 +857,7 @@ export const PaymentPreferenceFormFields = (
 
 // // ============================================================
 // // WEIGHBRIDGE RECORD FORM FIELDS
-// // Backend expects: source_order, delivery_id, quality_grade_id
+// // Backend expects: source_order, delivery_id, quality_grade
 // // ============================================================
 
 // export const WeighbridgeRecordFormFields = (
@@ -914,7 +914,7 @@ export const PaymentPreferenceFormFields = (
 //     required: true,
 //   },
 //   {
-//     name: 'quality_grade_id', // ✅ FIXED: Added _id suffix
+//     name: 'quality_grade', // ✅ FIXED: Added _id suffix
 //     initailValue: '',
 //     label: 'Quality Grade *',
 //     type: 'select',
@@ -1415,7 +1415,7 @@ export const PaymentPreferenceFormFields = (
 
 // // ============================================================
 // // WEIGHBRIDGE RECORD FORM FIELDS
-// // Backend expects: source_order, delivery_id, quality_grade_id
+// // Backend expects: source_order, delivery_id, quality_grade
 // // ============================================================
 
 // export const WeighbridgeRecordFormFields = (
@@ -1472,7 +1472,7 @@ export const PaymentPreferenceFormFields = (
 //     required: true,
 //   },
 //   {
-//     name: 'quality_grade_id', // ✅ FIXED: Added _id suffix
+//     name: 'quality_grade', // ✅ FIXED: Added _id suffix
 //     initailValue: '',
 //     label: 'Quality Grade *',
 //     type: 'select',

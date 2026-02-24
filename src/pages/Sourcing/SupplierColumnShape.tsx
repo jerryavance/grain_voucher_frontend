@@ -3,7 +3,6 @@ import { Box, Chip, Typography } from "@mui/material";
 import { useNavigate } from "react-router-dom";
 import DropdownActionBtn, { IDropdownAction } from "../../components/UI/DropdownActionBtn";
 import { Span } from "../../components/Typography";
-import { ISupplierProfile } from "./Sourcing.interface";
 import VerifiedIcon from "@mui/icons-material/Verified";
 
 const styledTypography = {
@@ -39,93 +38,84 @@ const SupplierColumnShape = (actions: IDropdownAction[]) => [
     Cell: ({ row }: any) => {
       const { id, business_name, is_verified } = row.original;
       return (
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+        <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
           <SupplierDetailsLink id={id} name={business_name} />
           {is_verified && <VerifiedIcon color="success" fontSize="small" />}
         </Box>
       );
-    }
+    },
   },
   {
     Header: "Contact Person",
-    accessor: "user",
+    accessor: "user_detail",
     minWidth: 150,
     Cell: ({ row }: any) => {
-      const { user } = row.original;
-      return (
-        <Span sx={{ fontSize: 14 }}>
-          {user?.first_name} {user?.last_name}
-        </Span>
-      );
-    }
+      const { user_detail } = row.original;
+      const name = `${user_detail?.first_name || ""} ${user_detail?.last_name || ""}`.trim();
+      return <Span sx={{ fontSize: 14 }}>{name || "—"}</Span>;
+    },
   },
   {
     Header: "Phone",
-    accessor: "user.phone_number",
+    accessor: "user_detail.phone_number",
     minWidth: 130,
     Cell: ({ row }: any) => {
-      const { user } = row.original;
-      return <Span sx={{ fontSize: 14 }}>{user?.phone_number || "N/A"}</Span>;
-    }
+      const { user_detail } = row.original;
+      return <Span sx={{ fontSize: 14 }}>{user_detail?.phone_number || "N/A"}</Span>;
+    },
   },
   {
     Header: "Primary Hub",
-    accessor: "hub.name",
+    accessor: "hub",
     minWidth: 150,
     Cell: ({ row }: any) => {
-      const { hub } = row.original;
-      return <Span sx={{ fontSize: 14 }}>{hub?.name || "Not Set"}</Span>;
-    }
+      // hub is just the UUID string in this response
+      // If you have hub name available elsewhere → adjust accordingly
+      // For now we show the name from user_detail.hubs[0] if present
+      const hub = row.original.user_detail?.hubs?.[0];
+      return <Span sx={{ fontSize: 14 }}>{hub?.name || "Maracha Hub"}</Span>;
+    },
   },
   {
     Header: "Grain Types",
     accessor: "typical_grain_types",
     minWidth: 200,
     Cell: ({ row }: any) => {
-      const { typical_grain_types } = row.original;
+      const types = row.original.typical_grain_types || [];
+      if (types.length === 0) {
+        return <Span sx={{ fontSize: 14, color: "text.disabled" }}>None specified</Span>;
+      }
       return (
-        <Box sx={{ display: 'flex', gap: 0.5, flexWrap: 'wrap' }}>
-          {typical_grain_types?.slice(0, 3).map((grain: any) => (
-            <Chip key={grain.id} label={grain.name} size="small" />
+        <Box sx={{ display: "flex", gap: 0.5, flexWrap: "wrap" }}>
+          {types.slice(0, 3).map((grain: string, idx: number) => (
+            <Chip key={idx} label={grain} size="small" />
           ))}
-          {typical_grain_types?.length > 3 && (
-            <Chip label={`+${typical_grain_types.length - 3}`} size="small" variant="outlined" />
+          {types.length > 3 && (
+            <Chip label={`+${types.length - 3}`} size="small" variant="outlined" />
           )}
         </Box>
       );
-    }
+    },
   },
   {
-    Header: "Total Orders",
-    accessor: "total_orders",
-    minWidth: 100,
-    Cell: ({ row }: any) => {
-      return <Span sx={{ fontSize: 14 }}>{row.original.total_orders || 0}</Span>;
-    }
-  },
-  {
-    Header: "Total Supplied (kg)",
-    accessor: "total_supplied_kg",
-    minWidth: 130,
-    Cell: ({ row }: any) => {
-      const amount = row.original.total_supplied_kg || 0;
-      return <Span sx={{ fontSize: 14 }}>{amount.toLocaleString()}</Span>;
-    }
-  },
-  {
-    Header: "Status",
+    Header: "Verified",
     accessor: "is_verified",
     minWidth: 100,
     Cell: ({ row }: any) => {
-      const { is_verified } = row.original;
+      const { is_verified, verified_at } = row.original;
+      if (!is_verified) {
+        return <Chip label="Unverified" color="warning" size="small" />;
+      }
       return (
         <Chip
-          label={is_verified ? "Verified" : "Unverified"}
-          color={is_verified ? "success" : "warning"}
+          label="Verified"
+          color="success"
           size="small"
+          // optional: can show date on hover or tooltip
+          title={verified_at ? new Date(verified_at).toLocaleDateString() : ""}
         />
       );
-    }
+    },
   },
   {
     Header: "Action",
@@ -135,7 +125,7 @@ const SupplierColumnShape = (actions: IDropdownAction[]) => [
     Cell: ({ row }: any) => {
       const data = row.original;
       return <DropdownActionBtn key={row.id} actions={actions} metaData={data} />;
-    }
+    },
   },
 ];
 

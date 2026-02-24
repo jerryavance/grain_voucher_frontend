@@ -118,12 +118,14 @@ export const SupplierInvoiceColumnShape = (actions: IDropdownAction[]) => [
 export const DeliveryRecordColumnShape = (actions: IDropdownAction[]) => [
   {
     Header: "Order Number",
-    accessor: "source_order.order_number",
+    accessor: "id",
+    // accessor: "source_order.order_number",
     minWidth: 160,
   },
   {
     Header: "Hub",
-    accessor: "hub.name",
+    accessor: "hub",
+    // accessor: "hub.name",
     minWidth: 130,
   },
   {
@@ -183,7 +185,7 @@ export const DeliveryRecordColumnShape = (actions: IDropdownAction[]) => [
 export const WeighbridgeRecordColumnShape = (actions: IDropdownAction[]) => [
   {
     Header: "Order Number",
-    accessor: "source_order.order_number",
+    accessor: "source_order",
     minWidth: 160,
   },
   {

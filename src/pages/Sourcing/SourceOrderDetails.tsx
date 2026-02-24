@@ -24,8 +24,8 @@ import { formatDateToDDMMYYYY } from "../../utils/date_formatter";
 import { Span } from "../../components/Typography";
 import LoadingScreen from "../../components/LoadingScreen";
 import ProgressIndicator from "../../components/UI/ProgressIndicator";
-import { DeliveryRecordForm } from "./DeliveryRecordForm";
-import { WeighbridgeRecordForm } from "./WeighbridgeRecordForm";
+// ✅ Use the standalone self-fetching wrappers — no formData prop management needed here
+import { StandaloneDeliveryRecordForm, StandaloneWeighbridgeRecordForm } from "./SourcingForms";
 
 interface TabPanelProps { children?: React.ReactNode; index: number; value: number; }
 function TabPanel({ children, value, index }: TabPanelProps) {
@@ -48,7 +48,6 @@ const InvestorAllocationForm: FC<{
   const [optionsLoading, setOptionsLoading] = useState(false);
   const [investorAccounts, setInvestorAccounts] = useState<IInvestorAccount[]>([]);
 
-  // Fetch investor accounts whenever the dialog opens
   useEffect(() => {
     if (!open) return;
     setOptionsLoading(true);
@@ -117,7 +116,6 @@ const InvestorAllocationForm: FC<{
         <AccountBalanceIcon color="secondary" />
         Assign Investor to Order
       </DialogTitle>
-
       <DialogContent dividers>
         {optionsLoading ? (
           <Box sx={{ display: "flex", justifyContent: "center", alignItems: "center", py: 6, gap: 2 }}>
@@ -129,7 +127,6 @@ const InvestorAllocationForm: FC<{
             <Alert severity="info">
               Committing investor capital to fund this purchase. Funds + margin are returned once the grain is sold.
             </Alert>
-
             {investorAccounts.length === 0 ? (
               <Alert severity="warning">
                 No investor accounts found. Please create an investor account first.
@@ -156,14 +153,12 @@ const InvestorAllocationForm: FC<{
                 )}
               </FormControl>
             )}
-
             {selected && (
               <Alert severity={sufficient ? "success" : "error"}>
                 Available balance: <strong>{formatCurrency(selected.available_balance)}</strong>
                 {!sufficient && " — Insufficient funds for this allocation amount"}
               </Alert>
             )}
-
             <TextField
               label="Amount Allocated (UGX) *"
               type="number"
@@ -178,7 +173,6 @@ const InvestorAllocationForm: FC<{
               }
               inputProps={{ min: 1 }}
             />
-
             <TextField
               label="Notes (optional)"
               multiline
@@ -191,11 +185,8 @@ const InvestorAllocationForm: FC<{
           </Box>
         )}
       </DialogContent>
-
       <DialogActions sx={{ px: 3, py: 2, gap: 1 }}>
-        <Button onClick={handleDialogClose} disabled={loading}>
-          Cancel
-        </Button>
+        <Button onClick={handleDialogClose} disabled={loading}>Cancel</Button>
         <Button
           variant="contained"
           onClick={() => form.handleSubmit()}
@@ -244,7 +235,6 @@ const SourceOrderDetails = () => {
   if (loading) return <LoadingScreen />;
   if (!order) return null;
 
-  // The backend returns nested objects for the detail endpoint per ISourceOrder interface
   const createdBy = order.created_by;
   const hub = order.hub;
   const grainType = order.grain_type;
@@ -483,14 +473,18 @@ const SourceOrderDetails = () => {
         callBack={fetchOrderDetails}
       />
       {showDeliveryForm && (
-        <DeliveryRecordForm sourceOrderId={order.id}
+        <StandaloneDeliveryRecordForm
+          sourceOrderId={order.id}
           callBack={() => { setShowDeliveryForm(false); fetchOrderDetails(); }}
-          handleClose={() => setShowDeliveryForm(false)} />
+          handleClose={() => setShowDeliveryForm(false)}
+        />
       )}
       {showWeighbridgeForm && (
-        <WeighbridgeRecordForm sourceOrderId={order.id}
+        <StandaloneWeighbridgeRecordForm
+          sourceOrderId={order.id}
           callBack={() => { setShowWeighbridgeForm(false); fetchOrderDetails(); }}
-          handleClose={() => setShowWeighbridgeForm(false)} />
+          handleClose={() => setShowWeighbridgeForm(false)}
+        />
       )}
     </Box>
   );

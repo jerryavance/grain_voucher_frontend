@@ -124,7 +124,7 @@ export const DeliveryRecordFormValidations = Yup.object().shape({
 
 // ============================================================
 // WEIGHBRIDGE RECORD VALIDATION
-// Fields: source_order, delivery_id, quality_grade_id
+// Fields: source_order, delivery_id, quality_grade
 // ============================================================
 
 export const WeighbridgeRecordFormValidations = Yup.object().shape({
@@ -154,7 +154,7 @@ export const WeighbridgeRecordFormValidations = Yup.object().shape({
     .min(0, "Moisture level cannot be negative")
     .max(100, "Moisture level cannot exceed 100%"),
   
-  quality_grade_id: Yup.string() // ✅ FIXED: Added _id suffix
+  quality_grade: Yup.string() // ✅ FIXED: Added _id suffix
     .required("Quality grade is required"),
   
   notes: Yup.string()
