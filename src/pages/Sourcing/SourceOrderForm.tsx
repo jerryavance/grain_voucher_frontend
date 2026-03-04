@@ -1,7 +1,8 @@
 import { FC, useEffect, useRef, useState } from "react";
-import { Box, Button, Typography, Divider } from "@mui/material";
+import { Alert, Box, Button, Chip, Divider, Typography } from "@mui/material";
 import { useFormik } from "formik";
 import { toast } from "react-hot-toast";
+import StorefrontIcon from "@mui/icons-material/Storefront";
 import ModalDialog from "../../components/UI/Modal/ModalDialog";
 import ProgressIndicator from "../../components/UI/ProgressIndicator";
 import { Span } from "../../components/Typography";
@@ -67,6 +68,7 @@ const SourceOrderForm: FC<ISourceOrderFormProps> = ({
     onSubmit: (values: any) => handleSubmit(values),
   });
 
+  // UPDATED: watches all 7 cost fields including loading_cost and offloading_cost
   useEffect(() => {
     const cost = calculateTotalCost(orderForm.values);
     setTotalCost(cost);
@@ -75,6 +77,8 @@ const SourceOrderForm: FC<ISourceOrderFormProps> = ({
     orderForm.values.offered_price_per_kg,
     orderForm.values.weighbridge_cost,
     orderForm.values.logistics_cost,
+    orderForm.values.loading_cost,
+    orderForm.values.offloading_cost,
     orderForm.values.handling_cost,
     orderForm.values.other_costs,
   ]);
@@ -93,6 +97,10 @@ const SourceOrderForm: FC<ISourceOrderFormProps> = ({
         hub_id: initialValues.hub?.id,
         grain_type_id: initialValues.grain_type?.id,
         payment_method_id: initialValues.payment_method?.id,
+        // NEW: ensure trade_type and cost fields are mapped
+        trade_type: initialValues.trade_type || "direct",
+        loading_cost: initialValues.loading_cost || 0,
+        offloading_cost: initialValues.offloading_cost || 0,
       };
       orderForm.setValues(patchInitialValues(formFields)(mappedValues));
     }
@@ -108,18 +116,13 @@ const SourceOrderForm: FC<ISourceOrderFormProps> = ({
         await SourcingService.createSourceOrder(values);
         toast.success("Source order created successfully");
       }
-      
       orderForm.resetForm();
-      callBack && callBack();
-      handleClose();
-      setLoading(false);
+      callBack?.(); handleClose();
     } catch (error: any) {
-      setLoading(false);
-      
-      if (error.response?.data) {
-        orderForm.setErrors(error.response.data);
-      }
+      if (error.response?.data) orderForm.setErrors(error.response.data);
       toast.error(error.message || "An error occurred");
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -128,36 +131,28 @@ const SourceOrderForm: FC<ISourceOrderFormProps> = ({
     handleClose();
   };
 
-  const handleButtonClick = () => {
-    orderForm.handleSubmit();
-  };
-
-  const ActionBtns: FC = () => {
-    return (
-      <>
-        <Button onClick={handleReset} disabled={loading || formDataLoading}>
-          Close
-        </Button>
-        <Button 
-          onClick={handleButtonClick} 
-          type="button"
-          variant="contained"
-          disabled={loading || formDataLoading}
-        >
-          {loading || formDataLoading ? (
-            <>
-              <ProgressIndicator color="inherit" size={20} />{" "}
-              <Span style={{ marginLeft: "0.5rem" }} color="primary">
-                {formDataLoading ? "Loading..." : "Saving..."}
-              </Span>
-            </>
-          ) : (
-            formType === "Update" ? "Update Order" : "Create Order"
-          )}
-        </Button>
-      </>
-    );
-  };
+  const ActionBtns: FC = () => (
+    <>
+      <Button onClick={handleReset} disabled={loading || formDataLoading}>Close</Button>
+      <Button
+        onClick={() => orderForm.handleSubmit()}
+        type="button"
+        variant="contained"
+        disabled={loading || formDataLoading}
+      >
+        {loading || formDataLoading ? (
+          <>
+            <ProgressIndicator color="inherit" size={20} />
+            <Span style={{ marginLeft: "0.5rem" }} color="primary">
+              {formDataLoading ? "Loading..." : "Saving..."}
+            </Span>
+          </>
+        ) : (
+          formType === "Update" ? "Update Order" : "Create Order"
+        )}
+      </Button>
+    </>
+  );
 
   if (formDataLoading) {
     return (
@@ -168,13 +163,18 @@ const SourceOrderForm: FC<ISourceOrderFormProps> = ({
         ActionButtons={ActionBtns}
         maxWidth="md"
       >
-        <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', p: 4 }}>
+        <Box sx={{ display: "flex", justifyContent: "center", alignItems: "center", p: 4 }}>
           <ProgressIndicator />
           <Span sx={{ ml: 2 }}>Loading form data...</Span>
         </Box>
       </ModalDialog>
     );
   }
+
+  const isAggregator = orderForm.values.trade_type === "aggregator";
+  const grainCost =
+    (parseFloat(orderForm.values.quantity_kg) || 0) *
+    (parseFloat(orderForm.values.offered_price_per_kg) || 0);
 
   return (
     <ModalDialog
@@ -186,10 +186,7 @@ const SourceOrderForm: FC<ISourceOrderFormProps> = ({
     >
       <form
         ref={formRef}
-        onSubmit={(e) => {
-          e.preventDefault();
-          handleSubmit(orderForm.values);
-        }}
+        onSubmit={e => { e.preventDefault(); handleSubmit(orderForm.values); }}
       >
         <Box sx={{ width: "100%" }}>
           <FormFactory
@@ -198,50 +195,54 @@ const SourceOrderForm: FC<ISourceOrderFormProps> = ({
             formFields={formFields}
             validationSchema={SourceOrderFormValidations}
           />
-          
+
+          {/* Aggregator trade info banner */}
+          {isAggregator && (
+            <Alert
+              severity="info"
+              icon={<StorefrontIcon />}
+              sx={{ mt: 2 }}
+            >
+              <strong>Aggregator Trade</strong> — After delivery, record the actual tonnage and destination costs
+              (weighbridge, insurance, etc.) using the "Record Aggregator Costs" action on the order details page.
+              The effective cost/kg will be computed automatically.
+            </Alert>
+          )}
+
           <Divider sx={{ my: 2 }} />
-          
-          <Box sx={{ 
-            p: 2, 
-            bgcolor: 'background.paper', 
-            borderRadius: 1,
-            border: '1px solid',
-            borderColor: 'divider'
+
+          {/* Cost Summary */}
+          <Box sx={{
+            p: 2, bgcolor: "background.paper", borderRadius: 1,
+            border: "1px solid", borderColor: "divider",
           }}>
-            <Typography variant="h6" gutterBottom>
-              Cost Summary
-            </Typography>
-            <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
-              <Span>Grain Cost:</Span>
-              <Span sx={{ fontWeight: 600 }}>
-                {formatCurrency(
-                  (parseFloat(orderForm.values.quantity_kg) || 0) *
-                  (parseFloat(orderForm.values.offered_price_per_kg) || 0)
-                )}
-              </Span>
+            <Box sx={{ display: "flex", alignItems: "center", gap: 1, mb: 1.5 }}>
+              <Typography variant="h6">Cost Summary</Typography>
+              {isAggregator && (
+                <Chip label="Aggregator Trade" size="small" color="info" variant="outlined" />
+              )}
             </Box>
-            <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
-              <Span>Weighbridge Cost:</Span>
-              <Span>{formatCurrency(orderForm.values.weighbridge_cost || 0)}</Span>
-            </Box>
-            <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
-              <Span>Logistics Cost:</Span>
-              <Span>{formatCurrency(orderForm.values.logistics_cost || 0)}</Span>
-            </Box>
-            <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
-              <Span>Handling Cost:</Span>
-              <Span>{formatCurrency(orderForm.values.handling_cost || 0)}</Span>
-            </Box>
-            <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 2 }}>
-              <Span>Other Costs:</Span>
-              <Span>{formatCurrency(orderForm.values.other_costs || 0)}</Span>
-            </Box>
-            <Divider />
-            <Box sx={{ display: 'flex', justifyContent: 'space-between', mt: 2 }}>
+
+            {[
+              ["Grain Cost", formatCurrency(grainCost)],
+              ["Weighbridge Cost", formatCurrency(orderForm.values.weighbridge_cost || 0)],
+              ["Logistics Cost", formatCurrency(orderForm.values.logistics_cost || 0)],
+              // NEW: loading/offloading
+              ["Loading Cost", formatCurrency(orderForm.values.loading_cost || 0)],
+              ["Offloading Cost", formatCurrency(orderForm.values.offloading_cost || 0)],
+              ["Handling Cost", formatCurrency(orderForm.values.handling_cost || 0)],
+              ["Other Costs", formatCurrency(orderForm.values.other_costs || 0)],
+            ].map(([label, value]) => (
+              <Box key={label} sx={{ display: "flex", justifyContent: "space-between", mb: 0.75 }}>
+                <Span sx={{ color: "text.secondary" }}>{label}:</Span>
+                <Span>{value}</Span>
+              </Box>
+            ))}
+
+            <Divider sx={{ my: 1.5 }} />
+            <Box sx={{ display: "flex", justifyContent: "space-between" }}>
               <Typography variant="h6">Total Cost:</Typography>
-              <Typography variant="h6" color="primary">
-                {formatCurrency(totalCost)}
-              </Typography>
+              <Typography variant="h6" color="primary">{formatCurrency(totalCost)}</Typography>
             </Box>
           </Box>
         </Box>

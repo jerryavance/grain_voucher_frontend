@@ -1,10 +1,9 @@
 import { FC } from "react";
-import { Typography, Chip } from "@mui/material";
-import { useNavigate } from "react-router-dom";
+import { Typography, Chip, Box, LinearProgress, Tooltip } from "@mui/material";
 import { formatDateToDDMMYYYY } from "../../utils/date_formatter";
 import DropdownActionBtn, { IDropdownAction } from "../../components/UI/DropdownActionBtn";
 import { Span } from "../../components/Typography";
-import { IInvestorAccount } from "./Investor.interface";
+import { IInvestorAccount, IMarginPayout } from "./Investor.interface";
 
 const styledTypography = {
   cursor: "pointer",
@@ -14,34 +13,75 @@ const styledTypography = {
   },
 };
 
+const fmt = (val: string | number) =>
+  `UGX ${parseFloat(val?.toString() || "0").toLocaleString()}`;
+
 export const InvestorDetailsLink: FC<{
   id: string;
   name: string;
   onView: (account: IInvestorAccount) => void;
   account: IInvestorAccount;
-}> = ({ name, onView, account }) => {
+}> = ({ name, onView, account }) => (
+  <Typography
+    sx={styledTypography}
+    color="primary"
+    variant="h6"
+    onClick={() => onView(account)}
+  >
+    {name}
+  </Typography>
+);
+
+// ─── EMD Utilisation mini-bar ────────────────────────────────────────────────
+const EMDBar: FC<{ emdBalance: string; emdUtilized: string }> = ({
+  emdBalance,
+  emdUtilized,
+}) => {
+  const balance = parseFloat(emdBalance || "0");
+  const utilized = parseFloat(emdUtilized || "0");
+  const total = balance + utilized;
+  const pct = total > 0 ? (utilized / total) * 100 : 0;
   return (
-    <Typography
-      sx={styledTypography}
-      color="primary"
-      variant="h6"
-      onClick={() => onView(account)}
+    <Tooltip
+      title={`EMD Available: ${fmt(balance)} | In Trade: ${fmt(utilized)}`}
     >
-      {name}
-    </Typography>
+      <Box sx={{ minWidth: 120 }}>
+        <Typography variant="caption" color="success.main" fontWeight="bold">
+          {fmt(balance)}
+        </Typography>
+        <LinearProgress
+          variant="determinate"
+          value={pct}
+          sx={{
+            height: 6,
+            borderRadius: 3,
+            mt: 0.5,
+            bgcolor: "#e8f5e9",
+            "& .MuiLinearProgress-bar": { bgcolor: pct > 80 ? "#ef5350" : "#43a047" },
+          }}
+        />
+        <Typography variant="caption" color="text.secondary">
+          {pct.toFixed(0)}% utilized
+        </Typography>
+      </Box>
+    </Tooltip>
   );
 };
 
-export const InvestorAccountColumnShape = (actions: IDropdownAction[], onView: (account: IInvestorAccount) => void) => [
+// ─── Investor Account Columns ────────────────────────────────────────────────
+export const InvestorAccountColumnShape = (
+  actions: IDropdownAction[],
+  onView: (account: IInvestorAccount) => void
+) => [
   {
     Header: "Investor Name",
     accessor: "investor.first_name",
     minWidth: 200,
     Cell: ({ row }: any) => {
-      const { investor, id } = row.original;
+      const { investor } = row.original;
       return (
         <InvestorDetailsLink
-          id={id}
+          id={row.original.id}
           name={`${investor.first_name} ${investor.last_name}`}
           onView={onView}
           account={row.original}
@@ -50,70 +90,69 @@ export const InvestorAccountColumnShape = (actions: IDropdownAction[], onView: (
     },
   },
   {
-    Header: "Phone Number",
+    Header: "Phone",
     accessor: "investor.phone_number",
-    minWidth: 150,
+    minWidth: 140,
+  },
+  {
+    Header: "EMD Balance",
+    accessor: "emd_balance",
+    minWidth: 170,
+    Cell: ({ row }: any) => (
+      <EMDBar
+        emdBalance={row.original.emd_balance ?? row.original.available_balance}
+        emdUtilized={row.original.emd_utilized ?? row.original.total_utilized}
+      />
+    ),
   },
   {
     Header: "Total Deposited",
     accessor: "total_deposited",
     minWidth: 150,
-    Cell: ({ row }: any) => {
-      return <Span>UGX {parseFloat(row.original.total_deposited).toLocaleString()}</Span>;
-    }
-  },
-  {
-    Header: "Available Balance",
-    accessor: "available_balance",
-    minWidth: 150,
-    Cell: ({ row }: any) => {
-      return <Span>UGX {parseFloat(row.original.available_balance).toLocaleString()}</Span>;
-    }
-  },
-  {
-    Header: "Total Utilized",
-    accessor: "total_utilized",
-    minWidth: 150,
-    Cell: ({ row }: any) => {
-      return <Span>UGX {parseFloat(row.original.total_utilized).toLocaleString()}</Span>;
-    }
+    Cell: ({ row }: any) => <Span>{fmt(row.original.total_deposited)}</Span>,
   },
   {
     Header: "Margin Earned",
     accessor: "total_margin_earned",
     minWidth: 150,
-    Cell: ({ row }: any) => {
-      return <Span>UGX {parseFloat(row.original.total_margin_earned).toLocaleString()}</Span>;
-    }
+    Cell: ({ row }: any) => (
+      <Typography color="success.main" variant="body2" fontWeight="bold">
+        {fmt(row.original.total_margin_earned)}
+      </Typography>
+    ),
+  },
+  {
+    Header: "Margin Paid",
+    accessor: "total_margin_paid",
+    minWidth: 150,
+    Cell: ({ row }: any) => <Span>{fmt(row.original.total_margin_paid)}</Span>,
   },
   {
     Header: "Total Value",
     accessor: "total_value",
     minWidth: 150,
-    Cell: ({ row }: any) => {
-      return <Span>UGX {parseFloat(row.original.total_value).toLocaleString()}</Span>;
-    }
+    Cell: ({ row }: any) => <Span>{fmt(row.original.total_value)}</Span>,
   },
   {
-    Header: "Created Date",
+    Header: "Created",
     accessor: "created_at",
-    minWidth: 150,
-    Cell: ({ row }: any) => {
-      return <Span>{formatDateToDDMMYYYY(row.original.created_at)}</Span>;
-    }
+    minWidth: 120,
+    Cell: ({ row }: any) => (
+      <Span>{formatDateToDDMMYYYY(row.original.created_at)}</Span>
+    ),
   },
   {
     Header: "Action",
     accessor: "action",
     minWidth: 100,
     maxWidth: 100,
-    Cell: ({ row }: any) => {
-      const data = row.original;
-      return <DropdownActionBtn key={row.id} actions={actions} metaData={data}/>
-    }
+    Cell: ({ row }: any) => (
+      <DropdownActionBtn key={row.id} actions={actions} metaData={row.original} />
+    ),
   },
 ];
 
+// ─── Deposit Columns ─────────────────────────────────────────────────────────
 export const DepositColumnShape = (actions: IDropdownAction[]) => [
   {
     Header: "Investor Name",
@@ -122,23 +161,25 @@ export const DepositColumnShape = (actions: IDropdownAction[]) => [
     Cell: ({ row }: any) => {
       const { investor } = row.original;
       return <Span>{`${investor.first_name} ${investor.last_name}`}</Span>;
-    }
+    },
   },
   {
     Header: "Amount",
     accessor: "amount",
     minWidth: 150,
-    Cell: ({ row }: any) => {
-      return <Span>UGX {parseFloat(row.original.amount).toLocaleString()}</Span>;
-    }
+    Cell: ({ row }: any) => (
+      <Typography color="success.main" variant="body2" fontWeight="bold">
+        {fmt(row.original.amount)}
+      </Typography>
+    ),
   },
   {
     Header: "Deposit Date",
     accessor: "deposit_date",
-    minWidth: 150,
-    Cell: ({ row }: any) => {
-      return <Span>{formatDateToDDMMYYYY(row.original.deposit_date)}</Span>;
-    }
+    minWidth: 130,
+    Cell: ({ row }: any) => (
+      <Span>{formatDateToDDMMYYYY(row.original.deposit_date)}</Span>
+    ),
   },
   {
     Header: "Notes",
@@ -150,13 +191,13 @@ export const DepositColumnShape = (actions: IDropdownAction[]) => [
     accessor: "action",
     minWidth: 100,
     maxWidth: 100,
-    Cell: ({ row }: any) => {
-      const data = row.original;
-      return <DropdownActionBtn key={row.id} actions={actions} metaData={data}/>
-    }
+    Cell: ({ row }: any) => (
+      <DropdownActionBtn key={row.id} actions={actions} metaData={row.original} />
+    ),
   },
 ];
 
+// ─── Withdrawal Columns ──────────────────────────────────────────────────────
 export const WithdrawalColumnShape = (actions: IDropdownAction[]) => [
   {
     Header: "Investor Name",
@@ -165,42 +206,46 @@ export const WithdrawalColumnShape = (actions: IDropdownAction[]) => [
     Cell: ({ row }: any) => {
       const { investor } = row.original;
       return <Span>{`${investor.first_name} ${investor.last_name}`}</Span>;
-    }
+    },
   },
   {
     Header: "Amount",
     accessor: "amount",
     minWidth: 150,
-    Cell: ({ row }: any) => {
-      return <Span>UGX {parseFloat(row.original.amount).toLocaleString()}</Span>;
-    }
+    Cell: ({ row }: any) => (
+      <Typography color="error.main" variant="body2" fontWeight="bold">
+        - {fmt(row.original.amount)}
+      </Typography>
+    ),
   },
   {
     Header: "Status",
     accessor: "status",
     minWidth: 120,
     Cell: ({ row }: any) => {
-      const status = row.original.status;
-      const color = status === 'approved' ? 'success' : status === 'rejected' ? 'error' : 'warning';
-      return <Chip label={status.toUpperCase()} color={color} size="small" />;
-    }
+      const s = row.original.status;
+      const color = s === "approved" ? "success" : s === "rejected" ? "error" : "warning";
+      return <Chip label={s.toUpperCase()} color={color} size="small" />;
+    },
   },
   {
     Header: "Withdrawal Date",
     accessor: "withdrawal_date",
-    minWidth: 150,
-    Cell: ({ row }: any) => {
-      return <Span>{formatDateToDDMMYYYY(row.original.withdrawal_date)}</Span>;
-    }
+    minWidth: 130,
+    Cell: ({ row }: any) => (
+      <Span>{formatDateToDDMMYYYY(row.original.withdrawal_date)}</Span>
+    ),
   },
   {
     Header: "Approved By",
     accessor: "approved_by",
     minWidth: 150,
     Cell: ({ row }: any) => {
-      const { approved_by } = row.original;
-      return <Span>{approved_by ? `${approved_by.first_name} ${approved_by.last_name}` : 'N/A'}</Span>;
-    }
+      const ab = row.original.approved_by;
+      return (
+        <Span>{ab ? `${ab.first_name} ${ab.last_name}` : "N/A"}</Span>
+      );
+    },
   },
   {
     Header: "Action",
@@ -209,12 +254,13 @@ export const WithdrawalColumnShape = (actions: IDropdownAction[]) => [
     maxWidth: 100,
     Cell: ({ row }: any) => {
       const data = row.original;
-      const filteredActions = data.status === 'pending' ? actions : [];
-      return <DropdownActionBtn key={row.id} actions={filteredActions} metaData={data}/>
-    }
+      const filtered = data.status === "pending" ? actions : [];
+      return <DropdownActionBtn key={row.id} actions={filtered} metaData={data} />;
+    },
   },
 ];
 
+// ─── Profit Agreement Columns ────────────────────────────────────────────────
 export const ProfitAgreementColumnShape = (actions: IDropdownAction[]) => [
   {
     Header: "Investor Name",
@@ -223,39 +269,41 @@ export const ProfitAgreementColumnShape = (actions: IDropdownAction[]) => [
     Cell: ({ row }: any) => {
       const { investor } = row.original;
       return <Span>{`${investor.first_name} ${investor.last_name}`}</Span>;
-    }
+    },
   },
   {
     Header: "Profit Threshold",
     accessor: "profit_threshold",
-    minWidth: 120,
-    Cell: ({ row }: any) => {
-      return <Span>{row.original.profit_threshold}%</Span>;
-    }
+    minWidth: 140,
+    Cell: ({ row }: any) => <Span>{row.original.profit_threshold}%</Span>,
   },
   {
     Header: "Investor Share",
     accessor: "investor_share",
-    minWidth: 120,
-    Cell: ({ row }: any) => {
-      return <Span color="success.main">{row.original.investor_share}%</Span>;
-    }
+    minWidth: 130,
+    Cell: ({ row }: any) => (
+      <Typography color="success.main" variant="body2" fontWeight="bold">
+        {row.original.investor_share}%
+      </Typography>
+    ),
   },
   {
     Header: "BENNU Share",
     accessor: "bennu_share",
     minWidth: 120,
-    Cell: ({ row }: any) => {
-      return <Span color="info.main">{row.original.bennu_share}%</Span>;
-    }
+    Cell: ({ row }: any) => (
+      <Typography color="info.main" variant="body2" fontWeight="bold">
+        {row.original.bennu_share}%
+      </Typography>
+    ),
   },
   {
     Header: "Effective Date",
     accessor: "effective_date",
-    minWidth: 150,
-    Cell: ({ row }: any) => {
-      return <Span>{formatDateToDDMMYYYY(row.original.effective_date)}</Span>;
-    }
+    minWidth: 130,
+    Cell: ({ row }: any) => (
+      <Span>{formatDateToDDMMYYYY(row.original.effective_date)}</Span>
+    ),
   },
   {
     Header: "Notes",
@@ -267,10 +315,115 @@ export const ProfitAgreementColumnShape = (actions: IDropdownAction[]) => [
     accessor: "action",
     minWidth: 100,
     maxWidth: 100,
+    Cell: ({ row }: any) => (
+      <DropdownActionBtn key={row.id} actions={actions} metaData={row.original} />
+    ),
+  },
+];
+
+// ─── Margin Payout Columns (NEW – backend change #2) ─────────────────────────
+const PAYOUT_STATUS_COLOR: Record<string, any> = {
+  pending: "warning",
+  approved: "info",
+  paid: "success",
+  cancelled: "error",
+};
+
+export const MarginPayoutColumnShape = (actions: IDropdownAction[]) => [
+  {
+    Header: "Investor",
+    accessor: "investor.first_name",
+    minWidth: 200,
+    Cell: ({ row }: any) => {
+      const { investor } = row.original;
+      return <Span>{`${investor.first_name} ${investor.last_name}`}</Span>;
+    },
+  },
+  {
+    Header: "Amount",
+    accessor: "amount",
+    minWidth: 160,
+    Cell: ({ row }: any) => (
+      <Typography color="success.main" variant="body2" fontWeight="bold">
+        {fmt(row.original.amount)}
+      </Typography>
+    ),
+  },
+  {
+    Header: "Status",
+    accessor: "status",
+    minWidth: 120,
+    Cell: ({ row }: any) => {
+      const s: string = row.original.status;
+      return (
+        <Chip
+          label={s.toUpperCase()}
+          color={PAYOUT_STATUS_COLOR[s] ?? "default"}
+          size="small"
+        />
+      );
+    },
+  },
+  {
+    Header: "Approved By",
+    accessor: "approved_by",
+    minWidth: 160,
+    Cell: ({ row }: any) => {
+      const ab = row.original.approved_by;
+      return <Span>{ab ? `${ab.first_name} ${ab.last_name}` : "—"}</Span>;
+    },
+  },
+  {
+    Header: "Approved At",
+    accessor: "approved_at",
+    minWidth: 130,
+    Cell: ({ row }: any) =>
+      row.original.approved_at ? (
+        <Span>{formatDateToDDMMYYYY(row.original.approved_at)}</Span>
+      ) : (
+        <Span>—</Span>
+      ),
+  },
+  {
+    Header: "Paid At",
+    accessor: "paid_at",
+    minWidth: 130,
+    Cell: ({ row }: any) =>
+      row.original.paid_at ? (
+        <Span>{formatDateToDDMMYYYY(row.original.paid_at)}</Span>
+      ) : (
+        <Span>—</Span>
+      ),
+  },
+  {
+    Header: "Notes",
+    accessor: "notes",
+    minWidth: 180,
+  },
+  {
+    Header: "Created",
+    accessor: "created_at",
+    minWidth: 120,
+    Cell: ({ row }: any) => (
+      <Span>{formatDateToDDMMYYYY(row.original.created_at)}</Span>
+    ),
+  },
+  {
+    Header: "Action",
+    accessor: "action",
+    minWidth: 100,
+    maxWidth: 100,
     Cell: ({ row }: any) => {
       const data = row.original;
-      return <DropdownActionBtn key={row.id} actions={actions} metaData={data}/>
-    }
+      // Only show relevant actions per status
+      const filtered = actions.filter((a) => {
+        if (a.label === "Approve" && data.status !== "pending") return false;
+        if (a.label === "Mark Paid" && data.status !== "approved") return false;
+        if (a.label === "Cancel" && !["pending", "approved"].includes(data.status)) return false;
+        return true;
+      });
+      return <DropdownActionBtn key={row.id} actions={filtered} metaData={data} />;
+    },
   },
 ];
 

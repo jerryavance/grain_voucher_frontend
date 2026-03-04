@@ -6,20 +6,21 @@ import CustomTable from "../../components/UI/CustomTable";
 import useTitle from "../../hooks/useTitle";
 import { INITIAL_PAGE_SIZE } from "../../api/constants";
 import { SourcingService } from "./Sourcing.service";
-import { formatCurrency, formatWeight } from "./SourcingConstants";
-import { ISaleLotsResults } from "./Sourcing.interface";
+import { formatCurrency, formatWeight, LOT_STATUS_COLORS } from "./SourcingConstants";
+import { ISaleLot, ISaleLotsResults } from "./Sourcing.interface";
+import { RejectedLotForm } from "./SourcingForms";
 
-const LOT_STATUS_COLORS: Record<string, any> = {
-  available: "success", partially_sold: "warning", sold: "default",
-};
-
-const STATUS_TABS = ["", "available", "partially_sold", "sold"];
+// UPDATED: includes 'rejected'
+const STATUS_TABS = ["", "available", "partially_sold", "sold", "rejected"];
 
 const SaleLots: FC = () => {
   useTitle("Stock Inventory");
   const [lots, setLots] = useState<ISaleLotsResults>();
   const [filters, setFilters] = useState<any>({ page: 1, page_size: INITIAL_PAGE_SIZE });
   const [loading, setLoading] = useState(false);
+  // NEW: rejection form state
+  const [showRejectionForm, setShowRejectionForm] = useState(false);
+  const [selectedLotId, setSelectedLotId] = useState<string | undefined>(undefined);
 
   useEffect(() => { fetchData(filters); }, [filters]);
 
@@ -28,6 +29,11 @@ const SaleLots: FC = () => {
     try { setLots(await SourcingService.getSaleLots(params)); }
     catch { toast.error("Failed to load stock lots"); }
     finally { setLoading(false); }
+  };
+
+  const handleRecordRejection = (lot: ISaleLot) => {
+    setSelectedLotId(lot.id);
+    setShowRejectionForm(true);
   };
 
   const columns = [
@@ -47,9 +53,7 @@ const SaleLots: FC = () => {
     { Header: "Hub", accessor: "hub_name", minWidth: 120 },
     {
       Header: "Investor", accessor: "investor_name", minWidth: 150,
-      Cell: ({ row }: any) => (
-        <Span sx={{ fontSize: 13 }}>{row.original.investor_name || "—"}</Span>
-      ),
+      Cell: ({ row }: any) => <Span sx={{ fontSize: 13 }}>{row.original.investor_name || "—"}</Span>,
     },
     {
       Header: "Available (kg)", accessor: "available_quantity_kg", minWidth: 140,
@@ -62,6 +66,18 @@ const SaleLots: FC = () => {
     {
       Header: "Sold (kg)", accessor: "sold_quantity_kg", minWidth: 110,
       Cell: ({ row }: any) => <Span>{formatWeight(row.original.sold_quantity_kg)}</Span>,
+    },
+    // NEW: rejected_quantity_kg column
+    {
+      Header: "Rejected (kg)", accessor: "rejected_quantity_kg", minWidth: 125,
+      Cell: ({ row }: any) => {
+        const qty = row.original.rejected_quantity_kg ?? 0;
+        return (
+          <Span sx={{ color: qty > 0 ? "error.main" : "text.secondary", fontWeight: qty > 0 ? 700 : 400 }}>
+            {qty > 0 ? formatWeight(qty) : "—"}
+          </Span>
+        );
+      },
     },
     {
       Header: "Cost/kg", accessor: "cost_per_kg", minWidth: 120,
@@ -78,10 +94,30 @@ const SaleLots: FC = () => {
       Cell: ({ row }: any) => (
         <Chip
           label={row.original.status.replace(/_/g, " ").toUpperCase()}
-          color={LOT_STATUS_COLORS[row.original.status]}
+          color={LOT_STATUS_COLORS[row.original.status] ?? "default"}
           size="small"
         />
       ),
+    },
+    // NEW: Record Rejection action
+    {
+      Header: "Action", accessor: "action", minWidth: 160,
+      Cell: ({ row }: any) => {
+        const lot: ISaleLot = row.original;
+        // Only allow rejection for non-sold, non-rejected lots with available qty
+        if (lot.status === "sold" || lot.status === "rejected") return null;
+        if ((lot.available_quantity_kg ?? 0) <= 0) return null;
+        return (
+          <Button
+            size="small"
+            color="error"
+            variant="outlined"
+            onClick={() => handleRecordRejection(lot)}
+          >
+            Record Rejection
+          </Button>
+        );
+      },
     },
   ];
 
@@ -89,12 +125,13 @@ const SaleLots: FC = () => {
     <Box pt={2} pb={4}>
       <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 2, flexWrap: "wrap", gap: 1 }}>
         <Typography variant="h5">Stock Inventory (Sale Lots)</Typography>
-        <Box sx={{ display: "flex", gap: 1 }}>
+        <Box sx={{ display: "flex", gap: 1, flexWrap: "wrap" }}>
           {STATUS_TABS.map(s => (
             <Button
               key={s}
               size="small"
               variant={(filters.status || "") === s ? "contained" : "outlined"}
+              color={s === "rejected" ? "error" : "primary"}
               onClick={() => setFilters({ ...filters, status: s || undefined, page: 1 })}
             >
               {s ? s.replace(/_/g, " ") : "All"}
@@ -102,6 +139,7 @@ const SaleLots: FC = () => {
           ))}
         </Box>
       </Box>
+
       <CustomTable
         columnShape={columns}
         data={lots?.results || []}
@@ -111,6 +149,21 @@ const SaleLots: FC = () => {
         pageIndex={filters.page - 1}
         setPageSize={(s: number) => setFilters({ ...filters, page_size: s, page: 1 })}
         loading={loading}
+      />
+
+      {/* NEW: Rejection Form dialog */}
+      <RejectedLotForm
+        open={showRejectionForm}
+        saleLotId={selectedLotId}
+        handleClose={() => {
+          setShowRejectionForm(false);
+          setSelectedLotId(undefined);
+        }}
+        callBack={() => {
+          setShowRejectionForm(false);
+          setSelectedLotId(undefined);
+          fetchData(filters);
+        }}
       />
     </Box>
   );

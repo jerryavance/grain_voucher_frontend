@@ -230,6 +230,18 @@ export const MenuList = (
           path: "/admin/sourcing/settlements",
           visible: isSuperUser,
         },
+        {
+          title: "Aggregator Costs",
+          Icon: Icons.AddBusinessIcon,
+          path: "/admin/sourcing/aggregator-costs",
+          visible: isStaff || isHubAdmin || isSuperUser,
+        },
+        {
+          title: "Rejected Lots",
+          Icon: Icons.GradeIcon,
+          path: "/admin/sourcing/rejections",
+          visible: isStaff || isHubAdmin || isSuperUser,
+        },
       ],
     },
 

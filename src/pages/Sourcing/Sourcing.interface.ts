@@ -32,20 +32,30 @@ export interface ISupplierProfile {
 export interface ISuppliersResults { results: ISupplierProfile[]; count: number; }
 
 // ============ Source Order ============
-export type TSourceOrderStatus = 'draft'|'sent'|'accepted'|'in_transit'|'delivered'|'completed'|'cancelled';
+export type TSourceOrderStatus = 'draft'|'sent'|'accepted'|'in_transit'|'delivered'|'completed'|'cancelled'|'rejected';
 export type TLogisticsType = 'bennu_truck'|'supplier_driver'|'third_party';
+// NEW
+export type TTradeType = 'direct' | 'aggregator';
 
 export interface ISourceOrder {
   id: string; order_number: string; supplier: ISupplierProfile; supplier_id?: string;
   hub: IHub; hub_id?: string; created_by: IUser; grain_type: IGrainType; grain_type_id?: string;
+  // NEW: trade type
+  trade_type: TTradeType;
   quantity_kg: number; offered_price_per_kg: number; grain_cost: number; weighbridge_cost: number;
-  logistics_cost: number; handling_cost: number; other_costs: number; total_cost: number;
+  logistics_cost: number;
+  // NEW: loading/offloading costs
+  loading_cost: number;
+  offloading_cost: number;
+  handling_cost: number; other_costs: number; total_cost: number;
   payment_method: IPaymentPreference | null; payment_method_id?: string;
   logistics_type: TLogisticsType | ''; logistics_type_display: string;
   driver_name: string; driver_phone: string; expected_delivery_date: string | null;
   status: TSourceOrderStatus; status_display: string; notes: string;
   has_investor_allocation: boolean; has_sale_lot: boolean;
   has_delivery: boolean; has_weighbridge: boolean; has_invoice: boolean;
+  // NEW: link to rejected lot if one exists
+  rejected_lot: string | null;
   sent_at: string | null; accepted_at: string | null; shipped_at: string | null;
   delivered_at: string | null; completed_at: string | null; created_at: string; updated_at: string;
 }
@@ -53,6 +63,8 @@ export interface ISourceOrder {
 export interface ISourceOrderList {
   id: string; order_number: string; supplier: string; supplier_name: string; supplier_phone: string;
   hub: string; hub_name: string; grain_type: string; grain_type_name: string;
+  // NEW
+  trade_type: TTradeType;
   quantity_kg: number; offered_price_per_kg: number; total_cost: number;
   status: TSourceOrderStatus; status_display: string; created_by_name: string;
   expected_delivery_date: string | null; has_investor_allocation: boolean; has_sale_lot: boolean;
@@ -81,11 +93,15 @@ export interface IDeliveryRecord {
 }
 export interface IDeliveryRecordsResults { results: IDeliveryRecord[]; count: number; }
 
+// UPDATED: removed weighed_by, moisture_level, quality_grade; added vehicle_number
 export interface IWeighbridgeRecord {
   id: string; source_order: ISourceOrderList; source_order_id?: string;
-  delivery: IDeliveryRecord; delivery_id?: string; weighed_by: IUser; weighed_at: string;
+  delivery: IDeliveryRecord; delivery_id?: string;
+  // REMOVED: weighed_by, moisture_level, quality_grade
+  // NEW: vehicle_number (simplified model)
+  vehicle_number: string;
+  weighed_at: string;
   gross_weight_kg: number; tare_weight_kg: number; net_weight_kg: number;
-  moisture_level: number; quality_grade: IQualityGrade; quality_grade_id?: string;
   quantity_variance_kg: number; notes: string; created_at: string;
 }
 export interface IWeighbridgeRecordsResults { results: IWeighbridgeRecord[]; count: number; }
@@ -112,22 +128,82 @@ export interface IInvestorAllocation {
 }
 export interface IInvestorAllocationsResults { results: IInvestorAllocation[]; count: number; }
 
+// UPDATED: added emd_balance, emd_utilized
 export interface IInvestorAccount {
   id: string; investor: IUser; available_balance: number;
   total_utilized: number; total_margin_earned: number;
+  // NEW: EMD balance fields — primary source of truth for capital
+  emd_balance: number;
+  emd_utilized: number;
 }
 
 // ============ Sale Lot ============
+// UPDATED: added rejected_quantity_kg and 'rejected' status
 export interface ISaleLot {
   id: string; lot_number: string; source_order: string; source_order_number: string;
   investor_allocation: string | null; investor_name: string | null;
   hub: string; hub_name: string; grain_type: string; grain_type_name: string;
   quality_grade: string | null; quality_grade_name: string | null;
   original_quantity_kg: number; available_quantity_kg: number; sold_quantity_kg: number;
+  // NEW
+  rejected_quantity_kg: number;
   total_sourcing_cost: number; cost_per_kg: number;
-  status: 'available'|'partially_sold'|'sold'; created_at: string; updated_at: string;
+  status: 'available'|'partially_sold'|'sold'|'rejected'; created_at: string; updated_at: string;
 }
 export interface ISaleLotsResults { results: ISaleLot[]; count: number; }
+
+// ============ NEW: Aggregator Trade Cost ============
+export interface IAggregatorTradeCost {
+  id: string;
+  source_order: string;
+  source_order_number: string;
+  // Tonnage
+  source_quantity_kg: number;
+  arrived_quantity_kg: number;
+  buyer_deduction_kg: number;
+  buyer_deduction_reason: string;
+  // Destination costs
+  destination_weighbridge_cost: number;
+  transit_insurance_cost: number;
+  other_destination_costs: number;
+  // Computed (read-only from backend)
+  tonnage_lost_in_transit_kg: number;
+  net_accepted_quantity_kg: number;
+  total_additional_cost: number;
+  transit_loss_pct: number;
+  effective_cost_per_kg: number;
+  notes: string;
+  created_at: string;
+  updated_at: string;
+}
+export interface IAggregatorTradeCostsResults { results: IAggregatorTradeCost[]; count: number; }
+
+// ============ NEW: Rejected Lot ============
+export type TRejectionReason = 'quality'|'moisture'|'contamination'|'weight_short'|'pest_damage'|'wrong_variety'|'other';
+export type TRejectionStatus = 'pending'|'replacement_sourced'|'resolved'|'written_off';
+
+export interface IRejectedLot {
+  id: string;
+  rejection_number: string;
+  sale_lot: string;
+  lot_number: string;
+  investor_name: string;
+  rejected_quantity_kg: number;
+  rejection_reason: TRejectionReason;
+  rejection_reason_display: string;
+  rejection_details: string;
+  rejection_date: string;
+  disposal_cost: number;
+  restocking_cost: number;
+  status: TRejectionStatus;
+  status_display: string;
+  replacement_order: string | null;
+  replacement_order_number: string | null;
+  notes: string;
+  created_at: string;
+  updated_at: string;
+}
+export interface IRejectedLotsResults { results: IRejectedLot[]; count: number; }
 
 // ============ Buyer Profile ============
 export type TBuyerType = 'grain_company'|'trader'|'processor'|'exporter'|'retailer'|'other';
@@ -322,19 +398,14 @@ export interface IDeliveryFormProps {
   formDataLoading: boolean;
   searchHandlers: { handleOrderSearch: (query: string) => void };
 }
+
+// UPDATED: removed qualityGrades from WeighbridgeFormProps
 export interface IWeighbridgeFormProps {
   handleClose: () => void;
   sourceOrderId?: string;
   deliveryId?: string;
   callBack?: () => void;
-  formData: {
-    sourceOrders: { value: string; label: string }[];
-    deliveries: { value: string; label: string }[];
-    qualityGrades: { value: string; label: string }[];
-  };
-  formDataLoading: boolean;
-  searchHandlers: { handleOrderSearch: (query: string) => void };
-  onLoadDeliveries: (orderId: string) => Promise<void>;
+  // qualityGrades removed — weighbridge simplified
 }
 export interface IPaymentFormProps { handleClose: () => void; invoiceId?: string; callBack?: () => void; }
 export interface IPaymentPreferenceFormProps { handleClose: () => void; formType?: 'Save'|'Update'; initialValues?: any; callBack?: () => void; }

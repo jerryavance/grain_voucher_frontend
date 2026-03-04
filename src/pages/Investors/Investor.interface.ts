@@ -2,246 +2,265 @@ import { TOption } from "../../@types/common";
 
 // Interface for Investor (aligned with GrainUser model and UserSerializer)
 export interface IInvestor {
-    id: string; // UUID from GrainUser
+    id: string;
     first_name: string;
     last_name: string;
     phone_number: string;
     email: string;
-    role: string; // Expected to be 'investor' for investor users
+    role: string;
 }
 
-// Interface for InvestorAccount (aligned with InvestorAccount model and InvestorAccountSerializer)
+// Interface for InvestorAccount (aligned with InvestorAccount model - includes new EMD fields)
 export interface IInvestorAccount {
-    id: string; // UUID
-    investor: IInvestor; // Nested user object
-    total_deposited: string; // DecimalField as string (UGX)
-    total_utilized: string; // DecimalField as string (UGX)
-    available_balance: string; // DecimalField as string (UGX)
-    total_margin_earned: string; // DecimalField as string (UGX)
-    total_margin_paid: string; // DecimalField as string (UGX)
-    total_interest_earned: string; // DecimalField as string (UGX)
-    total_value: string; // From get_total_value method
-    profit_agreement?: IProfitSharingAgreement; // From get_profit_agreement method
-    created_at: string; // ISO date string
-    updated_at: string; // ISO date string
+    id: string;
+    investor: IInvestor;
+    // Legacy balance fields (kept for backward compatibility)
+    total_deposited: string;
+    total_utilized: string;
+    available_balance: string;
+    total_margin_earned: string;
+    total_margin_paid: string;
+    total_interest_earned: string;
+    total_value: string;
+    // New EMD fields (added in backend change #1)
+    emd_balance: string;        // Liquid capital available to back new trades
+    emd_utilized: string;       // Capital locked in active allocations
+    profit_agreement?: IProfitSharingAgreement;
+    created_at: string;
+    updated_at: string;
 }
 
-// Interface for InvestorDeposit (aligned with InvestorDeposit model and InvestorDepositSerializer)
+// Interface for InvestorDeposit
 export interface IInvestorDeposit {
-    id: string; // UUID
-    investor: IInvestor; // Nested user object from investor_account.investor
-    investor_account_id: string; // UUID for write operations
-    amount: string; // DecimalField as string (UGX)
-    deposit_date: string; // ISO date string
+    id: string;
+    investor: IInvestor;
+    investor_account_id: string;
+    amount: string;
+    deposit_date: string;
     notes: string;
-    created_at: string; // ISO date string
+    created_at: string;
 }
 
-// Interface for InvestorWithdrawal (aligned with InvestorWithdrawal model and InvestorWithdrawalSerializer)
+// Interface for InvestorWithdrawal
 export interface IInvestorWithdrawal {
-    id: string; // UUID
-    investor: IInvestor; // Nested user object from investor_account.investor
-    investor_account_id: string; // UUID for write operations
-    amount: string; // DecimalField as string (UGX)
-    withdrawal_date: string; // ISO date string
+    id: string;
+    investor: IInvestor;
+    investor_account_id: string;
+    amount: string;
+    withdrawal_date: string;
     status: 'pending' | 'approved' | 'rejected';
     notes: string;
-    approved_by?: IInvestor; // Nullable, nested user object
-    approved_at?: string; // Nullable, ISO date string
-    created_at: string; // ISO date string
-    updated_at: string; // ISO date string
+    approved_by?: IInvestor;
+    approved_at?: string;
+    created_at: string;
+    updated_at: string;
 }
 
-// Interface for ProfitSharingAgreement (aligned with ProfitSharingAgreement model and ProfitSharingAgreementSerializer)
+// Interface for ProfitSharingAgreement
 export interface IProfitSharingAgreement {
-    id: string; // UUID
-    investor: IInvestor; // Nested user object from investor_account.investor
-    investor_account_id: string; // UUID for write operations
-    profit_threshold: string; // DecimalField as string (percentage)
-    investor_share: string; // DecimalField as string (percentage)
-    bennu_share: string; // DecimalField as string (percentage)
-    effective_date: string; // ISO date string
+    id: string;
+    investor: IInvestor;
+    investor_account_id: string;
+    profit_threshold: string;
+    investor_share: string;
+    bennu_share: string;
+    effective_date: string;
     notes: string;
-    created_at: string; // ISO date string
-    updated_at: string; // ISO date string
+    created_at: string;
+    updated_at: string;
 }
 
-// Interface for Trade (aligned with Trade model and signals.py)
+// Interface for MarginPayout (new model - backend change #2)
+// Full lifecycle: pending → approved → paid / cancelled
+export interface IMarginPayout {
+    id: string;
+    investor: IInvestor;                        // Nested from investor_account.investor
+    investor_account: string;                   // UUID (read)
+    investor_account_id: string;                // UUID (write)
+    trade_financing?: string;                   // Optional: UUID of TradeFinancing
+    amount: string;                             // Amount to pay out
+    status: 'pending' | 'approved' | 'paid' | 'cancelled';
+    notes: string;
+    approved_by?: IInvestor;
+    approved_at?: string;
+    paid_at?: string;
+    cancelled_at?: string;
+    created_at: string;
+    updated_at: string;
+}
+
+// Interface for Trade
 export interface ITrade {
-    id: string; // UUID
+    id: string;
     grn_number: string;
-    hub: any; // Hub object (simplified as any; could be defined further if Hub model is provided)
-    grain_type_details: any; // Could be a specific grain type interface if defined
-    gross_tonnage: string; // DecimalField as string
-    net_tonnage: string; // DecimalField as string
-    buying_price: string; // DecimalField as string (UGX)
-    selling_price: string; // DecimalField as string (UGX)
-    other_expenses: string; // DecimalField as string (UGX)
-    total_trade_cost: string; // DecimalField as string (UGX)
-    supplier: IInvestor; // GrainUser reference
-    payable_by_buyer: string; // DecimalField as string (UGX)
-    buyer: IInvestor; // GrainUser reference
-    margin: string; // DecimalField as string (UGX)
+    hub: any;
+    grain_type_details: any;
+    gross_tonnage: string;
+    net_tonnage: string;
+    buying_price: string;
+    selling_price: string;
+    other_expenses: string;
+    total_trade_cost: string;
+    supplier: IInvestor;
+    payable_by_buyer: string;
+    buyer: IInvestor;
+    margin: string;
     payment_status: 'pending' | 'paid' | 'overdue';
-    amount_paid: string; // DecimalField as string (UGX)
-    payment_due_date: string; // ISO date string
-    amount_due: string; // DecimalField as string (UGX)
-    delivery_date: string; // ISO date string
+    amount_paid: string;
+    payment_due_date: string;
+    amount_due: string;
+    delivery_date: string;
     delivery_status: 'pending' | 'delivered';
-    bennu_fees: string; // DecimalField as string (UGX)
-    created_at: string; // ISO date string
-    updated_at: string; // ISO date string
+    bennu_fees: string;
+    created_at: string;
+    updated_at: string;
 }
 
-// Interface for TradeAllocation (aligned with TradeFinancing model and signals.py)
+// Interface for TradeAllocation (TradeFinancing model)
 export interface ITradeAllocation {
-    id: string; // UUID
-    trade: ITrade; // Nested Trade object
-    investor: IInvestor; // Nested user object from investor_account.investor
-    allocated_amount: string; // DecimalField as string (UGX)
-    margin_earned: string; // DecimalField as string (UGX)
-    investor_margin: string; // DecimalField as string (UGX)
-    bennu_margin: string; // DecimalField as string (UGX)
-    allocation_date: string; // ISO date string
+    id: string;
+    trade: ITrade;
+    investor: IInvestor;
+    allocated_amount: string;
+    margin_earned: string;
+    investor_margin: string;
+    bennu_margin: string;
+    allocation_date: string;
     notes: string;
 }
 
-// Interface for Loan (aligned with TradeLoan model referenced in serializers.py)
+// Interface for Loan
 export interface ILoan {
-    id: string; // UUID
-    trade: ITrade; // Nested Trade object
-    investor: IInvestor; // Nested user object
-    amount: string; // DecimalField as string (UGX)
-    interest_rate: string; // DecimalField as string (percentage)
-    disbursement_date: string; // ISO date string
-    due_date: string; // ISO date string
+    id: string;
+    trade: ITrade;
+    investor: IInvestor;
+    amount: string;
+    interest_rate: string;
+    disbursement_date: string;
+    due_date: string;
     status: 'pending' | 'active' | 'repaid' | 'defaulted';
-    amount_repaid: string; // DecimalField as string (UGX)
+    amount_repaid: string;
     notes: string;
-    created_at: string; // ISO date string
-    updated_at: string; // ISO date string
+    created_at: string;
+    updated_at: string;
 }
 
-// Interface for InvestorDashboard (aligned with /dashboards endpoint response)
+// Interface for InvestorDashboard
 export interface IInvestorDashboard {
-    accountId?: string; // UUID, optional as not in current endpoint response
-    total_deposited: number; // DecimalField as number (UGX)
-    total_utilized: number; // DecimalField as number (UGX)
-    available_balance: number; // DecimalField as number (UGX)
-    total_margin_earned: number; // DecimalField as number (UGX)
-    total_margin_paid: number; // DecimalField as number (UGX)
-    total_interest_earned: number; // DecimalField as number (UGX)
+    accountId?: string;
+    total_deposited: number;
+    total_utilized: number;
+    available_balance: number;
+    total_margin_earned: number;
+    total_margin_paid: number;
+    total_interest_earned: number;
+    // New EMD fields in dashboard
+    emd_balance?: number;
+    emd_utilized?: number;
     balance_sheet: IBalanceSheet;
     receivables_aging: IReceivablesAging;
     profit_and_loss: IProfitAndLoss;
-    monthly_returns: Record<string, number>; // Key is month (e.g., "Oct 2025"), value is ROI percentage as number
+    monthly_returns: Record<string, number>;
     trade_summary: ITradeSummary;
     financing_summary: IFinancingSummary;
     loan_summary: ILoanSummary;
 }
 
-// Interface for BalanceSheet (aligned with /dashboards endpoint balance_sheet)
 export interface IBalanceSheet {
-    cash_available: number; // DecimalField as number (UGX)
-    funds_in_trades: number; // DecimalField as number (UGX)
-    loans_outstanding: number; // DecimalField as number (UGX)
-    total_assets: number; // DecimalField as number (UGX)
-    total_earnings: number; // DecimalField as number (UGX)
-    earnings_withdrawn: number; // DecimalField as number (UGX)
-    net_earnings: number; // DecimalField as number (UGX)
+    cash_available: number;
+    funds_in_trades: number;
+    loans_outstanding: number;
+    total_assets: number;
+    total_earnings: number;
+    earnings_withdrawn: number;
+    net_earnings: number;
 }
 
-// Interface for ReceivablesAging (aligned with /dashboards endpoint receivables_aging)
 export interface IReceivablesAging {
-    '0-3_days': number; // DecimalField as number (UGX)
-    '4-7_days': number; // DecimalField as number (UGX)
-    '8-14_days': number; // DecimalField as number (UGX)
-    '15-30_days': number; // DecimalField as number (UGX)
-    'above_30_days': number; // DecimalField as number (UGX)
-    total: number; // DecimalField as number (UGX)
+    '0-3_days': number;
+    '4-7_days': number;
+    '8-14_days': number;
+    '15-30_days': number;
+    'above_30_days': number;
+    total: number;
 }
 
-// Interface for ProfitAndLoss (aligned with /dashboards endpoint profit_and_loss)
 export interface IProfitAndLoss {
-    total_invested: number; // DecimalField as number (UGX)
-    trade_profits: number; // DecimalField as number (UGX)
-    loan_interest: number; // DecimalField as number (UGX)
-    total_revenue: number; // DecimalField as number (UGX)
-    profit_withdrawn: number; // DecimalField as number (UGX)
-    net_profit: number; // DecimalField as number (UGX)
-    overall_roi: number; // DecimalField as number (percentage)
+    total_invested: number;
+    trade_profits: number;
+    loan_interest: number;
+    total_revenue: number;
+    profit_withdrawn: number;
+    net_profit: number;
+    overall_roi: number;
 }
 
-// Interface for TradeSummary (aligned with /dashboards endpoint trade_summary)
 export interface ITradeSummary {
     number_of_trades: number;
-    total_value_invested: number; // DecimalField as number (UGX)
-    average_investment: number; // DecimalField as number (UGX)
+    total_value_invested: number;
+    average_investment: number;
     active_trades: number;
 }
 
-// Interface for FinancingSummary (aligned with /dashboards endpoint financing_summary)
 export interface IFinancingSummary {
     total_financings: number;
     active_financings: number;
     completed_financings: number;
-    total_allocated: number; // DecimalField as number (UGX)
-    total_earnings: number; // DecimalField as number (UGX)
+    total_allocated: number;
+    total_earnings: number;
 }
 
-// Interface for LoanSummary (aligned with /dashboards endpoint loan_summary)
 export interface ILoanSummary {
     total_loans: number;
     active_loans: number;
-    total_loaned: number; // DecimalField as number (UGX)
-    total_outstanding: number; // DecimalField as number (UGX)
-    total_interest_earned: number; // DecimalField as number (UGX)
+    total_loaned: number;
+    total_outstanding: number;
+    total_interest_earned: number;
     overdue_loans: number;
 }
 
-// Interface for InvestorAccountsResults (aligned with InvestorAccountViewSet response)
+// Paginated result interfaces
 export interface IInvestorAccountsResults {
     results: IInvestorAccount[];
     count: number;
 }
 
-// Interface for InvestorDepositsResults (aligned with InvestorDepositViewSet response)
 export interface IInvestorDepositsResults {
     results: IInvestorDeposit[];
     count: number;
 }
 
-// Interface for InvestorWithdrawalsResults (aligned with InvestorWithdrawalViewSet response)
 export interface IInvestorWithdrawalsResults {
     results: IInvestorWithdrawal[];
     count: number;
 }
 
-// Interface for ProfitAgreementsResults (aligned with ProfitSharingAgreementViewSet response)
 export interface IProfitAgreementsResults {
     results: IProfitSharingAgreement[];
     count: number;
 }
 
-// Interface for TradesResults (aligned with potential TradeViewSet response)
+export interface IMarginPayoutsResults {
+    results: IMarginPayout[];
+    count: number;
+}
+
 export interface ITradesResults {
     results: ITrade[];
     count: number;
 }
 
-// Interface for TradeAllocationsResults (aligned with potential TradeFinancingViewSet response)
 export interface ITradeAllocationsResults {
     results: ITradeAllocation[];
     count: number;
 }
 
-// Interface for LoansResults (aligned with potential TradeLoanViewSet response)
 export interface ILoansResults {
     results: ILoan[];
     count: number;
 }
 
-// Interface for InvestorAccountFormProps (aligned with InvestorAccountForm component)
+// Form prop interfaces
 export interface IInvestorFormProps {
     handleClose: () => void;
     formType?: 'Save' | 'Update';
@@ -250,21 +269,18 @@ export interface IInvestorFormProps {
     accountId?: string;
 }
 
-// Interface for DepositFormProps (aligned with DepositForm component)
 export interface IDepositFormProps {
     handleClose: () => void;
     accountId: string;
     callBack?: () => void;
 }
 
-// Interface for WithdrawalFormProps (aligned with WithdrawalForm component)
 export interface IWithdrawalFormProps {
     handleClose: () => void;
     accountId: string;
     callBack?: () => void;
 }
 
-// Interface for ProfitAgreementFormProps (aligned with ProfitAgreementForm component)
 export interface IProfitAgreementFormProps {
     handleClose: () => void;
     formType?: 'Save' | 'Update';
@@ -273,7 +289,13 @@ export interface IProfitAgreementFormProps {
     accountId?: string;
 }
 
-// Interface for TradeFormProps (aligned with TradeForm component)
+// New: MarginPayout form props
+export interface IMarginPayoutFormProps {
+    handleClose: () => void;
+    callBack?: () => void;
+    accountId?: string;
+}
+
 export interface ITradeFormProps {
     handleClose: () => void;
     formType?: 'Save' | 'Update';
@@ -281,14 +303,12 @@ export interface ITradeFormProps {
     callBack?: () => void;
 }
 
-// Interface for TradeAllocationFormProps (aligned with TradeAllocationForm component)
 export interface ITradeAllocationFormProps {
     handleClose: () => void;
     tradeId?: string;
     callBack?: () => void;
 }
 
-// Interface for LoanFormProps (aligned with LoanForm component)
 export interface ILoanFormProps {
     handleClose: () => void;
     tradeId?: string;

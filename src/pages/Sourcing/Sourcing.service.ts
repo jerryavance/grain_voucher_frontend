@@ -13,6 +13,9 @@ import {
   // Buyer profile
   IBuyerProfile, IBuyerProfilesResults, IBuyerContactPreference,
   IBuyerDashboard, IBuyerCreditStatus,
+  // NEW
+  IAggregatorTradeCost, IAggregatorTradeCostsResults,
+  IRejectedLot, IRejectedLotsResults,
 } from "./Sourcing.interface";
 
 export const SourcingService = {
@@ -207,6 +210,49 @@ export const SourcingService = {
   },
   async getAvailableSaleLots(filters?: Record<string, any>): Promise<ISaleLot[]> {
     return instance.get("sourcing/sale-lots/available/", { params: filters }).then(r => r.data);
+  },
+
+  // ── NEW: Aggregator Trade Costs ───────────────────────────────────────────
+  async getAggregatorTradeCosts(filters?: Record<string, any>): Promise<IAggregatorTradeCostsResults> {
+    return instance.get("sourcing/aggregator-costs/", { params: filters }).then(r => r.data);
+  },
+  async getAggregatorTradeCostDetails(id: string): Promise<IAggregatorTradeCost> {
+    return instance.get(`sourcing/aggregator-costs/${id}/`).then(r => r.data);
+  },
+  async getAggregatorTradeCostByOrder(orderId: string): Promise<IAggregatorTradeCost> {
+    // Returns the single cost record for an aggregator order
+    return instance.get("sourcing/aggregator-costs/", {
+      params: { source_order: orderId },
+    }).then(r => {
+      const data = r.data;
+      const results = data.results ?? data;
+      if (Array.isArray(results) && results.length > 0) return results[0];
+      throw new Error("No aggregator cost record found");
+    });
+  },
+  async createAggregatorTradeCost(payload: Partial<IAggregatorTradeCost>): Promise<IAggregatorTradeCost> {
+    return instance.post("sourcing/aggregator-costs/", payload).then(r => r.data);
+  },
+  async updateAggregatorTradeCost(id: string, payload: Partial<IAggregatorTradeCost>): Promise<IAggregatorTradeCost> {
+    return instance.patch(`sourcing/aggregator-costs/${id}/`, payload).then(r => r.data);
+  },
+
+  // ── NEW: Rejected Lots ────────────────────────────────────────────────────
+  async getRejectedLots(filters?: Record<string, any>): Promise<IRejectedLotsResults> {
+    return instance.get("sourcing/rejections/", { params: filters }).then(r => r.data);
+  },
+  async getRejectedLotDetails(id: string): Promise<IRejectedLot> {
+    return instance.get(`sourcing/rejections/${id}/`).then(r => r.data);
+  },
+  async createRejectedLot(payload: Partial<IRejectedLot>): Promise<IRejectedLot> {
+    return instance.post("sourcing/rejections/", payload).then(r => r.data);
+  },
+  async updateRejectedLot(id: string, payload: Partial<IRejectedLot>): Promise<IRejectedLot> {
+    return instance.patch(`sourcing/rejections/${id}/`, payload).then(r => r.data);
+  },
+  // Creates a replacement SourceOrder from an existing rejected lot
+  async createReplacementTrade(rejectedLotId: string, payload?: Record<string, any>): Promise<ISourceOrder> {
+    return instance.post(`sourcing/rejections/${rejectedLotId}/create_replacement/`, payload || {}).then(r => r.data);
   },
 
   // ── Buyer Profiles ────────────────────────────────────────────────────────

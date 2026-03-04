@@ -1,9 +1,11 @@
+// SOURCING CONSTANTS — updated
 import { TOption } from "../../@types/common";
 
 // ============ Status Color Mappings ============
 export const ORDER_STATUS_COLORS: Record<string, "default" | "primary" | "secondary" | "error" | "info" | "success" | "warning"> = {
   draft: "default",
   open: "info",
+  sent: "info",       // NEW
   accepted: "primary",
   in_transit: "warning",
   delivered: "secondary",
@@ -33,16 +35,39 @@ export const CONDITION_COLORS: Record<string, "default" | "primary" | "secondary
   poor: "error",
 };
 
+// NEW: Lot status colors — includes 'rejected'
+export const LOT_STATUS_COLORS: Record<string, "default" | "primary" | "secondary" | "error" | "info" | "success" | "warning"> = {
+  available: "success",
+  partially_sold: "warning",
+  sold: "default",
+  rejected: "error",
+};
+
+// NEW: Rejection status colors
+export const REJECTION_STATUS_COLORS: Record<string, "default" | "primary" | "secondary" | "error" | "info" | "success" | "warning"> = {
+  pending: "warning",
+  replacement_sourced: "info",
+  resolved: "success",
+  written_off: "default",
+};
+
 // ============ Select Options ============
 export const ORDER_STATUS_OPTIONS: TOption[] = [
   { value: "draft", label: "Draft" },
   { value: "open", label: "Open" },
+  { value: "sent", label: "Sent to Supplier" },
   { value: "accepted", label: "Accepted" },
   { value: "in_transit", label: "In Transit" },
   { value: "delivered", label: "Delivered" },
   { value: "completed", label: "Completed" },
   { value: "cancelled", label: "Cancelled" },
   { value: "rejected", label: "Rejected" },
+];
+
+// NEW: Trade type options
+export const TRADE_TYPE_OPTIONS: TOption[] = [
+  { value: "direct", label: "Direct Purchase" },
+  { value: "aggregator", label: "Aggregator Trade" },
 ];
 
 export const LOGISTICS_TYPE_OPTIONS: TOption[] = [
@@ -79,6 +104,25 @@ export const CONDITION_OPTIONS: TOption[] = [
   { value: "poor", label: "Poor" },
 ];
 
+// NEW: Rejection reason options
+export const REJECTION_REASON_OPTIONS: TOption[] = [
+  { value: "quality", label: "Quality Issues" },
+  { value: "moisture", label: "High Moisture" },
+  { value: "contamination", label: "Contamination" },
+  { value: "weight_short", label: "Weight Shortage" },
+  { value: "pest_damage", label: "Pest Damage" },
+  { value: "wrong_variety", label: "Wrong Variety" },
+  { value: "other", label: "Other" },
+];
+
+// NEW: Rejection status options
+export const REJECTION_STATUS_OPTIONS: TOption[] = [
+  { value: "pending", label: "Pending" },
+  { value: "replacement_sourced", label: "Replacement Sourced" },
+  { value: "resolved", label: "Resolved" },
+  { value: "written_off", label: "Written Off" },
+];
+
 // ============ Helper Functions ============
 export const formatCurrency = (amount: number | string | undefined | null): string => {
   if (amount == null || amount === "") return "UGX 0";
@@ -106,16 +150,19 @@ export const formatPercentage = (value: number | string | undefined | null): str
   return `${num.toFixed(2)}%`;
 };
 
+// UPDATED: now includes loading_cost + offloading_cost
 export const calculateTotalCost = (values: any): number => {
   const quantity = parseFloat(values.quantity_kg) || 0;
   const price = parseFloat(values.offered_price_per_kg) || 0;
   const weighbridge = parseFloat(values.weighbridge_cost) || 0;
   const logistics = parseFloat(values.logistics_cost) || 0;
+  const loading = parseFloat(values.loading_cost) || 0;
+  const offloading = parseFloat(values.offloading_cost) || 0;
   const handling = parseFloat(values.handling_cost) || 0;
   const other = parseFloat(values.other_costs) || 0;
 
   const grain_cost = quantity * price;
-  return grain_cost + weighbridge + logistics + handling + other;
+  return grain_cost + weighbridge + logistics + loading + offloading + handling + other;
 };
 
 export const getOrderStatusBadgeProps = (status: string) => {

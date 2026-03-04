@@ -15,10 +15,10 @@ import { WeighbridgeRecordColumnShape } from "./AllColumnShapes";
 import { WeighbridgeRecordForm } from "./SourcingForms";
 import { INITIAL_PAGE_SIZE } from "../../api/constants";
 
+// UPDATED: removed qualityGrades from FormDataState
 interface FormDataState {
   sourceOrders: { value: string; label: string }[];
   deliveries: { value: string; label: string }[];
-  qualityGrades: { value: string; label: string }[];
 }
 
 const WeighbridgeRecords = () => {
@@ -30,20 +30,15 @@ const WeighbridgeRecords = () => {
   const [filters, setFilters] = useState<any>({ page: 1, page_size: INITIAL_PAGE_SIZE });
   const [loading, setLoading] = useState<boolean>(false);
 
+  // UPDATED: no qualityGrades
   const [formData, setFormData] = useState<FormDataState>({
     sourceOrders: [],
     deliveries: [],
-    qualityGrades: [],
   });
   const [formDataLoading, setFormDataLoading] = useState<boolean>(true);
 
-  useEffect(() => {
-    fetchData(filters);
-  }, [filters]);
-
-  useEffect(() => {
-    fetchFormData();
-  }, []);
+  useEffect(() => { fetchData(filters); }, [filters]);
+  useEffect(() => { fetchFormData(); }, []);
 
   const fetchData = async (params?: any) => {
     try {
@@ -58,22 +53,16 @@ const WeighbridgeRecords = () => {
     }
   };
 
+  // UPDATED: removed quality grades fetch
   const fetchFormData = async () => {
     try {
       setFormDataLoading(true);
-      const [ordersResponse, gradesResponse] = await Promise.all([
-        SourcingService.getSourceOrders({ status: "delivered", page_size: 100 }),
-        SourcingService.getQualityGrades(),
-      ]);
+      const ordersResponse = await SourcingService.getSourceOrders({ status: "delivered", page_size: 100 });
       setFormData(prev => ({
         ...prev,
         sourceOrders: (ordersResponse.results || []).map((order: any) => ({
           value: order.id,
           label: `${order.order_number} — ${order.supplier_name ?? order.supplier?.business_name ?? "Unknown"}`,
-        })),
-        qualityGrades: (gradesResponse.results || gradesResponse || []).map((grade: any) => ({
-          value: grade.id,
-          label: grade.name,
         })),
       }));
     } catch (error) {
@@ -84,14 +73,10 @@ const WeighbridgeRecords = () => {
     }
   };
 
-  // Mirrors loadPaymentMethods in SourceOrders.tsx exactly
   const loadDeliveries = async (orderId: string) => {
     if (!orderId) return;
     try {
-      const results = await SourcingService.getDeliveryRecords({
-        source_order: orderId,
-        page_size: 100,
-      });
+      const results = await SourcingService.getDeliveryRecords({ source_order: orderId, page_size: 100 });
       setFormData(prev => ({
         ...prev,
         deliveries: (results.results || []).map((delivery: any) => ({
@@ -108,11 +93,7 @@ const WeighbridgeRecords = () => {
   const handleOrderSearch = useCallback(
     debounce(async (query: string) => {
       try {
-        const results = await SourcingService.getSourceOrders({
-          search: query,
-          status: "delivered",
-          page_size: 100,
-        });
+        const results = await SourcingService.getSourceOrders({ search: query, status: "delivered", page_size: 100 });
         setFormData(prev => ({
           ...prev,
           sourceOrders: (results.results || []).map((order: any) => ({
@@ -123,8 +104,7 @@ const WeighbridgeRecords = () => {
       } catch (error) {
         console.error("Error searching orders:", error);
       }
-    }, 300),
-    []
+    }, 300), []
   );
 
   const handleRefreshData = async () => {
@@ -134,16 +114,8 @@ const WeighbridgeRecords = () => {
   const handleOpenModal = () => setShowModal(true);
   const handleCloseModal = () => {
     setShowModal(false);
-    // Reset deliveries when modal closes so next open starts clean
+    // Reset deliveries when modal closes
     setFormData(prev => ({ ...prev, deliveries: [] }));
-  };
-
-  const handleInputChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    setSearchQuery(event.target.value);
-  };
-
-  const handleSearch = () => {
-    setFilters({ ...filters, search: searchQuery, page: 1 });
   };
 
   const tableActions: IDropdownAction[] = [
@@ -160,9 +132,9 @@ const WeighbridgeRecords = () => {
         <Box sx={styles.searchContainer}>
           <SearchInput
             value={searchQuery}
-            onChange={handleInputChange}
-            onKeyPress={(event) => {
-              if (event.key === "Enter") handleSearch();
+            onChange={(e: React.ChangeEvent<HTMLInputElement>) => setSearchQuery(e.target.value)}
+            onKeyPress={(event: React.KeyboardEvent) => {
+              if (event.key === "Enter") setFilters({ ...filters, search: searchQuery, page: 1 });
             }}
             type="text"
             placeholder="Search weighbridge records..."
@@ -189,6 +161,7 @@ const WeighbridgeRecords = () => {
         loading={loading}
       />
 
+      {/* UPDATED: no qualityGrades prop */}
       <WeighbridgeRecordForm
         callBack={handleRefreshData}
         handleClose={handleCloseModal}
@@ -202,17 +175,8 @@ const WeighbridgeRecords = () => {
 };
 
 const styles = {
-  header: {
-    display: "flex",
-    alignItems: "center",
-    gap: 2,
-    marginBottom: 2,
-    flexWrap: "wrap",
-  },
-  searchContainer: {
-    flexGrow: 1,
-    minWidth: 250,
-  },
+  header: { display: "flex", alignItems: "center", gap: 2, marginBottom: 2, flexWrap: "wrap" },
+  searchContainer: { flexGrow: 1, minWidth: 250 },
 };
 
 export default WeighbridgeRecords;
