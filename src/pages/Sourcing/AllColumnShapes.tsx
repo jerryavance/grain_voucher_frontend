@@ -1,10 +1,12 @@
-// ============================================================
-// ALL SOURCING MODULE COLUMN SHAPES
-// CHANGES:
-//  - WeighbridgeRecordColumnShape: removed Moisture, Quality Grade, Weighed By; added Vehicle #
-//  - NEW: AggregatorTradeCostColumnShape
-//  - NEW: RejectedLotColumnShape
-// ============================================================
+/**
+ * AllColumnShapes.tsx  (updated — added PDF download column to SupplierInvoiceColumnShape)
+ *
+ * Changes from original:
+ *   - SupplierInvoiceColumnShape: added "PDF" column before "Action"
+ *     using SupplierInvoicePDFButton in compact mode.
+ *
+ * All other column shapes are unchanged.
+ */
 
 import { FC } from "react";
 import { Box, Chip, Typography } from "@mui/material";
@@ -17,6 +19,9 @@ import {
   LOT_STATUS_COLORS, REJECTION_STATUS_COLORS,
 } from "./SourcingConstants";
 import { formatDateToDDMMYYYY } from "../../utils/date_formatter";
+
+// ✅ NEW
+import SupplierInvoicePDFButton from "./SupplierInvoicePDF";
 
 // ============ Supplier Invoice Column Shape ============
 export const SupplierInvoiceColumnShape = (actions: IDropdownAction[]) => [
@@ -36,7 +41,7 @@ export const SupplierInvoiceColumnShape = (actions: IDropdownAction[]) => [
           {row.original.invoice_number}
         </Typography>
       );
-    }
+    },
   },
   { Header: "Order Number", accessor: "order_number", minWidth: 160 },
   { Header: "Supplier", accessor: "supplier_name", minWidth: 150 },
@@ -87,6 +92,21 @@ export const SupplierInvoiceColumnShape = (actions: IDropdownAction[]) => [
     accessor: "issued_at",
     minWidth: 110,
     Cell: ({ row }: any) => <Span sx={{ fontSize: 13 }}>{formatDateToDDMMYYYY(row.original.issued_at)}</Span>,
+  },
+  {
+    // ✅ NEW: compact PDF download — fetches full detail on first click
+    Header: "PDF",
+    accessor: "pdf",
+    minWidth: 60,
+    maxWidth: 80,
+    Cell: ({ row }: any) => (
+      <SupplierInvoicePDFButton
+        invoice={row.original}
+        isFullDetail={false}
+        compact
+        size="small"
+      />
+    ),
   },
   {
     Header: "Action",
@@ -141,10 +161,8 @@ export const DeliveryRecordColumnShape = (actions: IDropdownAction[]) => [
 ];
 
 // ============ Weighbridge Record Column Shape ============
-// UPDATED: removed Moisture, Quality Grade, Weighed By; added Vehicle #
 export const WeighbridgeRecordColumnShape = (actions: IDropdownAction[]) => [
   { Header: "Order Number", accessor: "source_order", minWidth: 160 },
-  // NEW: Vehicle #
   {
     Header: "Vehicle #",
     accessor: "vehicle_number",
@@ -221,7 +239,7 @@ export const SupplierPaymentColumnShape = (actions: IDropdownAction[]) => [
           {row.original.payment_number}
         </Typography>
       );
-    }
+    },
   },
   {
     Header: "Invoice Number",
@@ -286,7 +304,7 @@ export const SupplierPaymentColumnShape = (actions: IDropdownAction[]) => [
   },
 ];
 
-// ============ NEW: Aggregator Trade Cost Column Shape ============
+// ============ Aggregator Trade Cost Column Shape ============
 export const AggregatorTradeCostColumnShape = (actions: IDropdownAction[]) => [
   {
     Header: "Order #",
@@ -373,7 +391,7 @@ export const AggregatorTradeCostColumnShape = (actions: IDropdownAction[]) => [
   },
 ];
 
-// ============ NEW: Rejected Lot Column Shape ============
+// ============ Rejected Lot Column Shape ============
 export const RejectedLotColumnShape = (actions: IDropdownAction[]) => [
   {
     Header: "Rejection #",

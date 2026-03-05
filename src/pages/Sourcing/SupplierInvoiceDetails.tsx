@@ -1,3 +1,12 @@
+/**
+ * SupplierInvoiceDetails.tsx  (updated — added PDF download)
+ *
+ * Changes from original:
+ *   - Import SupplierInvoicePDFButton
+ *   - Pass isFullDetail={true} since we already have the complete invoice object
+ *   - Button placed in the action bar next to "Record Payment"
+ */
+
 import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import {
@@ -27,6 +36,9 @@ import { formatDateToDDMMYYYY } from "../../utils/date_formatter";
 import { Span } from "../../components/Typography";
 import LoadingScreen from "../../components/LoadingScreen";
 import ProgressIndicator from "../../components/UI/ProgressIndicator";
+
+// ✅ NEW: PDF download button
+import SupplierInvoicePDFButton from "./SupplierInvoicePDF";
 
 // ─── Payment Form Dialog ──────────────────────────────────────────────────────
 const MakePaymentDialog: React.FC<{
@@ -112,10 +124,7 @@ const MakePaymentDialog: React.FC<{
             inputProps={{ min: 1, max: Number(invoice.balance_due) }}
           />
 
-          <FormControl
-            fullWidth
-            error={Boolean(form.touched.method && form.errors.method)}
-          >
+          <FormControl fullWidth error={Boolean(form.touched.method && form.errors.method)}>
             <InputLabel>Payment Method *</InputLabel>
             <Select
               value={form.values.method}
@@ -157,17 +166,13 @@ const MakePaymentDialog: React.FC<{
       </DialogContent>
 
       <DialogActions sx={{ px: 3, py: 2, gap: 1 }}>
-        <Button onClick={handleDialogClose} disabled={loading}>
-          Cancel
-        </Button>
+        <Button onClick={handleDialogClose} disabled={loading}>Cancel</Button>
         <Button
           variant="contained"
           color="success"
           onClick={() => form.handleSubmit()}
           disabled={loading}
-          startIcon={
-            loading ? <ProgressIndicator color="inherit" size={18} /> : <PaymentIcon />
-          }
+          startIcon={loading ? <ProgressIndicator color="inherit" size={18} /> : <PaymentIcon />}
         >
           {loading ? "Recording..." : "Record Payment"}
         </Button>
@@ -212,12 +217,11 @@ const SupplierInvoiceDetails = () => {
     : 0;
 
   const canPay = ["pending", "partial"].includes(invoice.status);
-
   const statusColor = INVOICE_STATUS_COLORS[invoice.status] ?? "default";
 
   return (
     <Box pt={2} pb={4}>
-      {/* ── Header ─────────────────────────────────────────────────────────── */}
+      {/* ── Header ─────────────────────────────────────────────────────── */}
       <Box sx={{ display: "flex", alignItems: "center", mb: 3, flexWrap: "wrap", gap: 1 }}>
         <Button
           startIcon={<ArrowBackIcon />}
@@ -235,9 +239,9 @@ const SupplierInvoiceDetails = () => {
         />
       </Box>
 
-      {/* ── Action Buttons ──────────────────────────────────────────────────── */}
-      {canPay && (
-        <Box sx={{ mb: 3 }}>
+      {/* ── Action Buttons ──────────────────────────────────────────────── */}
+      <Box sx={{ mb: 3, display: "flex", gap: 1, flexWrap: "wrap" }}>
+        {canPay && (
           <Button
             variant="contained"
             color="success"
@@ -246,72 +250,53 @@ const SupplierInvoiceDetails = () => {
           >
             Record Payment
           </Button>
-        </Box>
-      )}
+        )}
+
+        {/* ✅ PDF Download — always available, uses full detail already loaded */}
+        <SupplierInvoicePDFButton
+          invoice={invoice}
+          isFullDetail
+          size="medium"
+        />
+      </Box>
 
       {invoice.status === "paid" && (
         <Alert severity="success" icon={<CheckCircleIcon />} sx={{ mb: 3 }}>
           This invoice has been fully paid.
         </Alert>
       )}
-
       {invoice.status === "cancelled" && (
         <Alert severity="error" sx={{ mb: 3 }}>
           This invoice has been cancelled.
         </Alert>
       )}
 
-      {/* ── Summary Cards ───────────────────────────────────────────────────── */}
+      {/* ── Summary Cards ───────────────────────────────────────────────── */}
       <Grid container spacing={3} sx={{ mb: 3 }}>
+        {[
+          { label: "Amount Due", value: formatCurrency(invoice.amount_due), color: "text.primary" },
+          { label: "Amount Paid", value: formatCurrency(invoice.amount_paid), color: "success.main" },
+          {
+            label: "Balance Due",
+            value: formatCurrency(invoice.balance_due),
+            color: Number(invoice.balance_due) > 0 ? "error.main" : "success.main",
+          },
+        ].map(({ label, value, color }) => (
+          <Grid key={label} item xs={12} sm={6} md={3}>
+            <Card>
+              <CardContent>
+                <Typography color="text.secondary" variant="overline" gutterBottom>{label}</Typography>
+                <Typography variant="h5" fontWeight={700} color={color}>{value}</Typography>
+              </CardContent>
+            </Card>
+          </Grid>
+        ))}
+
         <Grid item xs={12} sm={6} md={3}>
           <Card>
             <CardContent>
-              <Typography color="text.secondary" variant="overline" gutterBottom>
-                Amount Due
-              </Typography>
-              <Typography variant="h5" fontWeight={700}>
-                {formatCurrency(invoice.amount_due)}
-              </Typography>
-            </CardContent>
-          </Card>
-        </Grid>
-        <Grid item xs={12} sm={6} md={3}>
-          <Card>
-            <CardContent>
-              <Typography color="text.secondary" variant="overline" gutterBottom>
-                Amount Paid
-              </Typography>
-              <Typography variant="h5" fontWeight={700} color="success.main">
-                {formatCurrency(invoice.amount_paid)}
-              </Typography>
-            </CardContent>
-          </Card>
-        </Grid>
-        <Grid item xs={12} sm={6} md={3}>
-          <Card>
-            <CardContent>
-              <Typography color="text.secondary" variant="overline" gutterBottom>
-                Balance Due
-              </Typography>
-              <Typography
-                variant="h5"
-                fontWeight={700}
-                color={Number(invoice.balance_due) > 0 ? "error.main" : "success.main"}
-              >
-                {formatCurrency(invoice.balance_due)}
-              </Typography>
-            </CardContent>
-          </Card>
-        </Grid>
-        <Grid item xs={12} sm={6} md={3}>
-          <Card>
-            <CardContent>
-              <Typography color="text.secondary" variant="overline" gutterBottom>
-                Payment Progress
-              </Typography>
-              <Typography variant="h5" fontWeight={700}>
-                {paidPct.toFixed(0)}%
-              </Typography>
+              <Typography color="text.secondary" variant="overline" gutterBottom>Payment Progress</Typography>
+              <Typography variant="h5" fontWeight={700}>{paidPct.toFixed(0)}%</Typography>
               <LinearProgress
                 variant="determinate"
                 value={paidPct}
@@ -323,25 +308,21 @@ const SupplierInvoiceDetails = () => {
         </Grid>
       </Grid>
 
-      {/* ── Invoice Details + Supplier Info ────────────────────────────────── */}
+      {/* ── Invoice Details + Supplier Info ────────────────────────────── */}
       <Grid container spacing={3} sx={{ mb: 3 }}>
         <Grid item xs={12} md={6}>
           <Card>
             <CardContent>
-              <Typography variant="h6" gutterBottom>
-                Invoice Details
-              </Typography>
+              <Typography variant="h6" gutterBottom>Invoice Details</Typography>
               <Divider sx={{ mb: 2 }} />
-              {(
-                [
-                  ["Invoice Number", invoice.invoice_number],
-                  ["Source Order", (invoice.source_order as any)?.order_number ?? invoice.source_order ?? "—"],
-                  ["Issued At", formatDateToDDMMYYYY(invoice.issued_at)],
-                  ["Due Date", invoice.due_date ? formatDateToDDMMYYYY(invoice.due_date) : "Not set"],
-                  ["Paid At", invoice.paid_at ? formatDateToDDMMYYYY(invoice.paid_at) : "—"],
-                  ["Payment Reference", invoice.payment_reference || "—"],
-                ] as [string, string][]
-              ).map(([label, value]) => (
+              {([
+                ["Invoice Number", invoice.invoice_number],
+                ["Source Order", (invoice.source_order as any)?.order_number ?? invoice.source_order ?? "—"],
+                ["Issued At", formatDateToDDMMYYYY(invoice.issued_at)],
+                ["Due Date", invoice.due_date ? formatDateToDDMMYYYY(invoice.due_date) : "Not set"],
+                ["Paid At", invoice.paid_at ? formatDateToDDMMYYYY(invoice.paid_at) : "—"],
+                ["Payment Reference", invoice.payment_reference || "—"],
+              ] as [string, string][]).map(([label, value]) => (
                 <Box key={label} sx={styles.infoRow}>
                   <Span sx={styles.label}>{label}:</Span>
                   <Span sx={styles.value}>{value}</Span>
@@ -350,9 +331,7 @@ const SupplierInvoiceDetails = () => {
               {invoice.notes && (
                 <Box sx={{ mt: 1.5 }}>
                   <Span sx={styles.label}>Notes:</Span>
-                  <Typography variant="body2" sx={{ mt: 0.5, color: "text.secondary" }}>
-                    {invoice.notes}
-                  </Typography>
+                  <Typography variant="body2" sx={{ mt: 0.5, color: "text.secondary" }}>{invoice.notes}</Typography>
                 </Box>
               )}
             </CardContent>
@@ -362,9 +341,7 @@ const SupplierInvoiceDetails = () => {
         <Grid item xs={12} md={6}>
           <Card>
             <CardContent>
-              <Typography variant="h6" gutterBottom>
-                Supplier Information
-              </Typography>
+              <Typography variant="h6" gutterBottom>Supplier Information</Typography>
               <Divider sx={{ mb: 2 }} />
               {(() => {
                 const s = invoice.supplier as any;
@@ -404,12 +381,10 @@ const SupplierInvoiceDetails = () => {
         </Grid>
       </Grid>
 
-      {/* ── Payment History ─────────────────────────────────────────────────── */}
+      {/* ── Payment History ─────────────────────────────────────────────── */}
       <Card>
         <CardContent>
-          <Typography variant="h6" gutterBottom>
-            Payment History
-          </Typography>
+          <Typography variant="h6" gutterBottom>Payment History</Typography>
           <Divider sx={{ mb: 2 }} />
           {!invoice.payments_list || invoice.payments_list.length === 0 ? (
             <Alert severity="info">No payments recorded yet.</Alert>
@@ -464,7 +439,7 @@ const SupplierInvoiceDetails = () => {
         </CardContent>
       </Card>
 
-      {/* ── Payment Dialog ──────────────────────────────────────────────────── */}
+      {/* ── Payment Dialog ──────────────────────────────────────────────── */}
       {showPaymentForm && (
         <MakePaymentDialog
           open={showPaymentForm}
@@ -478,12 +453,7 @@ const SupplierInvoiceDetails = () => {
 };
 
 const styles = {
-  infoRow: {
-    display: "flex",
-    justifyContent: "space-between",
-    alignItems: "center",
-    mb: 1.5,
-  },
+  infoRow: { display: "flex", justifyContent: "space-between", alignItems: "center", mb: 1.5 },
   label: { fontWeight: 600, color: "text.secondary" },
   value: { color: "text.primary" },
 };

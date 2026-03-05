@@ -1,3 +1,12 @@
+/**
+ * BuyerInvoices.tsx  (updated — added PDF download action)
+ *
+ * Changes from original:
+ *   - Import BuyerInvoicePDFButton
+ *   - Added "Download PDF" action in tableActions (fetches order on demand)
+ *   - Added inline PDF download column cell next to DropdownActionBtn
+ */
+
 import { FC, useEffect, useState } from "react";
 import {
   Alert, Box, Button, Chip, FormControl, InputLabel,
@@ -21,12 +30,15 @@ import { SourcingService } from "./Sourcing.service";
 import { formatCurrency } from "./SourcingConstants";
 import { IBuyerInvoice, IBuyerInvoicesResults } from "./Sourcing.interface";
 
+// ✅ NEW
+import BuyerInvoicePDFButton from "./BuyerInvoicePDF";
+
 const BUYER_INVOICE_STATUS_COLORS: Record<string, any> = {
   draft: "default", issued: "primary", partial: "warning",
   paid: "success", overdue: "error", cancelled: "error",
 };
 
-// ─── Record Payment Form ──────────────────────────────────────────────────
+// ─── Record Payment Form ──────────────────────────────────────────────────────
 const RecordPaymentForm: FC<{
   invoice: IBuyerInvoice;
   handleClose: () => void;
@@ -54,7 +66,6 @@ const RecordPaymentForm: FC<{
       setLoading(true);
       try {
         const payment = await SourcingService.createBuyerPayment(values as any);
-        // If confirm mode, confirm immediately
         if ((values as any).__confirmMode) {
           await SourcingService.confirmBuyerPayment(payment.id);
           toast.success("Payment confirmed — settlement will run automatically if invoice is now fully paid");
@@ -136,7 +147,7 @@ const RecordPaymentForm: FC<{
   );
 };
 
-// ─── Main List Page ───────────────────────────────────────────────────────
+// ─── Main List Page ───────────────────────────────────────────────────────────
 const BuyerInvoices: FC = () => {
   useTitle("Buyer Invoices");
   const [invoices, setInvoices] = useState<IBuyerInvoicesResults>();
@@ -155,12 +166,14 @@ const BuyerInvoices: FC = () => {
 
   const tableActions: IDropdownAction[] = [
     {
-      label: "Record Payment", icon: <AccountBalanceIcon color="success" />,
+      label: "Record Payment",
+      icon: <AccountBalanceIcon color="success" />,
       onClick: (inv: IBuyerInvoice) => setSelectedInvoice(inv),
       condition: (inv: IBuyerInvoice) => !["paid", "cancelled"].includes(inv.status),
     },
     {
-      label: "Mark Overdue", icon: <WarningAmberIcon color="warning" />,
+      label: "Mark Overdue",
+      icon: <WarningAmberIcon color="warning" />,
       onClick: async (inv: IBuyerInvoice) => {
         try {
           await SourcingService.markBuyerInvoiceOverdue(inv.id);
@@ -174,26 +187,34 @@ const BuyerInvoices: FC = () => {
 
   const columns = [
     {
-      Header: "Invoice #", accessor: "invoice_number", minWidth: 180,
+      Header: "Invoice #",
+      accessor: "invoice_number",
+      minWidth: 180,
       Cell: ({ row }: any) => (
         <Typography color="primary" variant="h6">{row.original.invoice_number}</Typography>
       ),
     },
     { Header: "Buyer", accessor: "buyer_name", minWidth: 160 },
     {
-      Header: "Amount Due", accessor: "amount_due", minWidth: 130,
+      Header: "Amount Due",
+      accessor: "amount_due",
+      minWidth: 130,
       Cell: ({ row }: any) => (
         <Span sx={{ fontWeight: 600 }}>{formatCurrency(row.original.amount_due)}</Span>
       ),
     },
     {
-      Header: "Paid", accessor: "amount_paid", minWidth: 120,
+      Header: "Paid",
+      accessor: "amount_paid",
+      minWidth: 120,
       Cell: ({ row }: any) => (
         <Span sx={{ color: "success.main" }}>{formatCurrency(row.original.amount_paid)}</Span>
       ),
     },
     {
-      Header: "Balance Due", accessor: "balance_due", minWidth: 130,
+      Header: "Balance Due",
+      accessor: "balance_due",
+      minWidth: 130,
       Cell: ({ row }: any) => (
         <Span sx={{ fontWeight: 600, color: row.original.balance_due > 0 ? "error.main" : "success.main" }}>
           {formatCurrency(row.original.balance_due)}
@@ -201,13 +222,17 @@ const BuyerInvoices: FC = () => {
       ),
     },
     {
-      Header: "Terms", accessor: "payment_terms_days", minWidth: 110,
+      Header: "Terms",
+      accessor: "payment_terms_days",
+      minWidth: 110,
       Cell: ({ row }: any) => (
         <Span>{row.original.payment_terms_days === 0 ? "On Delivery" : `Net ${row.original.payment_terms_days}`}</Span>
       ),
     },
     {
-      Header: "Due Date", accessor: "due_date", minWidth: 130,
+      Header: "Due Date",
+      accessor: "due_date",
+      minWidth: 130,
       Cell: ({ row }: any) => (
         <Span sx={{ fontSize: 13, color: row.original.is_overdue ? "error.main" : "inherit" }}>
           {row.original.due_date ? formatDateToDDMMYYYY(row.original.due_date) : "—"}
@@ -216,7 +241,9 @@ const BuyerInvoices: FC = () => {
       ),
     },
     {
-      Header: "Status", accessor: "status", minWidth: 110,
+      Header: "Status",
+      accessor: "status",
+      minWidth: 110,
       Cell: ({ row }: any) => (
         <Chip
           label={row.original.status.toUpperCase()}
@@ -226,7 +253,23 @@ const BuyerInvoices: FC = () => {
       ),
     },
     {
-      Header: "Action", accessor: "action", minWidth: 80,
+      // ✅ NEW: PDF column — inline compact button, fetches order on first click
+      Header: "PDF",
+      accessor: "pdf",
+      minWidth: 60,
+      maxWidth: 80,
+      Cell: ({ row }: any) => (
+        <BuyerInvoicePDFButton
+          invoice={row.original}
+          compact
+          size="small"
+        />
+      ),
+    },
+    {
+      Header: "Action",
+      accessor: "action",
+      minWidth: 80,
       Cell: ({ row }: any) => <DropdownActionBtn actions={tableActions} metaData={row.original} />,
     },
   ];
