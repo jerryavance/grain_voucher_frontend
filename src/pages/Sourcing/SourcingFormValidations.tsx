@@ -124,39 +124,32 @@ export const DeliveryRecordFormValidations = Yup.object().shape({
 
 // ============================================================
 // WEIGHBRIDGE RECORD VALIDATION
-// Fields: source_order, delivery_id, quality_grade
+// Fields: source_order, delivery, gross_weight_kg, tare_weight_kg
+// NOTE: moisture_level and quality_grade removed — no longer in form
 // ============================================================
 
 export const WeighbridgeRecordFormValidations = Yup.object().shape({
-  source_order: Yup.string() // ✅ FIXED: Added _id suffix
+  source_order: Yup.string()
     .required("Source order is required"),
-  
-  delivery: Yup.string() // ✅ FIXED: Added _id suffix
+
+  delivery: Yup.string()
     .required("Delivery record is required"),
-  
+
   gross_weight_kg: Yup.number()
     .required("Gross weight is required")
     .min(0.01, "Gross weight must be greater than 0")
-    .max(100000, "Gross weight seems unusually high"),
-  
+    .max(200000, "Gross weight seems unusually high"),
+
   tare_weight_kg: Yup.number()
     .min(0, "Tare weight cannot be negative")
-    .max(10000, "Tare weight seems unusually high")
+    .max(50000, "Tare weight seems unusually high")
     .default(0)
-    .test('less-than-gross', 'Tare weight must be less than gross weight', function(value) {
+    .test("less-than-gross", "Tare weight must be less than gross weight", function (value) {
       const { gross_weight_kg } = this.parent;
       if (!value || !gross_weight_kg) return true;
       return value < gross_weight_kg;
     }),
-  
-  moisture_level: Yup.number()
-    .required("Moisture level is required")
-    .min(0, "Moisture level cannot be negative")
-    .max(100, "Moisture level cannot exceed 100%"),
-  
-  quality_grade: Yup.string() // ✅ FIXED: Added _id suffix
-    .required("Quality grade is required"),
-  
+
   notes: Yup.string()
     .max(1000, "Notes cannot exceed 1000 characters"),
 });

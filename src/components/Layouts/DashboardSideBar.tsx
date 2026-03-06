@@ -26,12 +26,30 @@ import useAuth from "../../hooks/useAuth";
 // Custom styled components
 const MainMenu = styled(Box)(({ theme }) => ({
   width: 150,
-  height: "100%",
+  height: "100vh",
   position: "fixed",
+  top: 0,
+  left: 0,
   boxShadow: theme.shadows[2],
   transition: "left 0.3s ease",
   zIndex: theme.zIndex.drawer + 11,
   backgroundColor: theme.palette.primary.main,
+  overflowY: "auto",
+  overflowX: "hidden",
+  // Thin custom scrollbar so it doesn't eat into the narrow width
+  "&::-webkit-scrollbar": {
+    width: 4,
+  },
+  "&::-webkit-scrollbar-track": {
+    background: "transparent",
+  },
+  "&::-webkit-scrollbar-thumb": {
+    background: "rgba(255,255,255,0.25)",
+    borderRadius: 2,
+  },
+  "&::-webkit-scrollbar-thumb:hover": {
+    background: "rgba(255,255,255,0.45)",
+  },
   [theme.breakpoints.down("md")]: {
     width: 250,
   },
@@ -147,7 +165,7 @@ const DashboardSideBar: FC<SideNavBarProps> = ({
   );
 
   const sidebarContent = (
-    <Box sx={{ height: "100%" }}>
+    <Box sx={{ minHeight: "100%", pb: 4 }}>
       <Box
         sx={{
           backgroundColor: alpha("#fff", 0.15),
@@ -177,6 +195,14 @@ const DashboardSideBar: FC<SideNavBarProps> = ({
           sx: {
             width: 250,
             backgroundColor: (theme) => theme.palette.primary.main,
+            overflowY: "auto",
+            overflowX: "hidden",
+            "&::-webkit-scrollbar": { width: 4 },
+            "&::-webkit-scrollbar-track": { background: "transparent" },
+            "&::-webkit-scrollbar-thumb": {
+              background: "rgba(255,255,255,0.25)",
+              borderRadius: 2,
+            },
           },
         }}
       >
