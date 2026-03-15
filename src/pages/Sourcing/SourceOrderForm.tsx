@@ -234,7 +234,7 @@ const SourceOrderForm: FC<ISourceOrderFormProps> = ({
               ["Other Costs", formatCurrency(orderForm.values.other_costs || 0)],
             ].map(([label, value]) => (
               <Box key={label} sx={{ display: "flex", justifyContent: "space-between", mb: 0.75 }}>
-                <Span sx={{ color: "text.secondary" }}>{label}:</Span>
+                <Span sx={{ color: "text.primary" }}>{label}:</Span>
                 <Span>{value}</Span>
               </Box>
             ))}

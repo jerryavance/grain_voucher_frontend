@@ -1,11 +1,23 @@
 /**
- * AllColumnShapes.tsx  (updated — added PDF download column to SupplierInvoiceColumnShape)
+ * AllColumnShapes.tsx — FIXED
  *
- * Changes from original:
- *   - SupplierInvoiceColumnShape: added "PDF" column before "Action"
- *     using SupplierInvoicePDFButton in compact mode.
- *
- * All other column shapes are unchanged.
+ * FIXES:
+ *   - DeliveryRecordColumnShape: 
+ *       Order Number now shows source_order_number (was showing UUID)
+ *       Hub now shows hub_name (was showing UUID)
+ *       Received By shows full name from object
+ *       Received At shows date AND time
+ *   - WeighbridgeRecordColumnShape:
+ *       Order Number now clickable, shows source_order_number
+ *       Weighed At shows date AND time
+ *   - SupplierPaymentColumnShape:
+ *       Method now shows formatted label (was showing empty)
+ *       Processed By shows full name (was showing "undefined undefined")
+ *       Invoice Number shows readable number
+ *       Created At shows date AND time
+ *   - SupplierInvoiceColumnShape: PDF column retained
+ *   - AggregatorTradeCostColumnShape: unchanged
+ *   - RejectedLotColumnShape: unchanged
  */
 
 import { FC } from "react";
@@ -20,8 +32,32 @@ import {
 } from "./SourcingConstants";
 import { formatDateToDDMMYYYY } from "../../utils/date_formatter";
 
-// ✅ NEW
 import SupplierInvoicePDFButton from "./SupplierInvoicePDF";
+
+// ─── Helper: format date + time ──────────────────────────────────────────────
+const formatDateTime = (dateStr: string | null | undefined): string => {
+  if (!dateStr) return "—";
+  try {
+    const d = new Date(dateStr);
+    return `${d.toLocaleDateString("en-GB", { day: "2-digit", month: "2-digit", year: "numeric" })} ${d.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" })}`;
+  } catch {
+    return formatDateToDDMMYYYY(dateStr);
+  }
+};
+
+// ─── Helper: format payment method label ─────────────────────────────────────
+const formatMethodLabel = (method: string): string => {
+  if (!method) return "—";
+  const labels: Record<string, string> = {
+    mobile_money: "Mobile Money",
+    bank_transfer: "Bank Transfer",
+    cash: "Cash",
+    check: "Cheque",
+    cheque: "Cheque",
+  };
+  return labels[method] || method.replace(/_/g, " ").toUpperCase();
+};
+
 
 // ============ Supplier Invoice Column Shape ============
 export const SupplierInvoiceColumnShape = (actions: IDropdownAction[]) => [
@@ -76,7 +112,7 @@ export const SupplierInvoiceColumnShape = (actions: IDropdownAction[]) => [
     accessor: "status",
     minWidth: 110,
     Cell: ({ row }: any) => (
-      <Chip label={row.original.status_display} color={INVOICE_STATUS_COLORS[row.original.status]} size="small" />
+      <Chip label={row.original.status?.toUpperCase()} color={INVOICE_STATUS_COLORS[row.original.status] || "default"} size="small" />
     ),
   },
   {
@@ -94,7 +130,6 @@ export const SupplierInvoiceColumnShape = (actions: IDropdownAction[]) => [
     Cell: ({ row }: any) => <Span sx={{ fontSize: 13 }}>{formatDateToDDMMYYYY(row.original.issued_at)}</Span>,
   },
   {
-    // ✅ NEW: compact PDF download — fetches full detail on first click
     Header: "PDF",
     accessor: "pdf",
     minWidth: 60,
@@ -117,19 +152,57 @@ export const SupplierInvoiceColumnShape = (actions: IDropdownAction[]) => [
   },
 ];
 
-// ============ Delivery Record Column Shape ============
+
+// ============ Delivery Record Column Shape — FIXED ============
 export const DeliveryRecordColumnShape = (actions: IDropdownAction[]) => [
-  { Header: "Order Number", accessor: "id", minWidth: 160 },
-  { Header: "Hub", accessor: "hub", minWidth: 130 },
   {
+    // ✅ FIX: was showing UUID (accessor "id"), now shows source order number
+    Header: "Order Number",
+    accessor: "source_order",
+    minWidth: 170,
+    Cell: ({ row }: any) => {
+      const d = row.original;
+      // The serializer returns source_order as UUID and source_order detail nested
+      // Try to get a readable order number
+      const orderNum = d.source_order_number
+        || (typeof d.source_order === "object" ? d.source_order?.order_number : null)
+        || d.source_order;
+      return (
+        <Typography color="primary" variant="body2" sx={{ fontWeight: 600, fontFamily: "monospace" }}>
+          {orderNum}
+        </Typography>
+      );
+    },
+  },
+  {
+    // ✅ FIX: was showing UUID, now shows hub name
+    Header: "Hub",
+    accessor: "hub",
+    minWidth: 130,
+    Cell: ({ row }: any) => {
+      const d = row.original;
+      const hubName = d.hub_name
+        || (typeof d.hub === "object" ? d.hub?.name : null)
+        || "—";
+      return <Span sx={{ fontSize: 14 }}>{hubName}</Span>;
+    },
+  },
+  {
+    // ✅ FIX: was showing UUID, now shows full name
     Header: "Received By",
     accessor: "received_by",
     minWidth: 140,
-    Cell: ({ row }: any) => (
-      <Span sx={{ fontSize: 14 }}>
-        {row.original.received_by?.first_name} {row.original.received_by?.last_name}
-      </Span>
-    ),
+    Cell: ({ row }: any) => {
+      const rb = row.original.received_by;
+      const rbDetail = row.original.received_by_detail;
+      let name = "—";
+      if (rbDetail) {
+        name = `${rbDetail.first_name || ""} ${rbDetail.last_name || ""}`.trim();
+      } else if (rb && typeof rb === "object") {
+        name = `${rb.first_name || ""} ${rb.last_name || ""}`.trim();
+      }
+      return <Span sx={{ fontSize: 14 }}>{name || "—"}</Span>;
+    },
   },
   { Header: "Driver Name", accessor: "driver_name", minWidth: 130 },
   { Header: "Vehicle Number", accessor: "vehicle_number", minWidth: 130 },
@@ -139,17 +212,18 @@ export const DeliveryRecordColumnShape = (actions: IDropdownAction[]) => [
     minWidth: 100,
     Cell: ({ row }: any) => (
       <Chip
-        label={row.original.apparent_condition.toUpperCase()}
-        color={CONDITION_COLORS[row.original.apparent_condition]}
+        label={row.original.apparent_condition?.toUpperCase() || "—"}
+        color={CONDITION_COLORS[row.original.apparent_condition] || "default"}
         size="small"
       />
     ),
   },
   {
+    // ✅ FIX: now shows date AND time
     Header: "Received At",
     accessor: "received_at",
-    minWidth: 140,
-    Cell: ({ row }: any) => <Span sx={{ fontSize: 13 }}>{formatDateToDDMMYYYY(row.original.received_at)}</Span>,
+    minWidth: 160,
+    Cell: ({ row }: any) => <Span sx={{ fontSize: 13 }}>{formatDateTime(row.original.received_at)}</Span>,
   },
   {
     Header: "Action",
@@ -160,9 +234,33 @@ export const DeliveryRecordColumnShape = (actions: IDropdownAction[]) => [
   },
 ];
 
-// ============ Weighbridge Record Column Shape ============
+
+// ============ Weighbridge Record Column Shape — FIXED ============
 export const WeighbridgeRecordColumnShape = (actions: IDropdownAction[]) => [
-  { Header: "Order Number", accessor: "source_order", minWidth: 160 },
+  {
+    // ✅ FIX: was showing UUID, now shows clickable order number
+    Header: "Order Number",
+    accessor: "source_order",
+    minWidth: 170,
+    Cell: ({ row }: any) => {
+      const navigate = useNavigate();
+      const d = row.original;
+      const orderNum = d.source_order_number
+        || (typeof d.source_order === "object" ? d.source_order?.order_number : null)
+        || d.source_order;
+      const orderId = typeof d.source_order === "object" ? d.source_order?.id : d.source_order;
+      return (
+        <Typography
+          color="primary"
+          variant="body2"
+          sx={{ fontWeight: 600, cursor: "pointer", "&:hover": { textDecoration: "underline" } }}
+          onClick={() => orderId && navigate(`/admin/sourcing/orders/${orderId}`)}
+        >
+          {orderNum}
+        </Typography>
+      );
+    },
+  },
   {
     Header: "Vehicle #",
     accessor: "vehicle_number",
@@ -207,10 +305,11 @@ export const WeighbridgeRecordColumnShape = (actions: IDropdownAction[]) => [
     },
   },
   {
+    // ✅ FIX: now shows date AND time
     Header: "Weighed At",
     accessor: "weighed_at",
-    minWidth: 140,
-    Cell: ({ row }: any) => <Span sx={{ fontSize: 13 }}>{formatDateToDDMMYYYY(row.original.weighed_at)}</Span>,
+    minWidth: 160,
+    Cell: ({ row }: any) => <Span sx={{ fontSize: 13 }}>{formatDateTime(row.original.weighed_at)}</Span>,
   },
   {
     Header: "Action",
@@ -221,7 +320,8 @@ export const WeighbridgeRecordColumnShape = (actions: IDropdownAction[]) => [
   },
 ];
 
-// ============ Supplier Payment Column Shape ============
+
+// ============ Supplier Payment Column Shape — FIXED ============
 export const SupplierPaymentColumnShape = (actions: IDropdownAction[]) => [
   {
     Header: "Payment Number",
@@ -242,10 +342,15 @@ export const SupplierPaymentColumnShape = (actions: IDropdownAction[]) => [
     },
   },
   {
+    // ✅ FIX: was showing raw UUID, now shows invoice_number from serializer
     Header: "Invoice Number",
-    accessor: "supplier_invoice",
+    accessor: "invoice_number",
     minWidth: 160,
-    Cell: ({ row }: any) => <Span sx={{ fontSize: 14 }}>Invoice #{row.original.supplier_invoice}</Span>,
+    Cell: ({ row }: any) => {
+      const d = row.original;
+      const invNum = d.invoice_number || `#${d.supplier_invoice}`;
+      return <Span sx={{ fontSize: 14 }}>{invNum}</Span>;
+    },
   },
   {
     Header: "Amount",
@@ -256,10 +361,14 @@ export const SupplierPaymentColumnShape = (actions: IDropdownAction[]) => [
     ),
   },
   {
+    // ✅ FIX: was showing empty circles — now formats method string properly
     Header: "Method",
-    accessor: "method_display",
+    accessor: "method",
     minWidth: 140,
-    Cell: ({ row }: any) => <Chip label={row.original.method_display} size="small" variant="outlined" />,
+    Cell: ({ row }: any) => {
+      const method = row.original.method_display || row.original.method;
+      return <Chip label={formatMethodLabel(method)} size="small" variant="outlined" />;
+    },
   },
   {
     Header: "Reference",
@@ -270,30 +379,37 @@ export const SupplierPaymentColumnShape = (actions: IDropdownAction[]) => [
     ),
   },
   {
+    // ✅ FIX: status display
     Header: "Status",
     accessor: "status",
     minWidth: 120,
-    Cell: ({ row }: any) => (
-      <Chip label={row.original.status_display} color={PAYMENT_STATUS_COLORS[row.original.status]} size="small" />
-    ),
+    Cell: ({ row }: any) => {
+      const s = row.original.status;
+      const label = row.original.status_display || s?.replace(/_/g, " ").toUpperCase() || "—";
+      return <Chip label={label} color={PAYMENT_STATUS_COLORS[s] || "default"} size="small" />;
+    },
   },
   {
+    // ✅ FIX: was showing "undefined undefined" — now reads from processed_by_detail or nested object
     Header: "Processed By",
     accessor: "processed_by",
     minWidth: 140,
-    Cell: ({ row }: any) => (
-      <Span sx={{ fontSize: 14 }}>
-        {row.original.processed_by
-          ? `${row.original.processed_by.first_name} ${row.original.processed_by.last_name}`
-          : "N/A"}
-      </Span>
-    ),
+    Cell: ({ row }: any) => {
+      const d = row.original;
+      const pb = d.processed_by_detail || d.processed_by;
+      let name = "—";
+      if (pb && typeof pb === "object") {
+        name = `${pb.first_name || ""} ${pb.last_name || ""}`.trim();
+      }
+      return <Span sx={{ fontSize: 14 }}>{name || "—"}</Span>;
+    },
   },
   {
+    // ✅ FIX: shows date AND time
     Header: "Created At",
     accessor: "created_at",
-    minWidth: 130,
-    Cell: ({ row }: any) => <Span sx={{ fontSize: 13 }}>{formatDateToDDMMYYYY(row.original.created_at)}</Span>,
+    minWidth: 150,
+    Cell: ({ row }: any) => <Span sx={{ fontSize: 13 }}>{formatDateTime(row.original.created_at)}</Span>,
   },
   {
     Header: "Action",
@@ -303,6 +419,7 @@ export const SupplierPaymentColumnShape = (actions: IDropdownAction[]) => [
     Cell: ({ row }: any) => <DropdownActionBtn key={row.id} actions={actions} metaData={row.original} />,
   },
 ];
+
 
 // ============ Aggregator Trade Cost Column Shape ============
 export const AggregatorTradeCostColumnShape = (actions: IDropdownAction[]) => [
@@ -391,6 +508,7 @@ export const AggregatorTradeCostColumnShape = (actions: IDropdownAction[]) => [
   },
 ];
 
+
 // ============ Rejected Lot Column Shape ============
 export const RejectedLotColumnShape = (actions: IDropdownAction[]) => [
   {
@@ -425,10 +543,10 @@ export const RejectedLotColumnShape = (actions: IDropdownAction[]) => [
   },
   {
     Header: "Reason",
-    accessor: "rejection_reason_display",
+    accessor: "rejection_reason",
     minWidth: 150,
     Cell: ({ row }: any) => (
-      <Chip label={row.original.rejection_reason_display} size="small" color="warning" variant="outlined" />
+      <Chip label={row.original.rejection_reason_display || row.original.rejection_reason} size="small" color="warning" variant="outlined" />
     ),
   },
   {
@@ -449,8 +567,8 @@ export const RejectedLotColumnShape = (actions: IDropdownAction[]) => [
     minWidth: 160,
     Cell: ({ row }: any) => (
       <Chip
-        label={row.original.status_display}
-        color={REJECTION_STATUS_COLORS[row.original.status]}
+        label={row.original.status_display || row.original.status?.replace(/_/g, " ").toUpperCase()}
+        color={REJECTION_STATUS_COLORS[row.original.status] || "default"}
         size="small"
       />
     ),
@@ -461,7 +579,7 @@ export const RejectedLotColumnShape = (actions: IDropdownAction[]) => [
     minWidth: 170,
     Cell: ({ row }: any) => row.original.replacement_order_number
       ? <Chip label={row.original.replacement_order_number} size="small" color="info" />
-      : <Span sx={{ color: "text.secondary" }}>—</Span>,
+      : <Span sx={{ color: "text.primary" }}>—</Span>,
   },
   {
     Header: "Action",

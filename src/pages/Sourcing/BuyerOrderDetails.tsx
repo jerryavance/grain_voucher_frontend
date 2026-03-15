@@ -40,7 +40,7 @@ const EXPENSE_CATEGORY_LABELS: Record<string, string> = {
 
 const InfoRow: FC<{ label: string; value: React.ReactNode }> = ({ label, value }) => (
   <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 1.5 }}>
-    <Span sx={{ fontWeight: 600, color: "text.secondary", minWidth: 180 }}>{label}</Span>
+    <Span sx={{ fontWeight: 600, color: "text.primary", minWidth: 180 }}>{label}</Span>
     <Box>{value}</Box>
   </Box>
 );
@@ -144,7 +144,7 @@ const AddLineForm: FC<{
           {estRevenue > 0 && (
             <Card variant="outlined">
               <CardContent sx={{ p: 1.5, "&:last-child": { pb: 1.5 } }}>
-                <Typography variant="caption" color="text.secondary" display="block" gutterBottom>
+                <Typography variant="caption" color="text.primary" display="block" gutterBottom>
                   Live Estimate
                 </Typography>
                 <Box sx={{ display: "flex", gap: 3 }}>
@@ -156,7 +156,7 @@ const AddLineForm: FC<{
                   </Box>
                   <Box>
                     <Typography variant="caption">COGS</Typography>
-                    <Typography variant="body2" sx={{ color: "text.secondary" }}>
+                    <Typography variant="body2" sx={{ color: "text.primary" }}>
                       {formatCurrency(estCOGS)}
                     </Typography>
                   </Box>
@@ -422,7 +422,7 @@ const BuyerOrderDetails: FC = () => {
             )}
           </Box>
           <Box sx={{ display: "flex", alignItems: "center", gap: 1, mt: 0.5 }}>
-            <Typography variant="body2" color="text.secondary">Buyer:</Typography>
+            <Typography variant="body2" color="text.primary">Buyer:</Typography>
             <Typography variant="body2" sx={{ fontWeight: 600 }}>{buyerDisplayName}</Typography>
             {order.buyer && (
               <Button
@@ -498,7 +498,7 @@ const BuyerOrderDetails: FC = () => {
       <Grid container spacing={2} sx={{ mb: 3 }}>
         {[
           { label: "Revenue", value: formatCurrency(order.subtotal), color: "primary.main" },
-          { label: "COGS", value: formatCurrency(order.total_cogs), color: "text.secondary" },
+          { label: "COGS", value: formatCurrency(order.total_cogs), color: "text.primary" },
           { label: "Selling Expenses", value: formatCurrency(order.total_selling_expenses), color: "warning.main" },
           {
             label: "Gross Profit",
@@ -514,7 +514,7 @@ const BuyerOrderDetails: FC = () => {
           <Grid item xs={6} sm={4} md={2.4} key={card.label}>
             <Card variant="outlined">
               <CardContent sx={{ p: 1.5, "&:last-child": { pb: 1.5 } }}>
-                <Typography variant="caption" color="text.secondary">{card.label}</Typography>
+                <Typography variant="caption" color="text.primary">{card.label}</Typography>
                 <Typography variant="h6" sx={{ color: card.color, fontWeight: 700 }}>{card.value}</Typography>
               </CardContent>
             </Card>
@@ -543,7 +543,7 @@ const BuyerOrderDetails: FC = () => {
             <TableBody>
               {order.lines.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={9} sx={{ textAlign: "center", py: 3, color: "text.secondary" }}>
+                  <TableCell colSpan={9} sx={{ textAlign: "center", py: 3, color: "text.primary" }}>
                     No lines added yet. Add lot lines to include grain in this order.
                   </TableCell>
                 </TableRow>
@@ -556,8 +556,8 @@ const BuyerOrderDetails: FC = () => {
                   <TableCell>{formatWeight(line.quantity_kg)}</TableCell>
                   <TableCell>{formatCurrency(line.sale_price_per_kg)}</TableCell>
                   <TableCell sx={{ fontWeight: 600 }}>{formatCurrency(line.line_total)}</TableCell>
-                  <TableCell sx={{ color: "text.secondary" }}>{formatCurrency(line.cogs_per_kg)}</TableCell>
-                  <TableCell sx={{ color: "text.secondary" }}>{formatCurrency(line.cogs_total)}</TableCell>
+                  <TableCell sx={{ color: "text.primary" }}>{formatCurrency(line.cogs_per_kg)}</TableCell>
+                  <TableCell sx={{ color: "text.primary" }}>{formatCurrency(line.cogs_total)}</TableCell>
                   <TableCell sx={{ fontWeight: 600, color: line.line_gross_profit >= 0 ? "success.main" : "error.main" }}>
                     {formatCurrency(line.line_gross_profit)}
                   </TableCell>
@@ -589,7 +589,7 @@ const BuyerOrderDetails: FC = () => {
             <TableBody>
               {order.sale_expenses.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={5} sx={{ textAlign: "center", py: 3, color: "text.secondary" }}>
+                  <TableCell colSpan={5} sx={{ textAlign: "center", py: 3, color: "text.primary" }}>
                     No expenses recorded.
                   </TableCell>
                 </TableRow>

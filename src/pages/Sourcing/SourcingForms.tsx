@@ -548,7 +548,7 @@ export const AggregatorTradeCostForm: FC<IAggregatorCostFormProps> = ({
           <Alert severity="info">Recording costs for order: <strong>{sourceOrderNumber}</strong></Alert>
         )}
 
-        <Typography variant="subtitle2" color="text.secondary" sx={{ fontWeight: 700, mt: 1 }}>
+        <Typography variant="subtitle2" color="text.primary" sx={{ fontWeight: 700, mt: 1 }}>
           TONNAGE
         </Typography>
         <Box sx={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 2 }}>
@@ -582,7 +582,7 @@ export const AggregatorTradeCostForm: FC<IAggregatorCostFormProps> = ({
         {(sourceQty > 0 || arrivedQty > 0) && (
           <Card variant="outlined" sx={{ bgcolor: "background.default" }}>
             <CardContent sx={{ p: 1.5, "&:last-child": { pb: 1.5 } }}>
-              <Typography variant="caption" color="text.secondary" display="block" gutterBottom>Live Tonnage Preview</Typography>
+              <Typography variant="caption" color="text.primary" display="block" gutterBottom>Live Tonnage Preview</Typography>
               <Box sx={{ display: "flex", gap: 3, flexWrap: "wrap" }}>
                 <Box>
                   <Typography variant="caption">Transit Loss</Typography>
@@ -608,7 +608,7 @@ export const AggregatorTradeCostForm: FC<IAggregatorCostFormProps> = ({
         )}
 
         <Divider />
-        <Typography variant="subtitle2" color="text.secondary" sx={{ fontWeight: 700 }}>
+        <Typography variant="subtitle2" color="text.primary" sx={{ fontWeight: 700 }}>
           DESTINATION COSTS
         </Typography>
         <Box sx={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 2 }}>

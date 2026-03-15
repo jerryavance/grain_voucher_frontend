@@ -75,6 +75,8 @@ export interface ISourceOrdersResults { results: ISourceOrderList[]; count: numb
 // ============ Supplier Invoice ============
 export type TInvoiceStatus = 'pending'|'partial'|'paid'|'cancelled';
 export interface ISupplierInvoice {
+  order_number: any;
+  supplier_name: any;
   id: string; invoice_number: string; source_order: ISourceOrderList; supplier: ISupplierProfile;
   amount_due: number; amount_paid: number; balance_due: number; payment_method: IPaymentPreference | null;
   payment_reference: string; status: TInvoiceStatus; status_display: string;

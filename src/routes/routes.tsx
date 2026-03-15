@@ -160,6 +160,11 @@ const routes = [
 
       // Rejected Lots
       { path: "rejections", element: <LazyLoader.RejectedLots /> },
+
+      { path: "orders/:id/tree", element: <LazyLoader.TransactionTree /> }, 
+      { path: "payments/:id", element: <LazyLoader.SupplierPaymentDetails /> },
+      { path: "buyer-invoices/:id", element: <LazyLoader.BuyerInvoiceDetails /> },
+      { path: "buyer-payments/:id", element: <LazyLoader.BuyerPaymentDetails /> },
     ],
   },
 

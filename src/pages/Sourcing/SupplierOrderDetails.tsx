@@ -313,7 +313,7 @@ const SupplierOrderDetails = () => {
 
               <Timeline>
                 <TimelineItem>
-                  <TimelineOppositeContent color="text.secondary" sx={{ flex: 0.3 }}>
+                  <TimelineOppositeContent color="text.primary" sx={{ flex: 0.3 }}>
                     {formatDateToDDMMYYYY(order.created_at)}
                   </TimelineOppositeContent>
                   <TimelineSeparator>
@@ -327,7 +327,7 @@ const SupplierOrderDetails = () => {
 
                 {order.sent_at && (
                   <TimelineItem>
-                    <TimelineOppositeContent color="text.secondary" sx={{ flex: 0.3 }}>
+                    <TimelineOppositeContent color="text.primary" sx={{ flex: 0.3 }}>
                       {formatDateToDDMMYYYY(order.sent_at)}
                     </TimelineOppositeContent>
                     <TimelineSeparator>
@@ -342,7 +342,7 @@ const SupplierOrderDetails = () => {
 
                 {order.accepted_at && (
                   <TimelineItem>
-                    <TimelineOppositeContent color="text.secondary" sx={{ flex: 0.3 }}>
+                    <TimelineOppositeContent color="text.primary" sx={{ flex: 0.3 }}>
                       {formatDateToDDMMYYYY(order.accepted_at)}
                     </TimelineOppositeContent>
                     <TimelineSeparator>
@@ -357,7 +357,7 @@ const SupplierOrderDetails = () => {
 
                 {order.shipped_at && (
                   <TimelineItem>
-                    <TimelineOppositeContent color="text.secondary" sx={{ flex: 0.3 }}>
+                    <TimelineOppositeContent color="text.primary" sx={{ flex: 0.3 }}>
                       {formatDateToDDMMYYYY(order.shipped_at)}
                     </TimelineOppositeContent>
                     <TimelineSeparator>
@@ -372,7 +372,7 @@ const SupplierOrderDetails = () => {
 
                 {order.delivered_at && (
                   <TimelineItem>
-                    <TimelineOppositeContent color="text.secondary" sx={{ flex: 0.3 }}>
+                    <TimelineOppositeContent color="text.primary" sx={{ flex: 0.3 }}>
                       {formatDateToDDMMYYYY(order.delivered_at)}
                     </TimelineOppositeContent>
                     <TimelineSeparator>
@@ -387,7 +387,7 @@ const SupplierOrderDetails = () => {
 
                 {order.completed_at && (
                   <TimelineItem>
-                    <TimelineOppositeContent color="text.secondary" sx={{ flex: 0.3 }}>
+                    <TimelineOppositeContent color="text.primary" sx={{ flex: 0.3 }}>
                       {formatDateToDDMMYYYY(order.completed_at)}
                     </TimelineOppositeContent>
                     <TimelineSeparator>

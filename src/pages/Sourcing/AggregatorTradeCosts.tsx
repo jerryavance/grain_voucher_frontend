@@ -1,8 +1,11 @@
-import { FC, useEffect, useState, useCallback } from "react";
-import { Box, Button, Chip, Typography } from "@mui/material";
+/**
+ * AggregatorTradeCosts.tsx — UPDATED: Export added
+ */
+
+import { FC, useEffect, useState } from "react";
+import { Box, Typography } from "@mui/material";
 import { toast } from "react-hot-toast";
-import { debounce } from "lodash";
-import AddIcon from "@mui/icons-material/Add";
+import EditIcon from "@mui/icons-material/Edit";
 import useTitle from "../../hooks/useTitle";
 import CustomTable from "../../components/UI/CustomTable";
 import SearchInput from "../../components/SearchInput";
@@ -12,22 +15,31 @@ import { AggregatorTradeCostColumnShape } from "./AllColumnShapes";
 import { AggregatorTradeCostForm } from "./SourcingForms";
 import { INITIAL_PAGE_SIZE } from "../../api/constants";
 import { IDropdownAction } from "../../components/UI/DropdownActionBtn";
-import EditIcon from "@mui/icons-material/Edit";
-import { formatCurrency, formatWeight, formatPercentage } from "./SourcingConstants";
+import { ExportButtons } from "./ExportUtils";
+
+const AGG_EXPORT_COLUMNS = [
+  { header: "Order #", key: "source_order_number" },
+  { header: "Source Qty (kg)", key: "source_quantity_kg" },
+  { header: "Arrived Qty (kg)", key: "arrived_quantity_kg" },
+  { header: "Transit Loss (kg)", key: "tonnage_lost_in_transit_kg" },
+  { header: "Loss %", key: "transit_loss_pct" },
+  { header: "Buyer Deduction (kg)", key: "buyer_deduction_kg" },
+  { header: "Net Accepted (kg)", key: "net_accepted_quantity_kg" },
+  { header: "Add. Costs", key: "total_additional_cost" },
+  { header: "Eff. Cost/kg", key: "effective_cost_per_kg" },
+  { header: "Created", key: "created_at" },
+];
 
 const AggregatorTradeCosts: FC = () => {
   useTitle("Aggregator Trade Costs");
-
   const [records, setRecords] = useState<IAggregatorTradeCostsResults>();
   const [filters, setFilters] = useState<any>({ page: 1, page_size: INITIAL_PAGE_SIZE });
   const [loading, setLoading] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
-
-  // Form state for create/edit
   const [showForm, setShowForm] = useState(false);
   const [editRecord, setEditRecord] = useState<IAggregatorTradeCost | null>(null);
-  const [editOrderId, setEditOrderId] = useState<string>("");
-  const [editOrderNumber, setEditOrderNumber] = useState<string>("");
+  const [editOrderId, setEditOrderId] = useState("");
+  const [editOrderNumber, setEditOrderNumber] = useState("");
 
   useEffect(() => { fetchData(filters); }, [filters]);
 
@@ -38,10 +50,6 @@ const AggregatorTradeCosts: FC = () => {
     finally { setLoading(false); }
   };
 
-  const handleSearch = () => {
-    setFilters({ ...filters, search: searchQuery, page: 1 });
-  };
-
   const handleEdit = (record: IAggregatorTradeCost) => {
     setEditRecord(record);
     setEditOrderId(record.source_order);
@@ -49,34 +57,20 @@ const AggregatorTradeCosts: FC = () => {
     setShowForm(true);
   };
 
-  const handleCloseForm = () => {
-    setShowForm(false);
-    setEditRecord(null);
-    setEditOrderId("");
-    setEditOrderNumber("");
-  };
+  const handleCloseForm = () => { setShowForm(false); setEditRecord(null); setEditOrderId(""); setEditOrderNumber(""); };
 
   const tableActions: IDropdownAction[] = [
-    {
-      label: "Edit",
-      icon: <EditIcon color="primary" />,
-      onClick: handleEdit,
-    },
+    { label: "Edit", icon: <EditIcon color="primary" />, onClick: handleEdit },
   ];
 
   return (
     <Box pt={2} pb={4}>
       <Box sx={{ display: "flex", alignItems: "center", gap: 2, mb: 2, flexWrap: "wrap" }}>
         <Box sx={{ flexGrow: 1, minWidth: 250 }}>
-          <SearchInput
-            value={searchQuery}
-            onChange={(e: React.ChangeEvent<HTMLInputElement>) => setSearchQuery(e.target.value)}
-            onKeyPress={(e: React.KeyboardEvent) => { if (e.key === "Enter") handleSearch(); }}
-            type="text"
-            placeholder="Search by order number..."
-          />
+          <SearchInput value={searchQuery} onChange={(e: React.ChangeEvent<HTMLInputElement>) => setSearchQuery(e.target.value)} onKeyPress={(e: React.KeyboardEvent) => { if (e.key === "Enter") setFilters({ ...filters, search: searchQuery, page: 1 }); }} type="text" placeholder="Search by order number..." />
         </Box>
         <Typography variant="h5" sx={{ mr: "auto" }}>Aggregator Trade Costs</Typography>
+        <ExportButtons data={records?.results || []} columns={AGG_EXPORT_COLUMNS} filename="aggregator_costs" />
       </Box>
 
       <CustomTable
@@ -90,14 +84,10 @@ const AggregatorTradeCosts: FC = () => {
         loading={loading}
       />
 
-      {/* Edit form — source_order is locked since we come from an existing record */}
       {showForm && editOrderId && (
         <AggregatorTradeCostForm
-          open={showForm}
-          sourceOrderId={editOrderId}
-          sourceOrderNumber={editOrderNumber}
-          existingRecord={editRecord}
-          handleClose={handleCloseForm}
+          open={showForm} sourceOrderId={editOrderId} sourceOrderNumber={editOrderNumber}
+          existingRecord={editRecord} handleClose={handleCloseForm}
           callBack={() => { handleCloseForm(); fetchData(filters); }}
         />
       )}

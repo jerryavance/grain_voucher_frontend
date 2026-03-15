@@ -200,7 +200,7 @@ const SupplierOrders = () => {
         <Grid item xs={12} sm={6} md={3}>
           <Card>
             <CardContent>
-              <Typography color="text.secondary" gutterBottom variant="overline">
+              <Typography color="text.primary" gutterBottom variant="overline">
                 Total Orders
               </Typography>
               <Typography variant="h4">{stats.total}</Typography>
@@ -210,7 +210,7 @@ const SupplierOrders = () => {
         <Grid item xs={12} sm={6} md={3}>
           <Card>
             <CardContent>
-              <Typography color="text.secondary" gutterBottom variant="overline">
+              <Typography color="text.primary" gutterBottom variant="overline">
                 Pending Action
               </Typography>
               <Typography variant="h4" color="warning.main">
@@ -222,7 +222,7 @@ const SupplierOrders = () => {
         <Grid item xs={12} sm={6} md={3}>
           <Card>
             <CardContent>
-              <Typography color="text.secondary" gutterBottom variant="overline">
+              <Typography color="text.primary" gutterBottom variant="overline">
                 In Progress
               </Typography>
               <Typography variant="h4" color="info.main">
@@ -234,7 +234,7 @@ const SupplierOrders = () => {
         <Grid item xs={12} sm={6} md={3}>
           <Card>
             <CardContent>
-              <Typography color="text.secondary" gutterBottom variant="overline">
+              <Typography color="text.primary" gutterBottom variant="overline">
                 Completed
               </Typography>
               <Typography variant="h4" color="success.main">

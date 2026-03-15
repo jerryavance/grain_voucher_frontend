@@ -134,25 +134,25 @@ const SupplierDetails = () => {
       <Grid container spacing={3} sx={{ mb: 3 }}>
         <Grid item xs={12} sm={6} md={3}>
           <Card><CardContent>
-            <Typography color="text.secondary" gutterBottom variant="overline">Total Orders</Typography>
+            <Typography color="text.primary" gutterBottom variant="overline">Total Orders</Typography>
             <Typography variant="h4">{supplier.total_orders}</Typography>
           </CardContent></Card>
         </Grid>
         <Grid item xs={12} sm={6} md={3}>
           <Card><CardContent>
-            <Typography color="text.secondary" gutterBottom variant="overline">Total Supplied</Typography>
+            <Typography color="text.primary" gutterBottom variant="overline">Total Supplied</Typography>
             <Typography variant="h4">{formatWeight(supplier.total_supplied_kg)}</Typography>
           </CardContent></Card>
         </Grid>
         <Grid item xs={12} sm={6} md={3}>
           <Card><CardContent>
-            <Typography color="text.secondary" gutterBottom variant="overline">Grain Types</Typography>
+            <Typography color="text.primary" gutterBottom variant="overline">Grain Types</Typography>
             <Typography variant="h4">{supplier.typical_grain_types.length}</Typography>
           </CardContent></Card>
         </Grid>
         <Grid item xs={12} sm={6} md={3}>
           <Card><CardContent>
-            <Typography color="text.secondary" gutterBottom variant="overline">Member Since</Typography>
+            <Typography color="text.primary" gutterBottom variant="overline">Member Since</Typography>
             <Typography variant="h6">{formatDateToDDMMYYYY(supplier.created_at)}</Typography>
           </CardContent></Card>
         </Grid>
@@ -252,7 +252,7 @@ const SupplierDetails = () => {
               {orders.length === 0 ? (
                 <TableRow>
                   <TableCell colSpan={6} align="center">
-                    <Typography color="text.secondary">No orders found</Typography>
+                    <Typography color="text.primary">No orders found</Typography>
                   </TableCell>
                 </TableRow>
               ) : (
@@ -293,7 +293,7 @@ const SupplierDetails = () => {
               {invoices.length === 0 ? (
                 <TableRow>
                   <TableCell colSpan={6} align="center">
-                    <Typography color="text.secondary">No invoices found</Typography>
+                    <Typography color="text.primary">No invoices found</Typography>
                   </TableCell>
                 </TableRow>
               ) : (
@@ -351,7 +351,7 @@ const SupplierDetails = () => {
 
 const styles = {
   infoRow: { display: "flex", justifyContent: "space-between", alignItems: "center", mb: 1.5 },
-  label: { fontWeight: 600, color: "text.secondary" },
+  label: { fontWeight: 600, color: "text.primary" },
   value: { color: "text.primary" },
 };
 

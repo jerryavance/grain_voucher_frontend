@@ -134,7 +134,7 @@ const SupplierDashboard = () => {
               <CardContent>
                 <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
                   <Box>
-                    <Typography color="text.secondary" gutterBottom variant="overline">
+                    <Typography color="text.primary" gutterBottom variant="overline">
                       {stat.title}
                     </Typography>
                     <Typography variant="h4">{stat.value}</Typography>
@@ -177,7 +177,7 @@ const SupplierDashboard = () => {
                     {recentOrders.length === 0 ? (
                       <TableRow>
                         <TableCell colSpan={6} align="center">
-                          <Typography color="text.secondary">No orders yet</Typography>
+                          <Typography color="text.primary">No orders yet</Typography>
                         </TableCell>
                       </TableRow>
                     ) : (
@@ -235,7 +235,7 @@ const SupplierDashboard = () => {
                     {recentInvoices.length === 0 ? (
                       <TableRow>
                         <TableCell colSpan={4} align="center">
-                          <Typography color="text.secondary">No invoices yet</Typography>
+                          <Typography color="text.primary">No invoices yet</Typography>
                         </TableCell>
                       </TableRow>
                     ) : (

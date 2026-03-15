@@ -112,7 +112,7 @@ const SupplierProfile = () => {
               )}
 
               {profile.is_verified && profile.verified_at && (
-                <Typography variant="body2" color="text.secondary">
+                <Typography variant="body2" color="text.primary">
                   Verified on {formatDateToDDMMYYYY(profile.verified_at)}
                 </Typography>
               )}
@@ -158,9 +158,9 @@ const SupplierProfile = () => {
               </Typography>
 
               <Box sx={{ display: "flex", alignItems: "center", mb: 2, mt: 3 }}>
-                <BusinessIcon sx={{ mr: 1, color: "text.secondary" }} />
+                <BusinessIcon sx={{ mr: 1, color: "text.primary" }} />
                 <Box>
-                  <Typography variant="caption" color="text.secondary">
+                  <Typography variant="caption" color="text.primary">
                     Business Name
                   </Typography>
                   <Typography variant="body1">{profile.business_name}</Typography>
@@ -168,9 +168,9 @@ const SupplierProfile = () => {
               </Box>
 
               <Box sx={{ display: "flex", alignItems: "center", mb: 2 }}>
-                <LocationOnIcon sx={{ mr: 1, color: "text.secondary" }} />
+                <LocationOnIcon sx={{ mr: 1, color: "text.primary" }} />
                 <Box>
-                  <Typography variant="caption" color="text.secondary">
+                  <Typography variant="caption" color="text.primary">
                     Farm Location
                   </Typography>
                   <Typography variant="body1">
@@ -180,9 +180,9 @@ const SupplierProfile = () => {
               </Box>
 
               <Box sx={{ display: "flex", alignItems: "center", mb: 2 }}>
-                <BusinessIcon sx={{ mr: 1, color: "text.secondary" }} />
+                <BusinessIcon sx={{ mr: 1, color: "text.primary" }} />
                 <Box>
-                  <Typography variant="caption" color="text.secondary">
+                  <Typography variant="caption" color="text.primary">
                     Hub
                   </Typography>
                   <Typography variant="body1">{profile.hub?.name || "—"}</Typography>
@@ -192,8 +192,8 @@ const SupplierProfile = () => {
               {profile.typical_grain_types && profile.typical_grain_types.length > 0 && (
                 <Box sx={{ mb: 2 }}>
                   <Box sx={{ display: "flex", alignItems: "center", mb: 1 }}>
-                    <AgricultureIcon sx={{ mr: 1, color: "text.secondary" }} />
-                    <Typography variant="caption" color="text.secondary">
+                    <AgricultureIcon sx={{ mr: 1, color: "text.primary" }} />
+                    <Typography variant="caption" color="text.primary">
                       Typical Grain Types
                     </Typography>
                   </Box>
@@ -215,9 +215,9 @@ const SupplierProfile = () => {
               </Typography>
 
               <Box sx={{ display: "flex", alignItems: "center", mb: 2, mt: 3 }}>
-                <PhoneIcon sx={{ mr: 1, color: "text.secondary" }} />
+                <PhoneIcon sx={{ mr: 1, color: "text.primary" }} />
                 <Box>
-                  <Typography variant="caption" color="text.secondary">
+                  <Typography variant="caption" color="text.primary">
                     Phone Number
                   </Typography>
                   <Typography variant="body1">
@@ -227,9 +227,9 @@ const SupplierProfile = () => {
               </Box>
 
               <Box sx={{ display: "flex", alignItems: "center", mb: 2 }}>
-                <EmailIcon sx={{ mr: 1, color: "text.secondary" }} />
+                <EmailIcon sx={{ mr: 1, color: "text.primary" }} />
                 <Box>
-                  <Typography variant="caption" color="text.secondary">
+                  <Typography variant="caption" color="text.primary">
                     Email
                   </Typography>
                   <Typography variant="body1">
@@ -239,9 +239,9 @@ const SupplierProfile = () => {
               </Box>
 
               <Box sx={{ display: "flex", alignItems: "center", mb: 2 }}>
-                <BusinessIcon sx={{ mr: 1, color: "text.secondary" }} />
+                <BusinessIcon sx={{ mr: 1, color: "text.primary" }} />
                 <Box>
-                  <Typography variant="caption" color="text.secondary">
+                  <Typography variant="caption" color="text.primary">
                     Full Name
                   </Typography>
                   <Typography variant="body1">

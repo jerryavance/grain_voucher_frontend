@@ -1,3 +1,13 @@
+/**
+ * Sourcing.service.ts — UPDATED
+ *
+ * NEW ENDPOINTS:
+ *   - getTransactionTree(orderId)
+ *   - getSupplierPaymentDetails(id)  (was missing)
+ *   - getBuyerPaymentDetails(id)     (was missing)
+ *   - getBuyerInvoiceDetails(id)     (was missing - only had list)
+ */
+
 import instance from "../../api";
 import {
   ISupplierProfile, ISuppliersResults, ISourceOrder, ISourceOrdersResults,
@@ -10,10 +20,8 @@ import {
   IBuyerInvoice, IBuyerInvoicesResults,
   IBuyerPayment, IBuyerPaymentsResults,
   ITradeSettlement, ITradeSettlementsResults, IHubPLSummary,
-  // Buyer profile
   IBuyerProfile, IBuyerProfilesResults, IBuyerContactPreference,
   IBuyerDashboard, IBuyerCreditStatus,
-  // NEW
   IAggregatorTradeCost, IAggregatorTradeCostsResults,
   IRejectedLot, IRejectedLotsResults,
 } from "./Sourcing.interface";
@@ -40,7 +48,7 @@ export const SourcingService = {
     return instance.post(`sourcing/suppliers/${id}/verify/`).then(r => r.data);
   },
 
-  // ── Supplier-specific methods (farmer users) ──────────────────────────────
+  // ── Supplier-specific methods ────────────────────────────────────────────
   async getMySupplierProfile() {
     return instance.get("sourcing/suppliers/").then((response) => {
       const data = response.data;
@@ -51,23 +59,18 @@ export const SourcingService = {
       return data;
     });
   },
-
   async getMySupplierOrders(filters?: any) {
     return instance.get("sourcing/source-orders/", { params: filters }).then(r => r.data);
   },
-
   async getMyPaymentPreferences(filters?: any) {
     return instance.get("sourcing/payment-preferences/", { params: filters }).then(r => r.data);
   },
-
   async getMySupplierInvoices(filters?: any) {
     return instance.get("sourcing/supplier-invoices/", { params: filters }).then(r => r.data);
   },
-
   async acceptOrder(orderId: string) {
     return instance.post(`sourcing/source-orders/${orderId}/accept/`).then(r => r.data);
   },
-
   async rejectOrder(orderId: string, reason: string) {
     return instance.post(`sourcing/source-orders/${orderId}/reject/`, { reason }).then(r => r.data);
   },
@@ -115,6 +118,11 @@ export const SourcingService = {
     return instance.post(`sourcing/source-orders/${id}/cancel/`, { reason }).then(r => r.data);
   },
 
+  // ✅ NEW: Transaction Tree — full end-to-end trade view
+  async getTransactionTree(orderId: string): Promise<any> {
+    return instance.get(`sourcing/source-orders/${orderId}/transaction_tree/`).then(r => r.data);
+  },
+
   // ── Supplier Invoices ─────────────────────────────────────────────────────
   async getSupplierInvoices(filters: Record<string, any>): Promise<ISupplierInvoicesResults> {
     return instance.get("sourcing/supplier-invoices/", { params: filters }).then(r => r.data);
@@ -158,6 +166,7 @@ export const SourcingService = {
   async getSupplierPayments(filters: Record<string, any>): Promise<ISupplierPaymentsResults> {
     return instance.get("sourcing/supplier-payments/", { params: filters }).then(r => r.data);
   },
+  // ✅ NEW
   async getSupplierPaymentDetails(id: string): Promise<ISupplierPayment> {
     return instance.get(`sourcing/supplier-payments/${id}/`).then(r => r.data);
   },
@@ -187,10 +196,7 @@ export const SourcingService = {
     return instance.get(`sourcing/investor-allocations/${id}/`).then(r => r.data);
   },
   async createInvestorAllocation(payload: {
-    investor_account: string;
-    source_order: string;
-    amount_allocated: number;
-    notes?: string;
+    investor_account: string; source_order: string; amount_allocated: number; notes?: string;
   }): Promise<IInvestorAllocation> {
     return instance.post("sourcing/investor-allocations/", payload).then(r => r.data);
   },
@@ -212,7 +218,7 @@ export const SourcingService = {
     return instance.get("sourcing/sale-lots/available/", { params: filters }).then(r => r.data);
   },
 
-  // ── NEW: Aggregator Trade Costs ───────────────────────────────────────────
+  // ── Aggregator Trade Costs ────────────────────────────────────────────────
   async getAggregatorTradeCosts(filters?: Record<string, any>): Promise<IAggregatorTradeCostsResults> {
     return instance.get("sourcing/aggregator-costs/", { params: filters }).then(r => r.data);
   },
@@ -220,7 +226,6 @@ export const SourcingService = {
     return instance.get(`sourcing/aggregator-costs/${id}/`).then(r => r.data);
   },
   async getAggregatorTradeCostByOrder(orderId: string): Promise<IAggregatorTradeCost> {
-    // Returns the single cost record for an aggregator order
     return instance.get("sourcing/aggregator-costs/", {
       params: { source_order: orderId },
     }).then(r => {
@@ -237,7 +242,7 @@ export const SourcingService = {
     return instance.patch(`sourcing/aggregator-costs/${id}/`, payload).then(r => r.data);
   },
 
-  // ── NEW: Rejected Lots ────────────────────────────────────────────────────
+  // ── Rejected Lots ─────────────────────────────────────────────────────────
   async getRejectedLots(filters?: Record<string, any>): Promise<IRejectedLotsResults> {
     return instance.get("sourcing/rejections/", { params: filters }).then(r => r.data);
   },
@@ -250,7 +255,6 @@ export const SourcingService = {
   async updateRejectedLot(id: string, payload: Partial<IRejectedLot>): Promise<IRejectedLot> {
     return instance.patch(`sourcing/rejections/${id}/`, payload).then(r => r.data);
   },
-  // Creates a replacement SourceOrder from an existing rejected lot
   async createReplacementTrade(rejectedLotId: string, payload?: Record<string, any>): Promise<ISourceOrder> {
     return instance.post(`sourcing/rejections/${rejectedLotId}/create_replacement/`, payload || {}).then(r => r.data);
   },
@@ -352,6 +356,7 @@ export const SourcingService = {
   async getBuyerInvoices(filters: Record<string, any>): Promise<IBuyerInvoicesResults> {
     return instance.get("sourcing/buyer-invoices/", { params: filters }).then(r => r.data);
   },
+  // ✅ NEW
   async getBuyerInvoiceDetails(id: string): Promise<IBuyerInvoice> {
     return instance.get(`sourcing/buyer-invoices/${id}/`).then(r => r.data);
   },
@@ -362,6 +367,10 @@ export const SourcingService = {
   // ── Buyer Payments ────────────────────────────────────────────────────────
   async getBuyerPayments(filters: Record<string, any>): Promise<IBuyerPaymentsResults> {
     return instance.get("sourcing/buyer-payments/", { params: filters }).then(r => r.data);
+  },
+  // ✅ NEW
+  async getBuyerPaymentDetails(id: string): Promise<IBuyerPayment> {
+    return instance.get(`sourcing/buyer-payments/${id}/`).then(r => r.data);
   },
   async createBuyerPayment(payload: Partial<IBuyerPayment>): Promise<IBuyerPayment> {
     return instance.post("sourcing/buyer-payments/", payload).then(r => r.data);

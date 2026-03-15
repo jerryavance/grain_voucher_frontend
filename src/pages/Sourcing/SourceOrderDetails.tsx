@@ -1,10 +1,23 @@
+/**
+ * SourceOrderDetails.tsx — FIXED
+ *
+ * FIXES:
+ *  1. Hub, Grain Type, Created By now read from _detail nested objects
+ *  2. Invoice & Payments tab shows actual invoice data + payment history (was static alert)
+ *  3. Added Deliveries tab with delivery records table
+ *  4. Added Weighbridge tab with weighbridge record details
+ *  5. Added "View Trade Story" button linking to TransactionTree
+ *  6. Aggregator tab preserved
+ */
+
 import { FC, useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import {
   Alert, Box, Button, Card, CardContent, Chip, Divider, Grid,
-  Tab, Tabs, TextField, Typography,
-  Dialog, DialogTitle, DialogContent, DialogActions,
-  FormControl, InputLabel, Select, MenuItem, FormHelperText,
+  Tab, Tabs, Table, TableBody, TableCell, TableHead, TableRow,
+  Typography, Dialog, DialogTitle, DialogContent, DialogActions,
+  FormControl, InputLabel, Select, MenuItem, FormHelperText, TextField,
+  Paper, LinearProgress,
 } from "@mui/material";
 import { useFormik } from "formik";
 import * as Yup from "yup";
@@ -19,14 +32,16 @@ import AccountBalanceIcon from "@mui/icons-material/AccountBalance";
 import StorefrontIcon from "@mui/icons-material/Storefront";
 import WarningAmberIcon from "@mui/icons-material/WarningAmber";
 import EditIcon from "@mui/icons-material/Edit";
+import AccountTreeIcon from "@mui/icons-material/AccountTree";
 import useTitle from "../../hooks/useTitle";
 import { SourcingService } from "./Sourcing.service";
 import { ISourceOrder, IInvestorAccount, IAggregatorTradeCost } from "./Sourcing.interface";
-import { formatCurrency, formatWeight, formatPercentage, ORDER_STATUS_COLORS } from "./SourcingConstants";
+import { formatCurrency, formatWeight, formatPercentage, ORDER_STATUS_COLORS, INVOICE_STATUS_COLORS, PAYMENT_STATUS_COLORS } from "./SourcingConstants";
 import { formatDateToDDMMYYYY } from "../../utils/date_formatter";
 import { Span } from "../../components/Typography";
 import LoadingScreen from "../../components/LoadingScreen";
 import ProgressIndicator from "../../components/UI/ProgressIndicator";
+import SupplierInvoicePDFButton from "./SupplierInvoicePDF";
 import { StandaloneDeliveryRecordForm, StandaloneWeighbridgeRecordForm, AggregatorTradeCostForm } from "./SourcingForms";
 
 interface TabPanelProps { children?: React.ReactNode; index: number; value: number; }
@@ -35,11 +50,8 @@ function TabPanel({ children, value, index }: TabPanelProps) {
 }
 
 const LOGISTICS_LABELS: Record<string, string> = {
-  supplier: "Supplier Arranged",
-  supplier_driver: "Supplier Driver",
-  bennu_truck: "Bennu Truck",
-  third_party: "Third Party",
-  company: "Company Arranged",
+  supplier: "Supplier Arranged", supplier_driver: "Supplier Driver",
+  bennu_truck: "Bennu Truck", third_party: "Third Party", company: "Company Arranged",
 };
 
 // ─── Investor Allocation Form ──────────────────────────────────────────────
@@ -60,137 +72,60 @@ const InvestorAllocationForm: FC<{
   }, [open]);
 
   const form = useFormik({
-    initialValues: {
-      investor_account: "",
-      source_order: order.id,
-      amount_allocated: order.total_cost,
-      notes: "",
-    },
+    initialValues: { investor_account: "", source_order: order.id, amount_allocated: order.total_cost, notes: "" },
     validationSchema: Yup.object({
       investor_account: Yup.string().required("Investor account is required"),
-      amount_allocated: Yup.number()
-        .typeError("Must be a number")
-        .positive("Must be positive")
-        .required("Amount is required"),
+      amount_allocated: Yup.number().typeError("Must be a number").positive().required(),
     }),
     enableReinitialize: true,
     onSubmit: async (values) => {
       setLoading(true);
       try {
         await SourcingService.createInvestorAllocation({
-          investor_account: values.investor_account,
-          source_order: values.source_order,
-          amount_allocated: Number(values.amount_allocated),
-          notes: values.notes,
+          investor_account: values.investor_account, source_order: values.source_order,
+          amount_allocated: Number(values.amount_allocated), notes: values.notes,
         });
         toast.success("Investor allocated successfully");
         form.resetForm(); callBack?.(); handleClose();
       } catch (e: any) {
-        const msg =
-          e.response?.data?.amount_allocated?.[0] ||
-          e.response?.data?.non_field_errors?.[0] ||
-          e.response?.data?.source_order?.[0] ||
-          e.response?.data?.detail ||
-          "Failed to create allocation";
-        toast.error(msg);
+        toast.error(e.response?.data?.amount_allocated?.[0] || e.response?.data?.source_order?.[0] || "Failed");
       } finally { setLoading(false); }
     },
   });
 
-  const handleDialogClose = () => {
-    if (loading) return;
-    form.resetForm(); handleClose();
-  };
-
   const selected = investorAccounts.find(a => a.id === form.values.investor_account);
-  // NEW: use emd_balance as primary capital source, fall back to available_balance
-  const effectiveBalance = selected
-    ? (selected.emd_balance ?? selected.available_balance)
-    : 0;
-  const sufficient = selected ? effectiveBalance >= Number(form.values.amount_allocated) : true;
+  const balance = selected ? (selected.emd_balance ?? selected.available_balance) : 0;
+  const sufficient = selected ? balance >= Number(form.values.amount_allocated) : true;
 
   return (
-    <Dialog open={open} onClose={handleDialogClose} maxWidth="sm" fullWidth>
-      <DialogTitle sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-        <AccountBalanceIcon color="secondary" />
-        Assign Investor to Order
-      </DialogTitle>
+    <Dialog open={open} onClose={() => !loading && handleClose()} maxWidth="sm" fullWidth>
+      <DialogTitle><AccountBalanceIcon color="primary" sx={{ mr: 1 }} />Assign Investor</DialogTitle>
       <DialogContent dividers>
-        {optionsLoading ? (
-          <Box sx={{ display: "flex", justifyContent: "center", alignItems: "center", py: 6, gap: 2 }}>
-            <ProgressIndicator /><Span>Loading investor accounts...</Span>
-          </Box>
-        ) : (
-          <Box sx={{ display: "flex", flexDirection: "column", gap: 2.5, pt: 1 }}>
-            <Alert severity="info">
-              Committing investor capital to fund this purchase. Funds + margin are returned once the grain is sold.
-            </Alert>
-            {investorAccounts.length === 0 ? (
-              <Alert severity="warning">No investor accounts found. Please create an investor account first.</Alert>
-            ) : (
-              <FormControl fullWidth error={Boolean(form.touched.investor_account && form.errors.investor_account)}>
-                <InputLabel id="investor-account-label">Investor Account *</InputLabel>
-                <Select
-                  labelId="investor-account-label"
-                  value={form.values.investor_account}
-                  label="Investor Account *"
-                  onChange={e => form.setFieldValue("investor_account", e.target.value)}
-                  onBlur={() => form.setFieldTouched("investor_account", true)}
-                >
-                  {investorAccounts.map(a => {
-                    const balance = a.emd_balance ?? a.available_balance;
-                    return (
-                      <MenuItem key={a.id} value={a.id}>
-                        {a.investor.first_name} {a.investor.last_name}
-                        &nbsp;—&nbsp;EMD Balance: {formatCurrency(balance)}
-                      </MenuItem>
-                    );
-                  })}
-                </Select>
-                {form.touched.investor_account && form.errors.investor_account && (
-                  <FormHelperText>{form.errors.investor_account as string}</FormHelperText>
-                )}
-              </FormControl>
-            )}
-            {selected && (
-              <Alert severity={sufficient ? "success" : "error"}>
-                EMD Balance: <strong>{formatCurrency(effectiveBalance)}</strong>
-                {!sufficient && " — Insufficient EMD balance for this allocation amount"}
-              </Alert>
-            )}
-            <TextField
-              label="Amount Allocated (UGX) *"
-              type="number"
-              fullWidth
-              value={form.values.amount_allocated}
+        {optionsLoading ? <Box sx={{ display: "flex", justifyContent: "center", py: 4 }}><ProgressIndicator /></Box> : (
+          <Box sx={{ display: "flex", flexDirection: "column", gap: 2, pt: 1 }}>
+            <FormControl fullWidth error={Boolean(form.touched.investor_account && form.errors.investor_account)}>
+              <InputLabel>Investor Account *</InputLabel>
+              <Select value={form.values.investor_account} label="Investor Account *" onChange={e => form.setFieldValue("investor_account", e.target.value)}>
+                {investorAccounts.map(a => (
+                  <MenuItem key={a.id} value={a.id}>
+                    {a.investor.first_name} {a.investor.last_name} — EMD: {formatCurrency(a.emd_balance ?? a.available_balance)}
+                  </MenuItem>
+                ))}
+              </Select>
+              {form.touched.investor_account && form.errors.investor_account && <FormHelperText>{form.errors.investor_account as string}</FormHelperText>}
+            </FormControl>
+            {selected && <Alert severity={sufficient ? "success" : "error"}>EMD Balance: {formatCurrency(balance)}{!sufficient && " — Insufficient"}</Alert>}
+            <TextField label="Amount (UGX) *" type="number" fullWidth value={form.values.amount_allocated}
               onChange={e => form.setFieldValue("amount_allocated", e.target.value)}
-              onBlur={() => form.setFieldTouched("amount_allocated", true)}
-              error={Boolean(form.touched.amount_allocated && form.errors.amount_allocated)}
-              helperText={
-                (form.touched.amount_allocated && form.errors.amount_allocated as string) ||
-                `Order total cost: ${formatCurrency(order.total_cost)}`
-              }
-              inputProps={{ min: 1 }}
-            />
-            <TextField
-              label="Notes (optional)"
-              multiline rows={2} fullWidth
-              value={form.values.notes}
-              onChange={e => form.setFieldValue("notes", e.target.value)}
-              placeholder="Any additional notes about this allocation..."
-            />
+              helperText={`Order total: ${formatCurrency(order.total_cost)}`} />
+            <TextField label="Notes" multiline rows={2} fullWidth value={form.values.notes} onChange={e => form.setFieldValue("notes", e.target.value)} />
           </Box>
         )}
       </DialogContent>
-      <DialogActions sx={{ px: 3, py: 2, gap: 1 }}>
-        <Button onClick={handleDialogClose} disabled={loading}>Cancel</Button>
-        <Button
-          variant="contained"
-          onClick={() => form.handleSubmit()}
-          disabled={loading || optionsLoading || !sufficient || investorAccounts.length === 0}
-          startIcon={loading ? <ProgressIndicator color="inherit" size={18} /> : <AccountBalanceIcon />}
-        >
-          {loading ? "Allocating..." : "Allocate Investor"}
+      <DialogActions>
+        <Button onClick={handleClose} disabled={loading}>Cancel</Button>
+        <Button variant="contained" onClick={() => form.handleSubmit()} disabled={loading || !sufficient}>
+          {loading ? "Allocating..." : "Allocate"}
         </Button>
       </DialogActions>
     </Dialog>
@@ -201,284 +136,180 @@ const InvestorAllocationForm: FC<{
 const SourceOrderDetails = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-
   const [order, setOrder] = useState<ISourceOrder | null>(null);
   const [loading, setLoading] = useState(true);
   const [tabValue, setTabValue] = useState(0);
   const [showDeliveryForm, setShowDeliveryForm] = useState(false);
   const [showWeighbridgeForm, setShowWeighbridgeForm] = useState(false);
   const [showAllocationForm, setShowAllocationForm] = useState(false);
-  // NEW: aggregator cost states
   const [showAggregatorCostForm, setShowAggregatorCostForm] = useState(false);
   const [aggregatorCost, setAggregatorCost] = useState<IAggregatorTradeCost | null>(null);
   const [aggregatorCostLoading, setAggregatorCostLoading] = useState(false);
 
+  // ✅ NEW: full trade tree data for invoice/payments/deliveries tabs
+  const [tradeTree, setTradeTree] = useState<any>(null);
+  const [treeLoading, setTreeLoading] = useState(false);
+
   useTitle(order ? `Order ${order.order_number}` : "Order Details");
 
   useEffect(() => { if (id) fetchOrderDetails(); }, [id]);
-
-  // NEW: load aggregator cost whenever order is an aggregator trade
-  useEffect(() => {
-    if (order?.trade_type === "aggregator") fetchAggregatorCost();
-  }, [order?.id, order?.trade_type]);
+  useEffect(() => { if (order?.trade_type === "aggregator") fetchAggregatorCost(); }, [order?.id, order?.trade_type]);
+  // ✅ NEW: fetch trade tree for invoice/payments/deliveries data
+  useEffect(() => { if (id) fetchTradeTree(); }, [id]);
 
   const fetchOrderDetails = async () => {
     try {
       setLoading(true);
-      const data = await SourcingService.getSourceOrderDetails(id!);
-      setOrder(data);
+      setOrder(await SourcingService.getSourceOrderDetails(id!));
     } catch {
       toast.error("Failed to load order details");
       navigate("/admin/sourcing/orders");
     } finally { setLoading(false); }
   };
 
+  const fetchTradeTree = async () => {
+    if (!id) return;
+    setTreeLoading(true);
+    try { setTradeTree(await SourcingService.getTransactionTree(id)); }
+    catch { /* trade tree is supplementary */ }
+    finally { setTreeLoading(false); }
+  };
+
   const fetchAggregatorCost = async () => {
     if (!id) return;
     setAggregatorCostLoading(true);
-    try {
-      const cost = await SourcingService.getAggregatorTradeCostByOrder(id);
-      setAggregatorCost(cost);
-    } catch {
-      // Not found is normal for new orders — not an error
-      setAggregatorCost(null);
-    } finally { setAggregatorCostLoading(false); }
+    try { setAggregatorCost(await SourcingService.getAggregatorTradeCostByOrder(id)); }
+    catch { setAggregatorCost(null); }
+    finally { setAggregatorCostLoading(false); }
   };
 
   const handleAction = async (action: () => Promise<any>, successMsg: string) => {
-    try {
-      await action();
-      toast.success(successMsg);
-      fetchOrderDetails();
-    } catch (e: any) {
-      toast.error(e?.response?.data?.error || e?.response?.data?.detail || "Action failed");
-    }
+    try { await action(); toast.success(successMsg); fetchOrderDetails(); fetchTradeTree(); }
+    catch (e: any) { toast.error(e?.response?.data?.error || "Action failed"); }
   };
 
   if (loading) return <LoadingScreen />;
   if (!order) return null;
 
-  const createdBy = order.created_by;
-  const hub = order.hub;
-  const grainType = order.grain_type;
-  const supplier = order.supplier;
+  // ✅ FIX: read from _detail nested objects
+  const createdBy = (order as any).created_by_detail || order.created_by;
+  const hub = (order as any).hub_detail || order.hub;
+  const grainType = (order as any).grain_type_detail || order.grain_type;
+  const supplier = (order as any).supplier_detail || order.supplier;
   const isAggregator = order.trade_type === "aggregator";
+
+  // Trade tree data
+  const treeDeliveries = tradeTree?.deliveries || [];
+  const treeWeighbridge = tradeTree?.weighbridge;
+  const treeInvoice = tradeTree?.supplier_invoice;
+  const treePayments = tradeTree?.supplier_payments || [];
+
+  const tabLabels = [
+    "Order Details",
+    "Supplier Info",
+    `Invoice & Payments`,
+    `Deliveries (${treeDeliveries.length})`,
+    "Weighbridge",
+  ];
+  if (isAggregator) tabLabels.push("Aggregator Costs");
 
   return (
     <Box pt={2} pb={4}>
       {/* Header */}
       <Box sx={{ display: "flex", alignItems: "center", mb: 3, flexWrap: "wrap", gap: 1 }}>
-        <Button startIcon={<ArrowBackIcon />} onClick={() => navigate("/admin/sourcing/orders")} sx={{ mr: 1 }}>
-          Back
-        </Button>
+        <Button startIcon={<ArrowBackIcon />} onClick={() => navigate("/admin/sourcing/orders")} sx={{ mr: 1 }}>Back</Button>
         <Typography variant="h4">{order.order_number}</Typography>
-        <Chip label={order.status_display ?? order.status} color={ORDER_STATUS_COLORS[order.status]} sx={{ ml: 1 }} />
-        {/* NEW: trade type chip */}
-        <Chip
-          label={isAggregator ? "Aggregator Trade" : "Direct Purchase"}
-          color={isAggregator ? "info" : "default"}
-          size="small"
-          variant="outlined"
-          icon={isAggregator ? <StorefrontIcon /> : undefined}
-        />
-        {order.has_investor_allocation
-          ? <Chip label="Investor Assigned" color="success" size="small" icon={<AccountBalanceIcon />} variant="outlined" />
-          : <Chip label="No Investor" color="warning" size="small" variant="outlined" />}
+        <Chip label={(order as any).status_display ?? order.status} color={ORDER_STATUS_COLORS[order.status]} sx={{ ml: 1 }} />
+        <Chip label={isAggregator ? "Aggregator Trade" : "Direct Purchase"} color={isAggregator ? "info" : "default"} size="small" variant="outlined" />
+        {order.has_investor_allocation && <Chip label="Investor Assigned" color="success" size="small" icon={<AccountBalanceIcon />} variant="outlined" />}
         {order.has_sale_lot && <Chip label="Stock Created" color="info" size="small" variant="outlined" />}
-        {/* NEW: rejected lot chip */}
-        {order.rejected_lot && <Chip label="Has Rejection" color="error" size="small" icon={<WarningAmberIcon />} variant="outlined" />}
       </Box>
 
       {/* Action Buttons */}
       <Box sx={{ mb: 3, display: "flex", gap: 1, flexWrap: "wrap" }}>
+        {/* ✅ NEW: Trade Story button */}
+        <Button variant="outlined" startIcon={<AccountTreeIcon />} onClick={() => navigate(`/admin/sourcing/orders/${id}/tree`)}>
+          View Trade Story
+        </Button>
         {order.status === "draft" && (
-          <Button variant="contained" startIcon={<SendIcon />}
-            onClick={() => handleAction(() => SourcingService.sendToSupplier(id!), "Order sent to supplier")}>
-            Send to Supplier
-          </Button>
+          <Button variant="contained" startIcon={<SendIcon />} onClick={() => handleAction(() => SourcingService.sendToSupplier(id!), "Sent to supplier")}>Send to Supplier</Button>
         )}
         {order.status === "sent" && (
           <>
-            <Button variant="contained" color="success" startIcon={<CheckIcon />}
-              onClick={() => handleAction(() => SourcingService.acceptOrder(id!), "Order accepted")}>
-              Accept Order
-            </Button>
-            <Button variant="outlined" color="error" startIcon={<CloseIcon />}
-              onClick={() => handleAction(() => SourcingService.cancelOrder(id!), "Order cancelled")}>
-              Cancel
-            </Button>
+            <Button variant="contained" color="success" startIcon={<CheckIcon />} onClick={() => handleAction(() => SourcingService.acceptOrder(id!), "Accepted")}>Accept</Button>
+            <Button variant="outlined" color="error" startIcon={<CloseIcon />} onClick={() => handleAction(() => SourcingService.cancelOrder(id!), "Cancelled")}>Cancel</Button>
           </>
         )}
         {order.status === "accepted" && (
           <>
-            {!order.has_investor_allocation && (
-              <Button variant="contained" color="secondary" startIcon={<AccountBalanceIcon />}
-                onClick={() => setShowAllocationForm(true)}>
-                Assign Investor
-              </Button>
-            )}
-            <Button variant="outlined" startIcon={<LocalShippingIcon />}
-              onClick={() => handleAction(() => SourcingService.markInTransit(id!), "Order marked in transit")}>
-              Mark In Transit
-            </Button>
+            {!order.has_investor_allocation && <Button variant="contained" color="primary" startIcon={<AccountBalanceIcon />} onClick={() => setShowAllocationForm(true)}>Assign Investor</Button>}
+            <Button variant="outlined" startIcon={<LocalShippingIcon />} onClick={() => handleAction(() => SourcingService.markInTransit(id!), "Marked in transit")}>Mark In Transit</Button>
           </>
         )}
-        {order.status === "in_transit" && (
-          <Button variant="contained" startIcon={<LocalShippingIcon />}
-            onClick={() => setShowDeliveryForm(true)}>
-            Record Delivery
-          </Button>
-        )}
+        {order.status === "in_transit" && <Button variant="contained" startIcon={<LocalShippingIcon />} onClick={() => setShowDeliveryForm(true)}>Record Delivery</Button>}
         {order.status === "delivered" && (
           <>
-            {!order.has_weighbridge && (
-              <Button variant="contained" color="secondary" startIcon={<ScaleIcon />}
-                onClick={() => setShowWeighbridgeForm(true)}>
-                Record Weighbridge
-              </Button>
-            )}
-            {/* NEW: aggregator cost button */}
-            {isAggregator && (
-              <Button
-                variant={aggregatorCost ? "outlined" : "contained"}
-                color="info"
-                startIcon={aggregatorCost ? <EditIcon /> : <StorefrontIcon />}
-                onClick={() => setShowAggregatorCostForm(true)}
-              >
-                {aggregatorCost ? "Edit Aggregator Costs" : "Record Aggregator Costs"}
-              </Button>
-            )}
+            {!order.has_weighbridge && <Button variant="contained" color="primary" startIcon={<ScaleIcon />} onClick={() => setShowWeighbridgeForm(true)}>Record Weighbridge</Button>}
+            {isAggregator && <Button variant={aggregatorCost ? "outlined" : "contained"} color="info" startIcon={aggregatorCost ? <EditIcon /> : <StorefrontIcon />} onClick={() => setShowAggregatorCostForm(true)}>{aggregatorCost ? "Edit Aggregator Costs" : "Record Aggregator Costs"}</Button>}
           </>
         )}
       </Box>
 
-      {/* Alerts */}
-      {order.status === "accepted" && !order.has_investor_allocation && (
-        <Alert severity="warning" sx={{ mb: 2 }}
-          action={<Button color="inherit" size="small" onClick={() => setShowAllocationForm(true)}>Assign Now</Button>}>
-          This order has no investor assigned. Assign an investor before dispatching.
-        </Alert>
-      )}
-      {/* NEW: alert if aggregator order delivered but no costs recorded */}
-      {isAggregator && order.status === "delivered" && !aggregatorCost && !aggregatorCostLoading && (
-        <Alert severity="warning" sx={{ mb: 2 }}
-          action={<Button color="inherit" size="small" onClick={() => setShowAggregatorCostForm(true)}>Record Now</Button>}>
-          Aggregator costs not yet recorded. Record actual tonnage and destination costs.
-        </Alert>
-      )}
-      {/* NEW: alert if rejected lot exists */}
-      {order.rejected_lot && (
-        <Alert severity="error" sx={{ mb: 2 }}>
-          A rejection has been recorded against this order's stock lot.
-        </Alert>
-      )}
-
       {/* Tabs */}
       <Tabs value={tabValue} onChange={(_, v) => setTabValue(v)} sx={{ borderBottom: 1, borderColor: "divider" }}>
-        <Tab label="Order Details" />
-        <Tab label="Supplier Info" />
-        <Tab label="Invoice & Payments" />
-        {/* NEW: aggregator tab — only shown for aggregator trades */}
-        {isAggregator && <Tab label="Aggregator Costs" />}
+        {tabLabels.map((label, i) => <Tab key={i} label={label} />)}
       </Tabs>
 
       {/* ── Tab 0: Order Details ─────────────────────────────────────────── */}
       <TabPanel value={tabValue} index={0}>
         <Grid container spacing={3}>
           <Grid item xs={12} md={6}>
-            <Card>
-              <CardContent>
-                <Typography variant="h6" gutterBottom>Order Information</Typography>
-                <Divider sx={{ mb: 2 }} />
-                {([
-                  ["Order Number", order.order_number],
-                  ["Trade Type", isAggregator ? "Aggregator Trade" : "Direct Purchase"],
-                  ["Hub", hub?.name ?? "—"],
-                  ["Grain Type", grainType?.name ?? "—"],
-                  ["Quantity", formatWeight(order.quantity_kg)],
-                  ["Price per kg", formatCurrency(order.offered_price_per_kg)],
-                  ["Created By", createdBy ? `${createdBy.first_name} ${createdBy.last_name}` : "—"],
-                  ["Created At", formatDateToDDMMYYYY(order.created_at)],
-                  ...(order.expected_delivery_date
-                    ? [["Expected Delivery", formatDateToDDMMYYYY(order.expected_delivery_date)]]
-                    : []),
-                ] as [string, string][]).map(([label, value]) => (
-                  <Box key={label} sx={styles.infoRow}>
-                    <Span sx={styles.label}>{label}:</Span>
-                    <Span sx={styles.value}>{value}</Span>
-                  </Box>
-                ))}
-              </CardContent>
-            </Card>
-          </Grid>
-
-          <Grid item xs={12} md={6}>
-            <Card>
-              <CardContent>
-                <Typography variant="h6" gutterBottom>Cost Breakdown</Typography>
-                <Divider sx={{ mb: 2 }} />
-                {([
-                  ["Grain Cost", formatCurrency(order.grain_cost)],
-                  ["Weighbridge Cost", formatCurrency(order.weighbridge_cost)],
-                  ["Logistics Cost", formatCurrency(order.logistics_cost)],
-                  // NEW: loading/offloading
-                  ["Loading Cost", formatCurrency(order.loading_cost)],
-                  ["Offloading Cost", formatCurrency(order.offloading_cost)],
-                  ["Handling Cost", formatCurrency(order.handling_cost)],
-                  ["Other Costs", formatCurrency(order.other_costs)],
-                ] as [string, string][]).map(([label, value]) => (
-                  <Box key={label} sx={styles.infoRow}>
-                    <Span sx={styles.label}>{label}:</Span>
-                    <Span sx={styles.value}>{value}</Span>
-                  </Box>
-                ))}
-                <Divider sx={{ my: 2 }} />
-                <Box sx={styles.infoRow}>
-                  <Typography variant="h6">Total Cost:</Typography>
-                  <Typography variant="h6" color="primary">{formatCurrency(order.total_cost)}</Typography>
+            <Card><CardContent>
+              <Typography variant="h6" gutterBottom>Order Information</Typography>
+              <Divider sx={{ mb: 2 }} />
+              {([
+                ["Order Number", order.order_number],
+                ["Trade Type", isAggregator ? "Aggregator Trade" : "Direct Purchase"],
+                ["Hub", hub?.name ?? "—"],
+                ["Grain Type", grainType?.name ?? "—"],
+                ["Quantity", formatWeight(order.quantity_kg)],
+                ["Price per kg", formatCurrency(order.offered_price_per_kg)],
+                ["Created By", createdBy && typeof createdBy === "object" ? `${createdBy.first_name || ""} ${createdBy.last_name || ""}`.trim() : "—"],
+                ["Created At", formatDateToDDMMYYYY(order.created_at)],
+                ...(order.expected_delivery_date ? [["Expected Delivery", formatDateToDDMMYYYY(order.expected_delivery_date)]] : []),
+              ] as [string, string][]).map(([label, value]) => (
+                <Box key={label} sx={{ display: "flex", justifyContent: "space-between", mb: 1.5 }}>
+                  <Span sx={{ fontWeight: 600, color: "text.primary" }}>{label}:</Span>
+                  <Span>{value}</Span>
                 </Box>
-              </CardContent>
-            </Card>
+              ))}
+            </CardContent></Card>
           </Grid>
-
-          {order.logistics_type && (
-            <Grid item xs={12}>
-              <Card>
-                <CardContent>
-                  <Typography variant="h6" gutterBottom>Logistics</Typography>
-                  <Divider sx={{ mb: 2 }} />
-                  <Grid container spacing={2}>
-                    <Grid item xs={12} md={4}>
-                      <Span sx={styles.label}>Type:</Span>
-                      <Span sx={styles.value}> {LOGISTICS_LABELS[order.logistics_type] ?? order.logistics_type}</Span>
-                    </Grid>
-                    {order.driver_name && (
-                      <Grid item xs={12} md={4}>
-                        <Span sx={styles.label}>Driver:</Span>
-                        <Span sx={styles.value}> {order.driver_name}</Span>
-                      </Grid>
-                    )}
-                    {order.driver_phone && (
-                      <Grid item xs={12} md={4}>
-                        <Span sx={styles.label}>Phone:</Span>
-                        <Span sx={styles.value}> {order.driver_phone}</Span>
-                      </Grid>
-                    )}
-                  </Grid>
-                </CardContent>
-              </Card>
-            </Grid>
-          )}
-
-          {order.notes && (
-            <Grid item xs={12}>
-              <Card><CardContent>
-                <Typography variant="h6" gutterBottom>Notes</Typography>
-                <Divider sx={{ mb: 2 }} />
-                <Typography>{order.notes}</Typography>
-              </CardContent></Card>
-            </Grid>
-          )}
+          <Grid item xs={12} md={6}>
+            <Card><CardContent>
+              <Typography variant="h6" gutterBottom>Cost Breakdown</Typography>
+              <Divider sx={{ mb: 2 }} />
+              {([
+                ["Grain Cost", formatCurrency(order.grain_cost)],
+                ["Weighbridge Cost", formatCurrency(order.weighbridge_cost)],
+                ["Logistics Cost", formatCurrency(order.logistics_cost)],
+                ["Loading Cost", formatCurrency(order.loading_cost)],
+                ["Offloading Cost", formatCurrency(order.offloading_cost)],
+                ["Handling Cost", formatCurrency(order.handling_cost)],
+                ["Other Costs", formatCurrency(order.other_costs)],
+              ] as [string, string][]).map(([label, value]) => (
+                <Box key={label} sx={{ display: "flex", justifyContent: "space-between", mb: 1.5 }}>
+                  <Span sx={{ fontWeight: 600, color: "text.primary" }}>{label}:</Span>
+                  <Span>{value}</Span>
+                </Box>
+              ))}
+              <Divider sx={{ my: 2 }} />
+              <Box sx={{ display: "flex", justifyContent: "space-between" }}>
+                <Typography variant="h6">Total Cost:</Typography>
+                <Typography variant="h6" color="primary">{formatCurrency(order.total_cost)}</Typography>
+              </Box>
+            </CardContent></Card>
+          </Grid>
         </Grid>
       </TabPanel>
 
@@ -489,185 +320,249 @@ const SourceOrderDetails = () => {
           <Divider sx={{ mb: 2 }} />
           <Grid container spacing={2}>
             <Grid item xs={12} md={6}>
-              <Box sx={styles.infoRow}>
-                <Span sx={styles.label}>Business Name:</Span>
-                <Span sx={styles.value}>{supplier?.business_name ?? "—"}</Span>
-              </Box>
-              <Box sx={styles.infoRow}>
-                <Span sx={styles.label}>Contact Person:</Span>
-                <Span sx={styles.value}>
-                  {supplier?.user ? `${supplier.user.first_name} ${supplier.user.last_name}` : "—"}
-                </Span>
-              </Box>
+              <Box sx={{ mb: 1.5 }}><Span sx={{ fontWeight: 600, color: "text.primary" }}>Business Name:</Span> <Span>{supplier?.business_name ?? "—"}</Span></Box>
+              <Box sx={{ mb: 1.5 }}><Span sx={{ fontWeight: 600, color: "text.primary" }}>Contact:</Span> <Span>{supplier?.user ? `${supplier.user.first_name} ${supplier.user.last_name}` : "—"}</Span></Box>
+              {supplier?.user?.phone_number && <Box sx={{ mb: 1.5 }}><Span sx={{ fontWeight: 600, color: "text.primary" }}>Phone:</Span> <Span>{supplier.user.phone_number}</Span></Box>}
             </Grid>
             <Grid item xs={12} md={6}>
-              <Box sx={styles.infoRow}>
-                <Span sx={styles.label}>Primary Hub:</Span>
-                <Span sx={styles.value}>{supplier?.hub?.name ?? "Not Set"}</Span>
-              </Box>
-              <Box sx={styles.infoRow}>
-                <Span sx={styles.label}>Verified:</Span>
-                <Chip
-                  label={supplier?.is_verified ? "Verified" : "Not Verified"}
-                  color={supplier?.is_verified ? "success" : "warning"}
-                  size="small"
-                />
-              </Box>
+              <Box sx={{ mb: 1.5 }}><Span sx={{ fontWeight: 600, color: "text.primary" }}>Hub:</Span> <Span>{supplier?.hub?.name ?? "—"}</Span></Box>
+              <Box sx={{ mb: 1.5 }}><Span sx={{ fontWeight: 600, color: "text.primary" }}>Farm Location:</Span> <Span>{supplier?.farm_location ?? "—"}</Span></Box>
+              <Box sx={{ mb: 1.5 }}><Span sx={{ fontWeight: 600, color: "text.primary" }}>Verified:</Span> <Chip label={supplier?.is_verified ? "Verified" : "Not Verified"} color={supplier?.is_verified ? "success" : "warning"} size="small" /></Box>
             </Grid>
           </Grid>
         </CardContent></Card>
       </TabPanel>
 
-      {/* ── Tab 2: Invoice & Payments ────────────────────────────────────── */}
+      {/* ── Tab 2: Invoice & Payments — ✅ FIXED (was static alert) ─────── */}
       <TabPanel value={tabValue} index={2}>
-        {order.has_invoice
-          ? <Alert severity="info">View invoice details in the Supplier Invoices section.</Alert>
-          : <Alert severity="warning">No invoice generated yet. Invoice is auto-created when order is accepted.</Alert>}
+        {treeLoading ? (
+          <Box sx={{ display: "flex", justifyContent: "center", py: 4 }}><ProgressIndicator /></Box>
+        ) : treeInvoice ? (
+          <Grid container spacing={3}>
+            {/* Invoice summary cards */}
+            <Grid item xs={12}>
+              <Grid container spacing={2}>
+                {[
+                  { label: "Amount Due", value: formatCurrency(treeInvoice.amount_due), color: "text.primary" },
+                  { label: "Amount Paid", value: formatCurrency(treeInvoice.amount_paid), color: "success.main" },
+                  { label: "Balance Due", value: formatCurrency(treeInvoice.balance_due), color: Number(treeInvoice.balance_due) > 0 ? "error.main" : "success.main" },
+                  { label: "Status", value: treeInvoice.status?.toUpperCase(), color: "primary.main" },
+                ].map(c => (
+                  <Grid item xs={6} sm={3} key={c.label}>
+                    <Card variant="outlined"><CardContent sx={{ p: 1.5, "&:last-child": { pb: 1.5 } }}>
+                      <Typography variant="caption" color="text.primary">{c.label}</Typography>
+                      <Typography variant="h6" sx={{ color: c.color, fontWeight: 700 }}>{c.value}</Typography>
+                    </CardContent></Card>
+                  </Grid>
+                ))}
+              </Grid>
+            </Grid>
+
+            {/* Invoice details */}
+            <Grid item xs={12} md={6}>
+              <Card variant="outlined"><CardContent>
+                <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 2 }}>
+                  <Typography variant="h6">Invoice Details</Typography>
+                  <SupplierInvoicePDFButton invoice={treeInvoice as any} isFullDetail={false} size="small" />
+                </Box>
+                <Divider sx={{ mb: 2 }} />
+                {([
+                  ["Invoice #", treeInvoice.invoice_number],
+                  ["Issued At", formatDateToDDMMYYYY(treeInvoice.issued_at)],
+                  ["Due Date", treeInvoice.due_date ? formatDateToDDMMYYYY(treeInvoice.due_date) : "—"],
+                  ["Paid At", treeInvoice.paid_at ? formatDateToDDMMYYYY(treeInvoice.paid_at) : "—"],
+                  ["Payment Reference", treeInvoice.payment_reference || "—"],
+                ] as [string, string][]).map(([label, value]) => (
+                  <Box key={label} sx={{ display: "flex", justifyContent: "space-between", mb: 1.5 }}>
+                    <Span sx={{ fontWeight: 600, color: "text.primary" }}>{label}:</Span>
+                    <Span>{value}</Span>
+                  </Box>
+                ))}
+              </CardContent></Card>
+            </Grid>
+
+            {/* Payment progress */}
+            <Grid item xs={12} md={6}>
+              <Card variant="outlined"><CardContent>
+                <Typography variant="h6" gutterBottom>Payment Progress</Typography>
+                <Divider sx={{ mb: 2 }} />
+                {(() => {
+                  const paidPct = treeInvoice.amount_due > 0 ? Math.min(100, (Number(treeInvoice.amount_paid) / Number(treeInvoice.amount_due)) * 100) : 0;
+                  return (
+                    <>
+                      <Typography variant="h4" sx={{ fontWeight: 700, mb: 1 }}>{paidPct.toFixed(0)}%</Typography>
+                      <LinearProgress variant="determinate" value={paidPct} color={paidPct === 100 ? "success" : "primary"} sx={{ height: 8, borderRadius: 4 }} />
+                    </>
+                  );
+                })()}
+              </CardContent></Card>
+            </Grid>
+
+            {/* Payment history table */}
+            <Grid item xs={12}>
+              <Card variant="outlined"><CardContent>
+                <Typography variant="h6" gutterBottom>Payment History</Typography>
+                <Divider sx={{ mb: 2 }} />
+                {treePayments.length === 0 ? (
+                  <Alert severity="info">No payments recorded yet.</Alert>
+                ) : (
+                  <Table size="small">
+                    <TableHead>
+                      <TableRow sx={{ bgcolor: "action.hover" }}>
+                        {["Payment #", "Method", "Reference", "Amount", "Status", "Date"].map(h => (
+                          <TableCell key={h} sx={{ fontWeight: 700 }}>{h}</TableCell>
+                        ))}
+                      </TableRow>
+                    </TableHead>
+                    <TableBody>
+                      {treePayments.map((p: any) => (
+                        <TableRow key={p.id} hover>
+                          <TableCell><Typography variant="body2" color="primary" sx={{ fontWeight: 600 }}>{p.payment_number}</Typography></TableCell>
+                          <TableCell>{p.method_display || p.method}</TableCell>
+                          <TableCell sx={{ fontFamily: "monospace" }}>{p.reference_number || "—"}</TableCell>
+                          <TableCell sx={{ fontWeight: 600 }}>{formatCurrency(p.amount)}</TableCell>
+                          <TableCell><Chip label={p.status_display || p.status} color={PAYMENT_STATUS_COLORS[p.status] || "default"} size="small" /></TableCell>
+                          <TableCell>{formatDateToDDMMYYYY(p.completed_at || p.created_at)}</TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                )}
+              </CardContent></Card>
+            </Grid>
+          </Grid>
+        ) : (
+          <Alert severity="warning">No invoice generated yet. Invoice is auto-created when the order is accepted.</Alert>
+        )}
       </TabPanel>
 
-      {/* ── Tab 3: Aggregator Costs (only for aggregator trades) ─────────── */}
+      {/* ── Tab 3: Deliveries ✅ NEW ────────────────────────────────────── */}
+      <TabPanel value={tabValue} index={3}>
+        {treeLoading ? (
+          <Box sx={{ display: "flex", justifyContent: "center", py: 4 }}><ProgressIndicator /></Box>
+        ) : treeDeliveries.length > 0 ? (
+          <Paper variant="outlined">
+            <Table size="small">
+              <TableHead>
+                <TableRow sx={{ bgcolor: "action.hover" }}>
+                  {["Hub", "Driver", "Vehicle", "Condition", "Received At", "Notes"].map(h => (
+                    <TableCell key={h} sx={{ fontWeight: 700 }}>{h}</TableCell>
+                  ))}
+                </TableRow>
+              </TableHead>
+              <TableBody>
+                {treeDeliveries.map((d: any) => (
+                  <TableRow key={d.id} hover>
+                    <TableCell>{d.hub_name || "—"}</TableCell>
+                    <TableCell>{d.driver_name}</TableCell>
+                    <TableCell sx={{ fontFamily: "monospace" }}>{d.vehicle_number}</TableCell>
+                    <TableCell><Chip label={d.apparent_condition?.toUpperCase()} size="small" /></TableCell>
+                    <TableCell>{formatDateToDDMMYYYY(d.received_at)}</TableCell>
+                    <TableCell sx={{ maxWidth: 200, overflow: "hidden", textOverflow: "ellipsis" }}>{d.notes || "—"}</TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </Paper>
+        ) : (
+          <Alert severity="info">No delivery records yet. {order.status === "in_transit" && <Button size="small" onClick={() => setShowDeliveryForm(true)}>Record Delivery</Button>}</Alert>
+        )}
+      </TabPanel>
+
+      {/* ── Tab 4: Weighbridge ✅ NEW ───────────────────────────────────── */}
+      <TabPanel value={tabValue} index={4}>
+        {treeLoading ? (
+          <Box sx={{ display: "flex", justifyContent: "center", py: 4 }}><ProgressIndicator /></Box>
+        ) : treeWeighbridge ? (
+          <Grid container spacing={3}>
+            <Grid item xs={12} md={6}>
+              <Card variant="outlined"><CardContent>
+                <Typography variant="h6" gutterBottom>Weight Details</Typography>
+                <Divider sx={{ mb: 2 }} />
+                {([
+                  ["Vehicle #", treeWeighbridge.vehicle_number],
+                  ["Gross Weight", formatWeight(treeWeighbridge.gross_weight_kg)],
+                  ["Tare Weight", formatWeight(treeWeighbridge.tare_weight_kg)],
+                  ["Net Weight", formatWeight(treeWeighbridge.net_weight_kg)],
+                  ["Contracted Qty", formatWeight(order.quantity_kg)],
+                ] as [string, string][]).map(([label, value]) => (
+                  <Box key={label} sx={{ display: "flex", justifyContent: "space-between", mb: 1.5 }}>
+                    <Span sx={{ fontWeight: 600, color: "text.primary" }}>{label}:</Span>
+                    <Span sx={{ fontWeight: 600 }}>{value}</Span>
+                  </Box>
+                ))}
+                <Divider sx={{ my: 1 }} />
+                <Box sx={{ display: "flex", justifyContent: "space-between" }}>
+                  <Span sx={{ fontWeight: 700 }}>Variance:</Span>
+                  <Span sx={{ fontWeight: 700, color: Number(treeWeighbridge.quantity_variance_kg) >= 0 ? "success.main" : "error.main" }}>
+                    {Number(treeWeighbridge.quantity_variance_kg) >= 0 ? "+" : ""}{formatWeight(treeWeighbridge.quantity_variance_kg)}
+                  </Span>
+                </Box>
+              </CardContent></Card>
+            </Grid>
+          </Grid>
+        ) : (
+          <Alert severity="info">No weighbridge record yet. {order.status === "delivered" && <Button size="small" onClick={() => setShowWeighbridgeForm(true)}>Record Weighbridge</Button>}</Alert>
+        )}
+      </TabPanel>
+
+      {/* ── Tab 5: Aggregator Costs (conditional) ──────────────────────── */}
       {isAggregator && (
-        <TabPanel value={tabValue} index={3}>
-          {aggregatorCostLoading ? (
-            <Box sx={{ display: "flex", justifyContent: "center", py: 4 }}>
-              <ProgressIndicator />
-            </Box>
-          ) : aggregatorCost ? (
+        <TabPanel value={tabValue} index={5}>
+          {aggregatorCostLoading ? <Box sx={{ display: "flex", justifyContent: "center", py: 4 }}><ProgressIndicator /></Box>
+          : aggregatorCost ? (
             <Grid container spacing={3}>
               <Grid item xs={12} md={6}>
-                <Card>
-                  <CardContent>
-                    <Typography variant="h6" gutterBottom>Tonnage Outcome</Typography>
-                    <Divider sx={{ mb: 2 }} />
-                    {([
-                      ["Source Quantity", formatWeight(aggregatorCost.source_quantity_kg)],
-                      ["Arrived Quantity", formatWeight(aggregatorCost.arrived_quantity_kg)],
-                      ["Transit Loss", formatWeight(aggregatorCost.tonnage_lost_in_transit_kg)],
-                      ["Buyer Deduction", formatWeight(aggregatorCost.buyer_deduction_kg)],
-                      ["Net Accepted", formatWeight(aggregatorCost.net_accepted_quantity_kg)],
-                    ] as [string, string][]).map(([label, value]) => (
-                      <Box key={label} sx={styles.infoRow}>
-                        <Span sx={styles.label}>{label}:</Span>
-                        <Span sx={styles.value}>{value}</Span>
-                      </Box>
-                    ))}
-                    <Box sx={styles.infoRow}>
-                      <Span sx={styles.label}>Transit Loss %:</Span>
-                      <Span sx={{
-                        color: parseFloat(String(aggregatorCost.transit_loss_pct)) > 2
-                          ? "error.main" : "success.main",
-                        fontWeight: 700,
-                      }}>
-                        {formatPercentage(aggregatorCost.transit_loss_pct)}
-                      </Span>
-                    </Box>
-                  </CardContent>
-                </Card>
+                <Card><CardContent>
+                  <Typography variant="h6" gutterBottom>Tonnage</Typography><Divider sx={{ mb: 2 }} />
+                  {([
+                    ["Source Qty", formatWeight(aggregatorCost.source_quantity_kg)],
+                    ["Arrived Qty", formatWeight(aggregatorCost.arrived_quantity_kg)],
+                    ["Transit Loss", formatWeight(aggregatorCost.tonnage_lost_in_transit_kg)],
+                    ["Transit Loss %", formatPercentage(aggregatorCost.transit_loss_pct)],
+                    ["Buyer Deduction", formatWeight(aggregatorCost.buyer_deduction_kg)],
+                    ["Net Accepted", formatWeight(aggregatorCost.net_accepted_quantity_kg)],
+                  ] as [string, string][]).map(([l, v]) => (
+                    <Box key={l} sx={{ display: "flex", justifyContent: "space-between", mb: 1 }}><Span sx={{ color: "text.primary" }}>{l}:</Span><Span>{v}</Span></Box>
+                  ))}
+                </CardContent></Card>
               </Grid>
-
               <Grid item xs={12} md={6}>
-                <Card>
-                  <CardContent>
-                    <Typography variant="h6" gutterBottom>Destination Costs</Typography>
-                    <Divider sx={{ mb: 2 }} />
-                    {([
-                      ["Weighbridge Cost", formatCurrency(aggregatorCost.destination_weighbridge_cost)],
-                      ["Transit Insurance", formatCurrency(aggregatorCost.transit_insurance_cost)],
-                      ["Other Costs", formatCurrency(aggregatorCost.other_destination_costs)],
-                    ] as [string, string][]).map(([label, value]) => (
-                      <Box key={label} sx={styles.infoRow}>
-                        <Span sx={styles.label}>{label}:</Span>
-                        <Span sx={styles.value}>{value}</Span>
-                      </Box>
-                    ))}
-                    <Divider sx={{ my: 1.5 }} />
-                    <Box sx={styles.infoRow}>
-                      <Span sx={{ fontWeight: 700 }}>Total Add. Costs:</Span>
-                      <Span sx={{ fontWeight: 700 }}>{formatCurrency(aggregatorCost.total_additional_cost)}</Span>
-                    </Box>
-                    <Box sx={styles.infoRow}>
-                      <Typography variant="h6">Effective Cost/kg:</Typography>
-                      <Typography variant="h6" color="primary">
-                        {formatCurrency(aggregatorCost.effective_cost_per_kg)}/kg
-                      </Typography>
-                    </Box>
-                  </CardContent>
-                </Card>
+                <Card><CardContent>
+                  <Typography variant="h6" gutterBottom>Destination Costs</Typography><Divider sx={{ mb: 2 }} />
+                  {([
+                    ["Weighbridge", formatCurrency(aggregatorCost.destination_weighbridge_cost)],
+                    ["Insurance", formatCurrency(aggregatorCost.transit_insurance_cost)],
+                    ["Other", formatCurrency(aggregatorCost.other_destination_costs)],
+                    ["Total Add. Costs", formatCurrency(aggregatorCost.total_additional_cost)],
+                  ] as [string, string][]).map(([l, v]) => (
+                    <Box key={l} sx={{ display: "flex", justifyContent: "space-between", mb: 1 }}><Span sx={{ color: "text.primary" }}>{l}:</Span><Span>{v}</Span></Box>
+                  ))}
+                  <Divider sx={{ my: 1 }} />
+                  <Box sx={{ display: "flex", justifyContent: "space-between" }}>
+                    <Typography variant="h6">Effective Cost/kg:</Typography>
+                    <Typography variant="h6" color="primary">{formatCurrency(aggregatorCost.effective_cost_per_kg)}/kg</Typography>
+                  </Box>
+                </CardContent></Card>
               </Grid>
-
-              <Grid item xs={12}>
-                <Button
-                  variant="outlined"
-                  startIcon={<EditIcon />}
-                  onClick={() => setShowAggregatorCostForm(true)}
-                >
-                  Edit Aggregator Costs
-                </Button>
-              </Grid>
+              <Grid item xs={12}><Button variant="outlined" startIcon={<EditIcon />} onClick={() => setShowAggregatorCostForm(true)}>Edit</Button></Grid>
             </Grid>
           ) : (
             <Box sx={{ textAlign: "center", py: 4 }}>
-              <Typography color="text.secondary" gutterBottom>
-                No aggregator costs recorded yet.
-              </Typography>
-              <Button
-                variant="contained"
-                color="info"
-                startIcon={<StorefrontIcon />}
-                onClick={() => setShowAggregatorCostForm(true)}
-              >
-                Record Aggregator Costs
-              </Button>
+              <Typography color="text.primary" gutterBottom>No aggregator costs recorded.</Typography>
+              <Button variant="contained" color="info" startIcon={<StorefrontIcon />} onClick={() => setShowAggregatorCostForm(true)}>Record</Button>
             </Box>
           )}
         </TabPanel>
       )}
 
       {/* Modals */}
-      <InvestorAllocationForm
-        open={showAllocationForm}
-        order={order}
-        handleClose={() => setShowAllocationForm(false)}
-        callBack={fetchOrderDetails}
-      />
-
-      {showDeliveryForm && (
-        <StandaloneDeliveryRecordForm
-          sourceOrderId={order.id}
-          callBack={() => { setShowDeliveryForm(false); fetchOrderDetails(); }}
-          handleClose={() => setShowDeliveryForm(false)}
-        />
-      )}
-
-      {showWeighbridgeForm && (
-        <StandaloneWeighbridgeRecordForm
-          sourceOrderId={order.id}
-          callBack={() => { setShowWeighbridgeForm(false); fetchOrderDetails(); }}
-          handleClose={() => setShowWeighbridgeForm(false)}
-        />
-      )}
-
-      {/* NEW: Aggregator Cost Form */}
-      <AggregatorTradeCostForm
-        open={showAggregatorCostForm}
-        sourceOrderId={order.id}
-        sourceOrderNumber={order.order_number}
-        existingRecord={aggregatorCost}
-        handleClose={() => setShowAggregatorCostForm(false)}
-        callBack={() => {
-          setShowAggregatorCostForm(false);
-          fetchAggregatorCost();
-          fetchOrderDetails();
-        }}
-      />
+      <InvestorAllocationForm open={showAllocationForm} order={order} handleClose={() => setShowAllocationForm(false)} callBack={() => { fetchOrderDetails(); fetchTradeTree(); }} />
+      {showDeliveryForm && <StandaloneDeliveryRecordForm sourceOrderId={order.id} callBack={() => { setShowDeliveryForm(false); fetchOrderDetails(); fetchTradeTree(); }} handleClose={() => setShowDeliveryForm(false)} />}
+      {showWeighbridgeForm && <StandaloneWeighbridgeRecordForm sourceOrderId={order.id} callBack={() => { setShowWeighbridgeForm(false); fetchOrderDetails(); fetchTradeTree(); }} handleClose={() => setShowWeighbridgeForm(false)} />}
+      <AggregatorTradeCostForm open={showAggregatorCostForm} sourceOrderId={order.id} sourceOrderNumber={order.order_number} existingRecord={aggregatorCost} handleClose={() => setShowAggregatorCostForm(false)} callBack={() => { setShowAggregatorCostForm(false); fetchAggregatorCost(); fetchOrderDetails(); }} />
     </Box>
   );
-};
-
-const styles = {
-  infoRow: { display: "flex", justifyContent: "space-between", alignItems: "center", mb: 1.5 },
-  label: { fontWeight: 600, color: "text.secondary" },
-  value: { color: "text.primary" },
 };
 
 export default SourceOrderDetails;

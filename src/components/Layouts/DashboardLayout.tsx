@@ -35,13 +35,14 @@ const DashboardLayout: FC = ({ children }) => {
 export default DashboardLayout;
 
 const Wrapper = styled.div`
-  padding-left: 150px;
+  padding-left: 220px;   /* matches SIDEBAR_WIDTH in DashboardSideBar */
   height: 100vh;
   overflow: hidden;
   @media (max-width: 960px) {
     padding: 0;
   }
 `;
+
 const ContentWrapper = styled.div`
   padding: 0 20px;
   height: calc(100% - 60px);

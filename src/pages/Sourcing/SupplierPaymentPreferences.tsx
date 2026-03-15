@@ -141,10 +141,10 @@ const SupplierPaymentPreferences = () => {
         <Card>
           <CardContent>
             <Box sx={{ textAlign: "center", py: 4 }}>
-              <Typography variant="h6" color="text.secondary" gutterBottom>
+              <Typography variant="h6" color="text.primary" gutterBottom>
                 No payment methods configured
               </Typography>
-              <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
+              <Typography variant="body2" color="text.primary" sx={{ mb: 3 }}>
                 Add a payment method to receive payments for your grain deliveries
               </Typography>
               <Button variant="contained" startIcon={<AddIcon />} onClick={handleOpenModal}>
@@ -206,7 +206,7 @@ const SupplierPaymentPreferences = () => {
                   {/* Account Details */}
                   {preference.account_number && (
                     <Box sx={{ mb: 1 }}>
-                      <Typography variant="caption" color="text.secondary">
+                      <Typography variant="caption" color="text.primary">
                         {preference.method === "mobile_money"
                           ? "Phone Number"
                           : "Account Number"}
@@ -219,7 +219,7 @@ const SupplierPaymentPreferences = () => {
 
                   {preference.account_name && (
                     <Box sx={{ mb: 2 }}>
-                      <Typography variant="caption" color="text.secondary">
+                      <Typography variant="caption" color="text.primary">
                         Account Name
                       </Typography>
                       <Typography variant="body1">{preference.account_name}</Typography>

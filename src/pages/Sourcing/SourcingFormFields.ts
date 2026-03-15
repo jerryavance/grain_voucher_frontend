@@ -9,6 +9,27 @@
 
 import { IFormField } from "../../utils/form_factory";
 import { TOption } from "../../@types/common";
+ 
+interface DropdownOption {
+  value: string;
+  label: string;
+}
+ 
+interface FormField {
+  name: string;
+  label: string;
+  type: string;
+  required?: boolean;
+  options?: DropdownOption[];
+  multiline?: boolean;
+  rows?: number;
+  gridSize?: number;
+  placeholder?: string;
+  helperText?: string;
+  disabled?: boolean;
+  min?: number;
+  step?: number;
+}
 
 // ============================================================
 // SUPPLIER PROFILE FORM FIELDS
