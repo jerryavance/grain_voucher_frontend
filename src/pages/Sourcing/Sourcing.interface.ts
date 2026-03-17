@@ -38,6 +38,7 @@ export type TLogisticsType = 'bennu_truck'|'supplier_driver'|'third_party';
 export type TTradeType = 'direct' | 'aggregator';
 
 export interface ISourceOrder {
+    replacement_order_number: any;
   id: string; order_number: string; supplier: ISupplierProfile; supplier_id?: string;
   hub: IHub; hub_id?: string; created_by: IUser; grain_type: IGrainType; grain_type_id?: string;
   // NEW: trade type

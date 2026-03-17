@@ -1,10 +1,10 @@
-import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
+// sourcing/pages/SupplierDashboard.tsx
+import React, { useEffect, useState } from "react";
 import {
   Box,
   Card,
   CardContent,
-  Typography,
+  Chip,
   Grid,
   Table,
   TableBody,
@@ -12,42 +12,46 @@ import {
   TableContainer,
   TableHead,
   TableRow,
-  Paper,
-  Chip,
-  Button,
-  Alert,
-  CircularProgress,
+  Typography,
+  Skeleton,
 } from "@mui/material";
+import {
+  LocalShipping,
+  Receipt,
+  CheckCircle,
+  PendingActions,
+  Inventory2,
+  MonetizationOn,
+} from "@mui/icons-material";
+import { useNavigate } from "react-router-dom";
 import { toast } from "react-hot-toast";
-import MonetizationOnIcon from "@mui/icons-material/MonetizationOn";
-import ReceiptIcon from "@mui/icons-material/Receipt";
-import LocalShippingIcon from "@mui/icons-material/LocalShipping";
-import CheckCircleIcon from "@mui/icons-material/CheckCircle";
-import NotificationsIcon from "@mui/icons-material/Notifications";
-import useTitle from "../../hooks/useTitle";
 import { SourcingService } from "./Sourcing.service";
 import { ISupplierDashboard } from "./Sourcing.interface";
-import { formatCurrency, formatWeight, ORDER_STATUS_COLORS, INVOICE_STATUS_COLORS } from "./SourcingConstants";
-import { formatDateToDDMMYYYY } from "../../utils/date_formatter";
+import {
+  formatCurrency,
+  formatKg,
+  formatDate,
+  formatStatus,
+  getStatusColor,
+} from "../../utils/formatters";
 
-const SupplierDashboard = () => {
-  useTitle("Supplier Dashboard");
+const SupplierDashboard: React.FC = () => {
+  const [data, setData] = useState<ISupplierDashboard | null>(null);
+  const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
 
-  const [dashboard, setDashboard] = useState<ISupplierDashboard | null>(null);
-  const [loading, setLoading] = useState(true);
-
   useEffect(() => {
-    fetchDashboardData();
+    fetchDashboard();
   }, []);
 
-  const fetchDashboardData = async () => {
+  const fetchDashboard = async () => {
     try {
-      setLoading(true);
-      const data = await SourcingService.getSupplierDashboard();
-      setDashboard(data);
-    } catch (error: any) {
-      toast.error("Failed to load dashboard data");
+      // FIX: getSupplierDashboard is correct in the new service
+      const res = await SourcingService.getSupplierDashboard();
+      setData(res);
+    } catch (err: any) {
+      toast.error("Failed to load dashboard");
+      console.error(err);
     } finally {
       setLoading(false);
     }
@@ -55,94 +59,81 @@ const SupplierDashboard = () => {
 
   if (loading) {
     return (
-      <Box sx={{ display: "flex", justifyContent: "center", alignItems: "center", minHeight: "60vh" }}>
-        <CircularProgress />
+      <Box p={3}>
+        <Skeleton variant="text" width={300} height={50} />
+        <Grid container spacing={2} mt={1}>
+          {[...Array(6)].map((_, i) => (
+            <Grid item xs={12} sm={6} md={4} key={i}>
+              <Skeleton variant="rectangular" height={100} />
+            </Grid>
+          ))}
+        </Grid>
       </Box>
     );
   }
 
-  if (!dashboard) {
-    return (
-      <Alert severity="error">
-        Failed to load dashboard data. Please try again.
-      </Alert>
-    );
-  }
-
-  // Safe defaults so nothing crashes if the API omits fields
-  const recentOrders = dashboard.recent_orders ?? [];
-  const recentInvoices = dashboard.recent_invoices ?? [];
+  if (!data) return null;
 
   const statCards = [
     {
-      title: "Total Orders",
-      value: dashboard.total_orders ?? 0,
-      icon: <LocalShippingIcon sx={{ fontSize: 40, color: "primary.main" }} />,
-      color: "primary.light",
+      label: "TOTAL ORDERS",
+      value: data.total_orders,
+      icon: <LocalShipping sx={{ fontSize: 40, color: "#7c4dff" }} />,
     },
     {
-      title: "Pending Orders",
-      value: dashboard.pending_orders ?? 0,
-      icon: <ReceiptIcon sx={{ fontSize: 40, color: "warning.main" }} />,
-      color: "warning.light",
+      label: "PENDING ORDERS",
+      value: data.pending_orders,
+      icon: <PendingActions sx={{ fontSize: 40, color: "#ff9800" }} />,
     },
     {
-      title: "Completed Orders",
-      value: dashboard.completed_orders ?? 0,
-      icon: <CheckCircleIcon sx={{ fontSize: 40, color: "success.main" }} />,
-      color: "success.light",
+      label: "COMPLETED ORDERS",
+      value: data.completed_orders,
+      icon: <CheckCircle sx={{ fontSize: 40, color: "#4caf50" }} />,
     },
     {
-      title: "Total Supplied",
-      value: formatWeight(dashboard.total_supplied_kg ?? 0),
-      icon: <LocalShippingIcon sx={{ fontSize: 40, color: "info.main" }} />,
-      color: "info.light",
+      label: "TOTAL SUPPLIED",
+      value: formatKg(data.total_supplied_kg),
+      icon: <Inventory2 sx={{ fontSize: 40, color: "#9c27b0" }} />,
     },
     {
-      title: "Total Earned",
-      value: formatCurrency(dashboard.total_earned ?? 0),
-      icon: <MonetizationOnIcon sx={{ fontSize: 40, color: "success.main" }} />,
-      color: "success.light",
+      label: "TOTAL EARNED",
+      value: formatCurrency(data.total_earned),
+      icon: <MonetizationOn sx={{ fontSize: 40, color: "#4caf50" }} />,
     },
     {
-      title: "Pending Payment",
-      value: formatCurrency(dashboard.pending_payment ?? 0),
-      icon: <MonetizationOnIcon sx={{ fontSize: 40, color: "error.main" }} />,
-      color: "error.light",
+      label: "PENDING PAYMENT",
+      value: formatCurrency(data.pending_payment),
+      icon: <Receipt sx={{ fontSize: 40, color: "#f44336" }} />,
     },
   ];
 
   return (
-    <Box pt={2} pb={4}>
-      <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 3 }}>
-        <Typography variant="h4">Supplier Dashboard</Typography>
-        {(dashboard.unread_notifications ?? 0) > 0 && (
-          <Chip
-            icon={<NotificationsIcon />}
-            label={`${dashboard.unread_notifications} unread notifications`}
-            color="warning"
-            onClick={() => navigate("/supplier/notifications")}
-          />
-        )}
-      </Box>
+    <Box p={3}>
+      <Typography variant="h4" fontWeight={700} mb={3}>
+        Supplier Dashboard
+      </Typography>
 
-      {/* Statistics Cards */}
-      <Grid container spacing={3} sx={{ mb: 4 }}>
-        {statCards.map((stat, index) => (
-          <Grid item xs={12} sm={6} md={4} key={index}>
-            <Card>
-              <CardContent>
-                <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
-                  <Box>
-                    <Typography color="text.primary" gutterBottom variant="overline">
-                      {stat.title}
-                    </Typography>
-                    <Typography variant="h4">{stat.value}</Typography>
-                  </Box>
-                  <Box sx={{ bgcolor: stat.color, borderRadius: 1, p: 1 }}>
-                    {stat.icon}
-                  </Box>
+      <Grid container spacing={2} mb={4}>
+        {statCards.map((card) => (
+          <Grid item xs={12} sm={6} md={4} key={card.label}>
+            <Card elevation={0} sx={{ border: "1px solid #e0e0e0" }}>
+              <CardContent
+                sx={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}
+              >
+                <Box>
+                  <Typography
+                    variant="caption"
+                    color="text.secondary"
+                    fontWeight={600}
+                    textTransform="uppercase"
+                  >
+                    {card.label}
+                  </Typography>
+                  <Typography variant="h5" fontWeight={700}>
+                    {card.value}
+                  </Typography>
                 </Box>
+                {card.icon}
               </CardContent>
             </Card>
           </Grid>
@@ -151,57 +142,70 @@ const SupplierDashboard = () => {
 
       <Grid container spacing={3}>
         {/* Recent Orders */}
-        <Grid item xs={12} lg={7}>
-          <Card>
+        <Grid item xs={12} md={7}>
+          <Card elevation={0} sx={{ border: "1px solid #e0e0e0" }}>
             <CardContent>
-              <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 2 }}>
-                <Typography variant="h6">Recent Orders</Typography>
-                <Button size="small" onClick={() => navigate("/supplier/orders")}>
+              <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
+                <Typography variant="h6" fontWeight={600}>
+                  Recent Orders
+                </Typography>
+                <Typography
+                  variant="body2"
+                  color="primary"
+                  sx={{ cursor: "pointer" }}
+                  onClick={() => navigate("/supplier/orders")}
+                >
                   View All
-                </Button>
+                </Typography>
               </Box>
-
               <TableContainer>
                 <Table size="small">
                   <TableHead>
                     <TableRow>
                       <TableCell>Order #</TableCell>
                       <TableCell>Grain Type</TableCell>
-                      <TableCell align="right">Quantity</TableCell>
-                      <TableCell align="right">Total</TableCell>
+                      <TableCell>Quantity</TableCell>
+                      <TableCell>Total</TableCell>
                       <TableCell>Status</TableCell>
                       <TableCell>Date</TableCell>
                     </TableRow>
                   </TableHead>
                   <TableBody>
-                    {recentOrders.length === 0 ? (
-                      <TableRow>
-                        <TableCell colSpan={6} align="center">
-                          <Typography color="text.primary">No orders yet</Typography>
-                        </TableCell>
-                      </TableRow>
-                    ) : (
-                      recentOrders.map((order) => (
+                    {data.recent_orders?.length > 0 ? (
+                      data.recent_orders.map((order: any) => (
                         <TableRow
                           key={order.id}
                           hover
                           sx={{ cursor: "pointer" }}
+                          // onClick={() => navigate(`/my-farming/orders/${order.id}`)}
                           onClick={() => navigate(`/supplier/orders/${order.id}`)}
                         >
                           <TableCell>{order.order_number}</TableCell>
-                          <TableCell>{order.grain_type_name}</TableCell>
-                          <TableCell align="right">{formatWeight(order.quantity_kg)}</TableCell>
-                          <TableCell align="right">{formatCurrency(order.total_cost)}</TableCell>
+                          <TableCell>
+                            {order.grain_type_name || order.grain_type_detail?.name || "—"}
+                          </TableCell>
+                          <TableCell>{formatKg(order.quantity_kg)}</TableCell>
+                          <TableCell>{formatCurrency(order.total_cost)}</TableCell>
                           <TableCell>
                             <Chip
-                              label={order.status_display}
+                              label={order.status_display || formatStatus(order.status)}
                               size="small"
-                              color={ORDER_STATUS_COLORS[order.status]}
+                              sx={{
+                                bgcolor: getStatusColor(order.status),
+                                color: "#fff",
+                                fontWeight: 600,
+                              }}
                             />
                           </TableCell>
-                          <TableCell>{formatDateToDDMMYYYY(order.created_at)}</TableCell>
+                          <TableCell>{formatDate(order.created_at)}</TableCell>
                         </TableRow>
                       ))
+                    ) : (
+                      <TableRow>
+                        <TableCell colSpan={6} align="center">
+                          No orders yet
+                        </TableCell>
+                      </TableRow>
                     )}
                   </TableBody>
                 </Table>
@@ -211,53 +215,67 @@ const SupplierDashboard = () => {
         </Grid>
 
         {/* Recent Invoices */}
-        <Grid item xs={12} lg={5}>
-          <Card>
+        <Grid item xs={12} md={5}>
+          <Card elevation={0} sx={{ border: "1px solid #e0e0e0" }}>
             <CardContent>
-              <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 2 }}>
-                <Typography variant="h6">Recent Invoices</Typography>
-                <Button size="small" onClick={() => navigate("/supplier/invoices")}>
+              <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
+                <Typography variant="h6" fontWeight={600}>
+                  Recent Invoices
+                </Typography>
+                <Typography
+                  variant="body2"
+                  color="primary"
+                  sx={{ cursor: "pointer" }}
+                  // onClick={() => navigate("/my-farming/invoices")}
+                  onClick={() => navigate("/supplier/invoices")}
+                >
                   View All
-                </Button>
+                </Typography>
               </Box>
-
               <TableContainer>
                 <Table size="small">
                   <TableHead>
                     <TableRow>
                       <TableCell>Invoice #</TableCell>
-                      <TableCell align="right">Amount</TableCell>
-                      <TableCell align="right">Balance</TableCell>
+                      <TableCell>Amount</TableCell>
+                      <TableCell>Balance</TableCell>
                       <TableCell>Status</TableCell>
                     </TableRow>
                   </TableHead>
                   <TableBody>
-                    {recentInvoices.length === 0 ? (
-                      <TableRow>
-                        <TableCell colSpan={4} align="center">
-                          <Typography color="text.primary">No invoices yet</Typography>
-                        </TableCell>
-                      </TableRow>
-                    ) : (
-                      recentInvoices.map((invoice) => (
+                    {data.recent_invoices?.length > 0 ? (
+                      data.recent_invoices.map((inv: any) => (
                         <TableRow
-                          key={invoice.id}
+                          key={inv.id}
                           hover
                           sx={{ cursor: "pointer" }}
-                          onClick={() => navigate(`/supplier/invoices/${invoice.id}`)}
+                          // onClick={() => navigate(`/my-farming/invoices/${inv.id}`)}
+                          onClick={() => navigate(`/admin/sourcing/invoices/${inv.id}`)} 
                         >
-                          <TableCell>{invoice.invoice_number}</TableCell>
-                          <TableCell align="right">{formatCurrency(invoice.amount_due)}</TableCell>
-                          <TableCell align="right">{formatCurrency(invoice.balance_due)}</TableCell>
+                          <TableCell sx={{ fontSize: "0.8rem" }}>
+                            {inv.invoice_number}
+                          </TableCell>
+                          <TableCell>{formatCurrency(inv.amount_due)}</TableCell>
+                          <TableCell>{formatCurrency(inv.balance_due)}</TableCell>
                           <TableCell>
                             <Chip
-                              label={invoice.status_display}
+                              label={inv.status_display || formatStatus(inv.status)}
                               size="small"
-                              color={INVOICE_STATUS_COLORS[invoice.status]}
+                              sx={{
+                                bgcolor: getStatusColor(inv.status),
+                                color: "#fff",
+                                fontWeight: 600,
+                              }}
                             />
                           </TableCell>
                         </TableRow>
                       ))
+                    ) : (
+                      <TableRow>
+                        <TableCell colSpan={4} align="center">
+                          No invoices yet
+                        </TableCell>
+                      </TableRow>
                     )}
                   </TableBody>
                 </Table>

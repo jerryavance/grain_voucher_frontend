@@ -32,7 +32,7 @@ import {
 } from "./SourcingConstants";
 import { formatDateToDDMMYYYY } from "../../utils/date_formatter";
 
-import SupplierInvoicePDFButton from "./SupplierInvoicePDF";
+import { SupplierInvoicePDFButton } from "./SupplierInvoicePDF";
 
 // ─── Helper: format date + time ──────────────────────────────────────────────
 const formatDateTime = (dateStr: string | null | undefined): string => {
@@ -138,7 +138,7 @@ export const SupplierInvoiceColumnShape = (actions: IDropdownAction[]) => [
       <SupplierInvoicePDFButton
         invoice={row.original}
         isFullDetail={false}
-        compact
+        // compact
         size="small"
       />
     ),

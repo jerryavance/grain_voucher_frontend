@@ -7,7 +7,6 @@ import {
   Tabs,
   Tab,
   Button,
-  LinearProgress,
   Chip,
   Alert,
   Divider,
@@ -15,7 +14,6 @@ import {
 import { useEffect, useState } from "react";
 import { toast } from "react-hot-toast";
 import AccountBalanceWalletIcon from "@mui/icons-material/AccountBalanceWallet";
-import LockIcon from "@mui/icons-material/Lock";
 import TrendingUpIcon from "@mui/icons-material/TrendingUp";
 import AccountBalanceIcon from "@mui/icons-material/AccountBalance";
 import useTitle from "../../hooks/useTitle";
@@ -24,22 +22,6 @@ import { IInvestorDashboard } from "./Investor.interface";
 import ProgressIndicator from "../../components/UI/ProgressIndicator";
 import WithdrawalForm from "./WithdrawalForm";
 import { useModalContext } from "../../contexts/ModalDialogContext";
-import {
-  LineChart,
-  Line,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  Legend,
-  ResponsiveContainer,
-  PieChart,
-  Pie,
-  Cell,
-  PieLabelRenderProps,
-  BarChart,
-  Bar,
-} from "recharts";
 
 interface TabPanelProps {
   children?: React.ReactNode;
@@ -60,7 +42,11 @@ function TabPanel({ children, value, index, ...other }: TabPanelProps) {
   );
 }
 
-const COLORS = ["#43a047", "#1976d2", "#ffa726", "#ef5350", "#7b1fa2"];
+const EmptyState = ({ message }: { message: string }) => (
+  <Box sx={{ textAlign: "center", py: 6 }}>
+    <Typography color="text.primary" variant="body1">{message}</Typography>
+  </Box>
+);
 
 const InvestorDashboard = () => {
   useTitle("Investor Dashboard");
@@ -71,9 +57,7 @@ const InvestorDashboard = () => {
   const [dashboardData, setDashboardData] = useState<IInvestorDashboard | null>(null);
   const [accountId, setAccountId] = useState<string | null>(null);
 
-  useEffect(() => {
-    loadData();
-  }, []);
+  useEffect(() => { loadData(); }, []);
 
   const loadData = async () => {
     setLoading(true);
@@ -83,9 +67,7 @@ const InvestorDashboard = () => {
         InvestorService.getInvestorAccounts({ page: 1, page_size: 1 }),
       ]);
       setDashboardData(dashboard);
-      if (accounts.results?.length > 0) {
-        setAccountId(accounts.results[0].id);
-      }
+      if (accounts.results?.length > 0) setAccountId(accounts.results[0].id);
     } catch (err: any) {
       toast.error(err.response?.data?.detail || "Failed to load dashboard data");
     } finally {
@@ -114,26 +96,19 @@ const InvestorDashboard = () => {
     );
   }
 
-  // Derived values
-  const emdBalance = dashboardData.emd_balance ?? dashboardData.available_balance ?? 0;
-  const emdUtilized = dashboardData.emd_utilized ?? dashboardData.total_utilized ?? 0;
-  const emdTotal = emdBalance + emdUtilized;
-  const emdPct = emdTotal > 0 ? (emdUtilized / emdTotal) * 100 : 0;
+  const unpaidMargin =
+    parseFloat(dashboardData.total_margin_earned.toString()) -
+    parseFloat(dashboardData.total_margin_paid.toString());
 
-  const monthlyReturnsData = Object.entries(dashboardData.monthly_returns || {}).map(
-    ([month, value]) => ({ month, return: value })
-  );
-  const receivablesAgingData = [
-    { name: "0–3 days", value: dashboardData.receivables_aging["0-3_days"] },
-    { name: "4–7 days", value: dashboardData.receivables_aging["4-7_days"] },
-    { name: "8–14 days", value: dashboardData.receivables_aging["8-14_days"] },
-    { name: "15–30 days", value: dashboardData.receivables_aging["15-30_days"] },
-    { name: ">30 days", value: dashboardData.receivables_aging["above_30_days"] },
-  ].filter((d) => d.value > 0);
+  const hasReceivables = dashboardData.receivables_aging.total > 0;
+  const hasTrades = dashboardData.trade_summary.number_of_trades > 0;
+  const hasLoans = dashboardData.loan_summary.total_loans > 0;
+  const hasFinancing = dashboardData.financing_summary.total_financings > 0;
+  const hasPnL = dashboardData.profit_and_loss.total_invested > 0;
 
   return (
     <Box pt={2} pb={4} px={3}>
-      {/* ── Header ─────────────────────────────────────────────────────────── */}
+      {/* Header */}
       <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 3 }}>
         <Box sx={{ display: "flex", alignItems: "center", gap: 1.5 }}>
           <AccountBalanceIcon sx={{ fontSize: 38, color: "primary.main" }} />
@@ -150,9 +125,9 @@ const InvestorDashboard = () => {
         </Button>
       </Box>
 
-      {/* ── Top KPI Cards ───────────────────────────────────────────────────── */}
+      {/* Top KPI Cards — only show fields with real values */}
       <Grid container spacing={2.5} sx={{ mb: 3 }}>
-        {/* EMD Wallet Card (NEW – most important) */}
+        {/* Available Balance */}
         <Grid item xs={12} md={4}>
           <Card
             sx={{
@@ -165,123 +140,69 @@ const InvestorDashboard = () => {
               <Box sx={{ display: "flex", alignItems: "center", mb: 1 }}>
                 <AccountBalanceWalletIcon sx={{ mr: 1, color: "success.dark" }} />
                 <Typography variant="overline" color="success.dark" fontWeight="bold">
-                  EMD Wallet
+                  Available Balance
                 </Typography>
               </Box>
               <Typography variant="h5" color="success.dark" fontWeight="bold">
-                {fmt(emdBalance)}
+                {fmt(dashboardData.available_balance)}
               </Typography>
-              <Typography variant="caption" color="text.secondary" sx={{ display: "block", mt: 0.5 }}>
-                Available for trade allocation
-              </Typography>
-              <Box sx={{ mt: 1.5 }}>
-                <Box sx={{ display: "flex", justifyContent: "space-between", mb: 0.5 }}>
-                  <Typography variant="caption" color="text.secondary">
-                    <LockIcon sx={{ fontSize: 12, mr: 0.3 }} />
-                    In trades: {fmt(emdUtilized)}
-                  </Typography>
-                  <Typography variant="caption" color={emdPct > 80 ? "error.main" : "text.secondary"}>
-                    {emdPct.toFixed(0)}% utilized
-                  </Typography>
-                </Box>
-                <LinearProgress
-                  variant="determinate"
-                  value={emdPct}
-                  sx={{
-                    height: 8,
-                    borderRadius: 4,
-                    bgcolor: "#fff",
-                    "& .MuiLinearProgress-bar": {
-                      bgcolor: emdPct > 80 ? "#ef5350" : emdPct > 50 ? "#ffa726" : "#43a047",
-                    },
-                  }}
-                />
-              </Box>
-              {emdBalance === 0 && (
-                <Alert severity="warning" sx={{ mt: 1, py: 0.5 }}>
-                  No available EMD — new trades cannot be allocated
-                </Alert>
-              )}
-            </CardContent>
-          </Card>
-        </Grid>
-
-        {/* Total Deposited */}
-        <Grid item xs={12} sm={6} md={2}>
-          <Card sx={{ height: "100%" }}>
-            <CardContent>
-              <Typography variant="overline" color="text.secondary" fontSize={10}>
-                Total Deposited
-              </Typography>
-              <Typography variant="h6" fontWeight="bold">
-                {fmt(dashboardData.total_deposited)}
+              <Typography variant="caption" color="text.primary" sx={{ display: "block", mt: 0.5 }}>
+                Total Deposited: {fmt(dashboardData.total_deposited)}
               </Typography>
             </CardContent>
           </Card>
         </Grid>
 
         {/* Margin Earned */}
-        <Grid item xs={12} sm={6} md={2}>
+        <Grid item xs={12} sm={6} md={4}>
           <Card sx={{ height: "100%", bgcolor: "#f3e5f5" }}>
             <CardContent>
               <Box sx={{ display: "flex", alignItems: "center", mb: 0.5 }}>
-                <TrendingUpIcon sx={{ fontSize: 18, mr: 0.5, color: "secondary.main" }} />
-                <Typography variant="overline" color="text.secondary" fontSize={10}>
+                <TrendingUpIcon sx={{ fontSize: 18, mr: 0.5, color: "primary.main" }} />
+                <Typography variant="overline" color="text.primary">
                   Margin Earned
                 </Typography>
               </Box>
-              <Typography variant="h6" color="secondary.main" fontWeight="bold">
+              <Typography variant="h5" color="primary.main" fontWeight="bold">
                 {fmt(dashboardData.total_margin_earned)}
               </Typography>
+              <Typography variant="caption" color="text.primary" display="block" mt={0.5}>
+                Paid Out: {fmt(dashboardData.total_margin_paid)}
+              </Typography>
+              {unpaidMargin > 0 && (
+                <Chip
+                  label={`${fmt(unpaidMargin)} unpaid`}
+                  color="warning"
+                  size="small"
+                  sx={{ mt: 0.5, fontSize: 10 }}
+                />
+              )}
             </CardContent>
           </Card>
         </Grid>
 
-        {/* Margin Paid */}
-        <Grid item xs={12} sm={6} md={2}>
-          <Card sx={{ height: "100%" }}>
-            <CardContent>
-              <Typography variant="overline" color="text.secondary" fontSize={10}>
-                Margin Paid Out
-              </Typography>
-              <Typography variant="h6" fontWeight="bold">
-                {fmt(dashboardData.total_margin_paid)}
-              </Typography>
-              {(() => {
-                const unpaid =
-                  dashboardData.total_margin_earned - dashboardData.total_margin_paid;
-                return unpaid > 0 ? (
-                  <Chip
-                    label={`${fmt(unpaid)} unpaid`}
-                    color="warning"
-                    size="small"
-                    sx={{ mt: 0.5, fontSize: 10 }}
-                  />
-                ) : null;
-              })()}
-            </CardContent>
-          </Card>
-        </Grid>
-
-        {/* Overall ROI */}
-        <Grid item xs={12} sm={6} md={2}>
+        {/* Net Earnings */}
+        <Grid item xs={12} sm={6} md={4}>
           <Card sx={{ height: "100%", bgcolor: "#e3f2fd" }}>
             <CardContent>
-              <Typography variant="overline" color="text.secondary" fontSize={10}>
-                Overall ROI
+              <Typography variant="overline" color="text.primary">
+                Net Earnings
               </Typography>
-              <Typography variant="h6" color="primary.main" fontWeight="bold">
-                {fmtPct(dashboardData.profit_and_loss?.overall_roi ?? 0)}
+              <Typography variant="h5" color="primary.main" fontWeight="bold">
+                {fmt(dashboardData.balance_sheet.net_earnings)}
               </Typography>
-              <Typography variant="caption" color="text.secondary">
-                Net: {fmt(dashboardData.profit_and_loss?.net_profit ?? 0)}
+              <Typography variant="caption" color="text.primary" display="block" mt={0.5}>
+                Total Earnings: {fmt(dashboardData.balance_sheet.total_earnings)}
+              </Typography>
+              <Typography variant="caption" color="text.primary" display="block">
+                Withdrawn: {fmt(dashboardData.balance_sheet.earnings_withdrawn)}
               </Typography>
             </CardContent>
           </Card>
         </Grid>
       </Grid>
 
-      {/* ── Tabs ────────────────────────────────────────────────────────────── */}
+      {/* Tabs */}
       <Box sx={{ borderBottom: 1, borderColor: "divider" }}>
         <Tabs value={tabValue} onChange={(_, v) => setTabValue(v)}>
           <Tab label="Overview" />
@@ -292,89 +213,94 @@ const InvestorDashboard = () => {
         </Tabs>
       </Box>
 
-      {/* ── Overview Tab ──────────────────────────────────────────────────── */}
+      {/* Overview Tab */}
       <TabPanel value={tabValue} index={0}>
         <Grid container spacing={3}>
-          {/* Monthly returns chart */}
-          {monthlyReturnsData.length > 0 && (
+          {/* Payout summary alert if unpaid margin exists */}
+          {unpaidMargin > 0 && (
             <Grid item xs={12}>
-              <Card>
-                <CardContent>
-                  <Typography variant="h6" gutterBottom color="primary">
-                    Monthly Returns (%)
-                  </Typography>
-                  <ResponsiveContainer width="100%" height={260}>
-                    <LineChart data={monthlyReturnsData}>
-                      <CartesianGrid strokeDasharray="3 3" />
-                      <XAxis dataKey="month" tick={{ fontSize: 12 }} />
-                      <YAxis tick={{ fontSize: 12 }} unit="%" />
-                      <Tooltip formatter={(v: number) => `${v.toFixed(2)}%`} />
-                      <Legend />
-                      <Line
-                        type="monotone"
-                        dataKey="return"
-                        stroke="#43a047"
-                        strokeWidth={2}
-                        dot={{ r: 4 }}
-                        name="ROI %"
-                      />
-                    </LineChart>
-                  </ResponsiveContainer>
-                </CardContent>
-              </Card>
+              <Alert severity="info">
+                You have <strong>{fmt(unpaidMargin)}</strong> in unpaid margin earnings. Use "Request Withdrawal" to initiate a payout.
+              </Alert>
             </Grid>
           )}
 
-          {/* Financing summary mini-cards */}
-          <Grid item xs={12}>
+          {/* EMD Summary */}
+          <Grid item xs={12} md={6}>
             <Card>
               <CardContent>
-                <Typography variant="h6" gutterBottom color="primary">
-                  Financing Portfolio
-                </Typography>
-                <Grid container spacing={2}>
+                <Typography variant="h6" gutterBottom color="primary">EMD Summary</Typography>
+                <Grid container spacing={1.5}>
                   {[
-                    { label: "Total", value: dashboardData.financing_summary.total_financings, color: "text.primary" },
-                    { label: "Active", value: dashboardData.financing_summary.active_financings, color: "info.main" },
-                    { label: "Completed", value: dashboardData.financing_summary.completed_financings, color: "success.main" },
-                  ].map(({ label, value, color }) => (
-                    <Grid item xs={4} key={label}>
-                      <Box sx={{ textAlign: "center", p: 2, border: "1px solid #e0e0e0", borderRadius: 1 }}>
-                        <Typography variant="h4" color={color}>{value}</Typography>
-                        <Typography variant="caption" color="text.secondary">{label}</Typography>
+                    { label: "EMD Balance", value: dashboardData.emd_summary.emd_balance },
+                    { label: "EMD Utilized", value: dashboardData.emd_summary.emd_utilized },
+                    { label: "Total Committed", value: dashboardData.emd_summary.total_emd_committed },
+                    { label: "Total Deposited", value: dashboardData.emd_summary.total_deposited },
+                  ].map(({ label, value }) => (
+                    <Grid item xs={6} key={label}>
+                      <Box sx={{ p: 1.5, border: "1px solid #e0e0e0", borderRadius: 1 }}>
+                        <Typography variant="caption" color="text.primary">{label}</Typography>
+                        <Typography variant="body1" fontWeight="bold">{fmt(value)}</Typography>
                       </Box>
                     </Grid>
                   ))}
-                  <Grid item xs={12} sm={6}>
-                    <Box sx={{ p: 2, border: "1px solid #e0e0e0", borderRadius: 1 }}>
-                      <Typography variant="caption" color="text.secondary">Total Allocated</Typography>
-                      <Typography variant="h6">{fmt(dashboardData.financing_summary.total_allocated)}</Typography>
-                    </Box>
-                  </Grid>
-                  <Grid item xs={12} sm={6}>
-                    <Box sx={{ p: 2, border: "1px solid #e0e0e0", borderRadius: 1, bgcolor: "#e8f5e9" }}>
-                      <Typography variant="caption" color="text.secondary">Total Earnings from Financing</Typography>
-                      <Typography variant="h6" color="success.main">
-                        {fmt(dashboardData.financing_summary.total_earnings)}
-                      </Typography>
-                    </Box>
-                  </Grid>
                 </Grid>
+                {dashboardData.emd_summary.unpaid_margin > 0 && (
+                  <Alert severity="warning" sx={{ mt: 1.5 }}>
+                    Unpaid Margin: <strong>{fmt(dashboardData.emd_summary.unpaid_margin)}</strong>
+                  </Alert>
+                )}
+                {dashboardData.emd_summary.pending_payout_requests > 0 && (
+                  <Alert severity="info" sx={{ mt: 1 }}>
+                    Pending Payout Requests: {dashboardData.emd_summary.pending_payout_requests}
+                  </Alert>
+                )}
+              </CardContent>
+            </Card>
+          </Grid>
+
+          {/* Financing Portfolio */}
+          <Grid item xs={12} md={6}>
+            <Card sx={{ height: "100%" }}>
+              <CardContent>
+                <Typography variant="h6" gutterBottom color="primary">Financing Portfolio</Typography>
+                {hasFinancing ? (
+                  <Grid container spacing={1.5}>
+                    {[
+                      { label: "Total", value: dashboardData.financing_summary.total_financings, isNum: true },
+                      { label: "Active", value: dashboardData.financing_summary.active_financings, isNum: true },
+                      { label: "Completed", value: dashboardData.financing_summary.completed_financings, isNum: true },
+                      { label: "Total Allocated", value: dashboardData.financing_summary.total_allocated, isNum: false },
+                      { label: "Total Earnings", value: dashboardData.financing_summary.total_earnings, isNum: false },
+                    ].map(({ label, value, isNum }) => (
+                      <Grid item xs={6} key={label}>
+                        <Box sx={{ p: 1.5, border: "1px solid #e0e0e0", borderRadius: 1 }}>
+                          <Typography variant="caption" color="text.primary">{label}</Typography>
+                          <Typography variant="body1" fontWeight="bold">
+                            {isNum ? value : fmt(value)}
+                          </Typography>
+                        </Box>
+                      </Grid>
+                    ))}
+                  </Grid>
+                ) : (
+                  <EmptyState message="No financing activity yet. Allocated funds will appear here once trades are initiated." />
+                )}
               </CardContent>
             </Card>
           </Grid>
         </Grid>
       </TabPanel>
 
-      {/* ── Balance Sheet Tab ────────────────────────────────────────────── */}
+      {/* Balance Sheet Tab */}
       <TabPanel value={tabValue} index={1}>
         <Card>
           <CardContent>
             <Typography variant="h6" gutterBottom color="primary">Balance Sheet</Typography>
             <Grid container spacing={2}>
               {[
-                { label: "Cash Available", value: dashboardData.balance_sheet.cash_available, color: "primary.main" },
-                { label: "Funds in Trades", value: dashboardData.balance_sheet.funds_in_trades, color: "warning.main" },
+                { label: "EMD Available", value: dashboardData.balance_sheet.emd_available, color: "primary.main" },
+                { label: "EMD in Trades", value: dashboardData.balance_sheet.emd_in_trades, color: "warning.main" },
                 { label: "Loans Outstanding", value: dashboardData.balance_sheet.loans_outstanding, color: "warning.main" },
                 { label: "Total Assets", value: dashboardData.balance_sheet.total_assets, color: "success.main" },
                 { label: "Total Earnings", value: dashboardData.balance_sheet.total_earnings, color: "text.primary" },
@@ -383,7 +309,7 @@ const InvestorDashboard = () => {
               ].map(({ label, value, color }) => (
                 <Grid item xs={12} sm={6} md={3} key={label}>
                   <Box sx={{ p: 2, border: "1px solid #e0e0e0", borderRadius: 1, textAlign: "center" }}>
-                    <Typography variant="caption" color="text.secondary">{label}</Typography>
+                    <Typography variant="caption" color="text.primary">{label}</Typography>
                     <Typography variant="h6" color={color} fontWeight="bold">{fmt(value)}</Typography>
                   </Box>
                 </Grid>
@@ -393,137 +319,86 @@ const InvestorDashboard = () => {
         </Card>
       </TabPanel>
 
-      {/* ── Receivables Aging Tab ────────────────────────────────────────── */}
+      {/* Receivables Aging Tab */}
       <TabPanel value={tabValue} index={2}>
         <Card>
           <CardContent>
-            <Typography variant="h6" gutterBottom color="primary">
-              Receivables Aging
-            </Typography>
-            <Grid container spacing={3}>
-              <Grid item xs={12} md={6}>
-                {receivablesAgingData.length > 0 ? (
-                  <ResponsiveContainer width="100%" height={280}>
-                    <PieChart>
-                      <Pie
-                        data={receivablesAgingData}
-                        cx="50%"
-                        cy="50%"
-                        labelLine={false}
-                        label={(p: PieLabelRenderProps) =>
-                          `${p.name}: ${(Number(p.percent) * 100).toFixed(0)}%`
-                        }
-                        outerRadius={100}
-                        dataKey="value"
-                      >
-                        {receivablesAgingData.map((_, i) => (
-                          <Cell key={i} fill={COLORS[i % COLORS.length]} />
-                        ))}
-                      </Pie>
-                      <Tooltip formatter={(v: number) => fmt(v)} />
-                      <Legend />
-                    </PieChart>
-                  </ResponsiveContainer>
-                ) : (
-                  <Box sx={{ textAlign: "center", py: 4 }}>
-                    <Typography color="text.secondary">No receivables</Typography>
-                  </Box>
-                )}
-              </Grid>
-              <Grid item xs={12} md={6}>
-                {receivablesAgingData.map(({ name, value }, i) => (
-                  <Box key={name} sx={{ mb: 1.5 }}>
-                    <Box sx={{ display: "flex", justifyContent: "space-between", mb: 0.3 }}>
-                      <Typography variant="body2">{name}</Typography>
-                      <Typography variant="body2" fontWeight="bold">{fmt(value)}</Typography>
-                    </Box>
-                    <LinearProgress
-                      variant="determinate"
-                      value={
-                        dashboardData.receivables_aging.total > 0
-                          ? (value / dashboardData.receivables_aging.total) * 100
-                          : 0
-                      }
-                      sx={{
-                        height: 8,
-                        borderRadius: 4,
-                        bgcolor: "#f5f5f5",
-                        "& .MuiLinearProgress-bar": { bgcolor: COLORS[i % COLORS.length] },
-                      }}
-                    />
-                  </Box>
-                ))}
-                <Divider sx={{ my: 2 }} />
-                <Box sx={{ display: "flex", justifyContent: "space-between" }}>
-                  <Typography variant="subtitle1" fontWeight="bold">Total Receivables</Typography>
-                  <Typography variant="subtitle1" fontWeight="bold" color="primary">
-                    {fmt(dashboardData.receivables_aging.total)}
-                  </Typography>
-                </Box>
-              </Grid>
-            </Grid>
+            <Typography variant="h6" gutterBottom color="primary">Receivables Aging</Typography>
+            {hasReceivables ? (
+              <Typography>Receivables data will appear here once trades generate outstanding amounts.</Typography>
+            ) : (
+              <EmptyState message="No outstanding receivables. All financed amounts have been settled." />
+            )}
           </CardContent>
         </Card>
       </TabPanel>
 
-      {/* ── P&L Tab ──────────────────────────────────────────────────────── */}
+      {/* P&L Tab */}
       <TabPanel value={tabValue} index={3}>
         <Card>
           <CardContent>
             <Typography variant="h6" gutterBottom color="primary">Profit & Loss</Typography>
-            <Grid container spacing={2}>
-              {[
-                { label: "Total Invested", value: dashboardData.profit_and_loss.total_invested, color: "text.primary" },
-                { label: "Trade Profits", value: dashboardData.profit_and_loss.trade_profits, color: "success.main" },
-                { label: "Loan Interest", value: dashboardData.profit_and_loss.loan_interest, color: "success.main" },
-                { label: "Total Revenue", value: dashboardData.profit_and_loss.total_revenue, color: "success.main" },
-                { label: "Profit Withdrawn", value: dashboardData.profit_and_loss.profit_withdrawn, color: "error.main" },
-                { label: "Net Profit", value: dashboardData.profit_and_loss.net_profit, color: "success.main" },
-              ].map(({ label, value, color }) => (
-                <Grid item xs={12} sm={6} md={4} key={label}>
-                  <Box sx={{ p: 2, border: "1px solid #e0e0e0", borderRadius: 1 }}>
-                    <Typography variant="caption" color="text.secondary">{label}</Typography>
-                    <Typography variant="h6" color={color} fontWeight="bold">{fmt(value)}</Typography>
+            {hasPnL ? (
+              <Grid container spacing={2}>
+                {[
+                  { label: "Total Invested", value: dashboardData.profit_and_loss.total_invested, color: "text.primary" },
+                  { label: "Trade Profits", value: dashboardData.profit_and_loss.trade_profits, color: "success.main" },
+                  { label: "Loan Interest", value: dashboardData.profit_and_loss.loan_interest, color: "success.main" },
+                  { label: "Total Revenue", value: dashboardData.profit_and_loss.total_revenue, color: "success.main" },
+                  { label: "Profit Withdrawn", value: dashboardData.profit_and_loss.profit_withdrawn, color: "error.main" },
+                  { label: "Net Profit", value: dashboardData.profit_and_loss.net_profit, color: "success.main" },
+                ].map(({ label, value, color }) => (
+                  <Grid item xs={12} sm={6} md={4} key={label}>
+                    <Box sx={{ p: 2, border: "1px solid #e0e0e0", borderRadius: 1 }}>
+                      <Typography variant="caption" color="text.primary">{label}</Typography>
+                      <Typography variant="h6" color={color} fontWeight="bold">{fmt(value)}</Typography>
+                    </Box>
+                  </Grid>
+                ))}
+                <Grid item xs={12}>
+                  <Box sx={{ p: 2, bgcolor: "#e3f2fd", borderRadius: 1, textAlign: "center" }}>
+                    <Typography variant="body2" color="text.primary">Overall ROI</Typography>
+                    <Typography variant="h4" color="primary.main" fontWeight="bold">
+                      {fmtPct(dashboardData.profit_and_loss.overall_roi)}
+                    </Typography>
                   </Box>
                 </Grid>
-              ))}
-              <Grid item xs={12}>
-                <Box sx={{ p: 2, bgcolor: "#e3f2fd", borderRadius: 1, textAlign: "center" }}>
-                  <Typography variant="body2" color="text.secondary">Overall ROI</Typography>
-                  <Typography variant="h4" color="primary.main" fontWeight="bold">
-                    {fmtPct(dashboardData.profit_and_loss.overall_roi)}
-                  </Typography>
-                </Box>
               </Grid>
-            </Grid>
+            ) : (
+              <EmptyState message="P&L data will populate once trades are active and settled." />
+            )}
           </CardContent>
         </Card>
       </TabPanel>
 
-      {/* ── Trade Summary Tab ────────────────────────────────────────────── */}
+      {/* Trade Summary Tab */}
       <TabPanel value={tabValue} index={4}>
         <Grid container spacing={3}>
           <Grid item xs={12}>
             <Card>
               <CardContent>
                 <Typography variant="h6" gutterBottom color="primary">Trade Summary</Typography>
-                <Grid container spacing={2}>
-                  {[
-                    { label: "Total Trades", value: dashboardData.trade_summary.number_of_trades, color: "primary.main", isNum: true },
-                    { label: "Active", value: dashboardData.trade_summary.active_trades, color: "info.main", isNum: true },
-                    { label: "Total Invested", value: dashboardData.trade_summary.total_value_invested, color: "text.primary", isNum: false },
-                    { label: "Avg Investment", value: dashboardData.trade_summary.average_investment, color: "text.primary", isNum: false },
-                  ].map(({ label, value, color, isNum }) => (
-                    <Grid item xs={12} sm={6} md={3} key={label}>
-                      <Box sx={{ p: 2, border: "1px solid #e0e0e0", borderRadius: 1, textAlign: "center" }}>
-                        <Typography variant="caption" color="text.secondary">{label}</Typography>
-                        <Typography variant="h5" color={color} fontWeight="bold">
-                          {isNum ? value : fmt(value)}
-                        </Typography>
-                      </Box>
-                    </Grid>
-                  ))}
-                </Grid>
+                {hasTrades ? (
+                  <Grid container spacing={2}>
+                    {[
+                      { label: "Total Trades", value: dashboardData.trade_summary.number_of_trades, isNum: true },
+                      { label: "Active", value: dashboardData.trade_summary.active_trades, isNum: true },
+                      { label: "Total Invested", value: dashboardData.trade_summary.total_value_invested, isNum: false },
+                      { label: "Avg Investment", value: dashboardData.trade_summary.average_investment, isNum: false },
+                    ].map(({ label, value, isNum }) => (
+                      <Grid item xs={12} sm={6} md={3} key={label}>
+                        <Box sx={{ p: 2, border: "1px solid #e0e0e0", borderRadius: 1, textAlign: "center" }}>
+                          <Typography variant="caption" color="text.primary">{label}</Typography>
+                          <Typography variant="h5" fontWeight="bold">
+                            {isNum ? value : fmt(value)}
+                          </Typography>
+                        </Box>
+                      </Grid>
+                    ))}
+                  </Grid>
+                ) : (
+                  <EmptyState message="No trades yet. Your trade activity will appear here once you start investing." />
+                )}
               </CardContent>
             </Card>
           </Grid>
@@ -532,32 +407,36 @@ const InvestorDashboard = () => {
             <Card>
               <CardContent>
                 <Typography variant="h6" gutterBottom color="primary">Loan Portfolio</Typography>
-                <Grid container spacing={2}>
-                  {[
-                    { label: "Total Loans", value: dashboardData.loan_summary.total_loans, color: "text.primary", isNum: true },
-                    { label: "Active", value: dashboardData.loan_summary.active_loans, color: "info.main", isNum: true },
-                    { label: "Overdue", value: dashboardData.loan_summary.overdue_loans, color: "error.main", isNum: true },
-                    { label: "Interest Earned", value: dashboardData.loan_summary.total_interest_earned, color: "success.main", isNum: false },
-                    { label: "Total Loaned", value: dashboardData.loan_summary.total_loaned, color: "text.primary", isNum: false },
-                    { label: "Outstanding", value: dashboardData.loan_summary.total_outstanding, color: "warning.main", isNum: false },
-                  ].map(({ label, value, color, isNum }) => (
-                    <Grid item xs={12} sm={6} md={4} key={label}>
-                      <Box sx={{ p: 2, border: "1px solid #e0e0e0", borderRadius: 1, textAlign: "center" }}>
-                        <Typography variant="caption" color="text.secondary">{label}</Typography>
-                        <Typography variant="h6" color={color} fontWeight="bold">
-                          {isNum ? value : fmt(value)}
-                        </Typography>
-                      </Box>
-                    </Grid>
-                  ))}
-                </Grid>
+                {hasLoans ? (
+                  <Grid container spacing={2}>
+                    {[
+                      { label: "Total Loans", value: dashboardData.loan_summary.total_loans, isNum: true },
+                      { label: "Active", value: dashboardData.loan_summary.active_loans, isNum: true },
+                      { label: "Overdue", value: dashboardData.loan_summary.overdue_loans, isNum: true },
+                      { label: "Interest Earned", value: dashboardData.loan_summary.total_interest_earned, isNum: false },
+                      { label: "Total Loaned", value: dashboardData.loan_summary.total_loaned, isNum: false },
+                      { label: "Outstanding", value: dashboardData.loan_summary.total_outstanding, isNum: false },
+                    ].map(({ label, value, isNum }) => (
+                      <Grid item xs={12} sm={6} md={4} key={label}>
+                        <Box sx={{ p: 2, border: "1px solid #e0e0e0", borderRadius: 1, textAlign: "center" }}>
+                          <Typography variant="caption" color="text.primary">{label}</Typography>
+                          <Typography variant="h6" fontWeight="bold">
+                            {isNum ? value : fmt(value)}
+                          </Typography>
+                        </Box>
+                      </Grid>
+                    ))}
+                  </Grid>
+                ) : (
+                  <EmptyState message="No loan activity yet. Loan data will appear here once loans are issued." />
+                )}
               </CardContent>
             </Card>
           </Grid>
         </Grid>
       </TabPanel>
 
-      {/* ── Withdrawal Modal ─────────────────────────────────────────────── */}
+      {/* Withdrawal Modal */}
       {showModal && accountId && (
         <WithdrawalForm
           accountId={accountId}

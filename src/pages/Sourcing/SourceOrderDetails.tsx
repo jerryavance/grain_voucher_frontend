@@ -41,7 +41,7 @@ import { formatDateToDDMMYYYY } from "../../utils/date_formatter";
 import { Span } from "../../components/Typography";
 import LoadingScreen from "../../components/LoadingScreen";
 import ProgressIndicator from "../../components/UI/ProgressIndicator";
-import SupplierInvoicePDFButton from "./SupplierInvoicePDF";
+import { SupplierInvoicePDFButton } from "./SupplierInvoicePDF";
 import { StandaloneDeliveryRecordForm, StandaloneWeighbridgeRecordForm, AggregatorTradeCostForm } from "./SourcingForms";
 
 interface TabPanelProps { children?: React.ReactNode; index: number; value: number; }

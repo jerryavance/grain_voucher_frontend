@@ -1,10 +1,5 @@
 import { lazy, Suspense as ReactSuspense } from "react";
 import LoadingScreen from "../components/LoadingScreen";
-import JournalEntries from "../pages/Accounting/JournalEntries/JournalEntries";
-import SupplierDashboard from "../pages/Sourcing/SupplierDashboard";
-import SupplierInvoicesView from "../pages/Sourcing/SupplierInvoicesView";
-import Buyers from "../pages/Sourcing/Buyers";
-import BuyerDetails from "../pages/Sourcing/BuyerDetails";
 
 const Suspense: any = ReactSuspense;
 

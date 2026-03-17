@@ -71,14 +71,13 @@ export interface IProfitSharingAgreement {
 }
 
 // Interface for MarginPayout (new model - backend change #2)
-// Full lifecycle: pending → approved → paid / cancelled
 export interface IMarginPayout {
     id: string;
-    investor: IInvestor;                        // Nested from investor_account.investor
-    investor_account: string;                   // UUID (read)
-    investor_account_id: string;                // UUID (write)
-    trade_financing?: string;                   // Optional: UUID of TradeFinancing
-    amount: string;                             // Amount to pay out
+    investor: IInvestor;
+    investor_account: string;
+    investor_account_id: string;
+    trade_financing?: string;
+    amount: string;
     status: 'pending' | 'approved' | 'paid' | 'cancelled';
     notes: string;
     approved_by?: IInvestor;
@@ -145,30 +144,21 @@ export interface ILoan {
     updated_at: string;
 }
 
-// Interface for InvestorDashboard
-export interface IInvestorDashboard {
-    accountId?: string;
+// ── Dashboard interfaces (aligned with actual API response) ──────────────────
+
+export interface IEmdSummary {
+    emd_balance: number;
+    emd_utilized: number;
+    total_emd_committed: number;
     total_deposited: number;
-    total_utilized: number;
-    available_balance: number;
-    total_margin_earned: number;
-    total_margin_paid: number;
-    total_interest_earned: number;
-    // New EMD fields in dashboard
-    emd_balance?: number;
-    emd_utilized?: number;
-    balance_sheet: IBalanceSheet;
-    receivables_aging: IReceivablesAging;
-    profit_and_loss: IProfitAndLoss;
-    monthly_returns: Record<string, number>;
-    trade_summary: ITradeSummary;
-    financing_summary: IFinancingSummary;
-    loan_summary: ILoanSummary;
+    unpaid_margin: number;
+    pending_payout_requests: number;
 }
 
+// Updated: field names match actual API response
 export interface IBalanceSheet {
-    cash_available: number;
-    funds_in_trades: number;
+    emd_available: number;       // was: cash_available
+    emd_in_trades: number;       // was: funds_in_trades
     loans_outstanding: number;
     total_assets: number;
     total_earnings: number;
@@ -219,7 +209,32 @@ export interface ILoanSummary {
     overdue_loans: number;
 }
 
-// Paginated result interfaces
+// Main dashboard interface — aligned with actual API response shape
+export interface IInvestorDashboard {
+    id: string;
+    // Top-level balance fields
+    emd_balance: string;
+    emd_utilized: string;
+    total_deposited: string;
+    total_utilized: string;
+    available_balance: string;
+    total_margin_earned: string;
+    total_margin_paid: string;
+    total_interest_earned: string;
+    // Nested summaries
+    emd_summary: IEmdSummary;
+    balance_sheet: IBalanceSheet;
+    receivables_aging: IReceivablesAging;
+    profit_and_loss: IProfitAndLoss;
+    monthly_returns: Record<string, number>;
+    trade_summary: ITradeSummary;
+    financing_summary: IFinancingSummary;
+    loan_summary: ILoanSummary;
+    payout_history: IMarginPayout[];
+}
+
+// ── Paginated result interfaces ──────────────────────────────────────────────
+
 export interface IInvestorAccountsResults {
     results: IInvestorAccount[];
     count: number;
@@ -260,7 +275,8 @@ export interface ILoansResults {
     count: number;
 }
 
-// Form prop interfaces
+// ── Form prop interfaces ─────────────────────────────────────────────────────
+
 export interface IInvestorFormProps {
     handleClose: () => void;
     formType?: 'Save' | 'Update';
@@ -289,7 +305,6 @@ export interface IProfitAgreementFormProps {
     accountId?: string;
 }
 
-// New: MarginPayout form props
 export interface IMarginPayoutFormProps {
     handleClose: () => void;
     callBack?: () => void;
