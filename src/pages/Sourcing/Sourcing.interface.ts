@@ -331,13 +331,87 @@ export interface IBuyerOrdersResults { results: IBuyerOrderList[]; count: number
 
 // ============ Buyer Invoice ============
 export type TBuyerInvoiceStatus = 'draft'|'issued'|'partial'|'paid'|'overdue'|'cancelled';
+
+/** Per-lot grain line returned by BuyerInvoiceSerializer.order_lines */
+export interface IBuyerInvoiceOrderLine {
+  id: string;
+  lot_number: string;
+  grain_type: string;
+  source_order_number: string | null;
+  quantity_kg: string;
+  sale_price_per_kg: string;
+  line_total: string;
+  cogs_per_kg: string;
+  cogs_total: string;
+  line_gross_profit: string;
+  notes: string;
+}
+
+/** Itemised selling expense returned by BuyerInvoiceSerializer.sale_expenses */
+export interface IBuyerInvoiceSaleExpense {
+  id: string;
+  category: string;
+  category_display: string;
+  description: string;
+  amount: string;
+  receipt_reference: string;
+}
+
+/** Buyer / company contact block returned by BuyerInvoiceSerializer.buyer_detail */
+export interface IBuyerInvoiceBuyerDetail {
+  business_name: string;
+  contact_name: string;
+  phone: string;
+  email: string;
+  address: string;
+  registration_number?: string;
+  district?: string;
+  country?: string;
+  buyer_type?: string;
+  credit_terms_days?: number;
+}
+
 export interface IBuyerInvoice {
-  id: string; invoice_number: string; buyer_order: string; order_number: string;
-  buyer_name: string; hub: string; amount_due: number; amount_paid: number;
-  balance_due: number; payment_terms_days: number; issued_at: string;
-  due_date: string | null; status: TBuyerInvoiceStatus;
-  paid_at: string | null; is_overdue: boolean; notes: string;
-  created_at: string; updated_at: string;
+  id: string;
+  invoice_number: string;
+  buyer_order: string;
+  order_number: string;
+  buyer_profile: string | null;
+  buyer_profile_name: string | null;
+  /** Full buyer detail block for invoice PDF / detail view */
+  buyer_detail: IBuyerInvoiceBuyerDetail | null;
+  buyer_name: string;
+  hub: string;
+  hub_name: string;
+  // ── Payment amounts ──
+  amount_due: number;
+  amount_paid: number;
+  balance_due: number;
+  payment_terms_days: number;
+  issued_at: string;
+  due_date: string | null;
+  status: TBuyerInvoiceStatus;
+  status_display: string;
+  paid_at: string | null;
+  is_overdue: boolean;
+  // ── Cost breakdown (NEW — from backend serializer) ──
+  /** Per-lot grain sale lines: qty × price, COGS breakdown */
+  order_lines: IBuyerInvoiceOrderLine[];
+  /** Total revenue = sum of line_total across all order lines */
+  subtotal: number;
+  /** Total cost of goods sold = sum of cogs_total across all lines */
+  total_cogs: number;
+  /** Sum of all SaleExpenses */
+  total_selling_expenses: number;
+  /** subtotal − total_cogs − total_selling_expenses */
+  gross_profit: number;
+  /** gross_profit / subtotal × 100 */
+  gross_margin_pct: number;
+  /** Itemised selling expenses */
+  sale_expenses: IBuyerInvoiceSaleExpense[];
+  notes: string;
+  created_at: string;
+  updated_at: string;
 }
 export interface IBuyerInvoicesResults { results: IBuyerInvoice[]; count: number; }
 
@@ -420,3 +494,45 @@ export type TInvoiceTableAction = (invoice: ISupplierInvoice) => void;
 export type TDeliveryTableAction = (delivery: IDeliveryRecord) => void;
 export type TWeighbridgeTableAction = (weighbridge: IWeighbridgeRecord) => void;
 export type TPaymentTableAction = (payment: ISupplierPayment) => void;
+
+// ============ Investor Receivable (My Returns → Receivables tab) ============
+/**
+ * Shape returned by GET sourcing/investor-allocations/receivables/
+ * Contains both the live invoice data AND projected margin calculations
+ * so investors can see probable returns before settlement.
+ */
+export interface IInvestorReceivable {
+  // ── Invoice ──
+  buyer_invoice_id: string;
+  invoice_number: string;
+  buyer_name: string;
+  buyer_order_number: string;
+  grain_type: string;
+  hub_name: string;
+  invoice_amount_due: string;
+  invoice_amount_paid: string;
+  invoice_balance_due: string;
+  invoice_status: string;
+  invoice_issued_at: string;
+  invoice_due_date: string | null;
+  // ── Allocation ──
+  allocation_number: string;
+  source_order_number: string;
+  amount_allocated: string;
+  /** 0–1 share of total capital in this trade belonging to this investor */
+  allocation_proportion: string;
+  // ── Settled margin (non-zero only after TradeSettlement completes) ──
+  investor_margin: string;
+  allocation_status: 'active' | 'settled' | 'cancelled';
+  // ── Projected / estimated margin (available before settlement) ──
+  /** Investor's proportional share of the order's current gross profit */
+  projected_gross_profit: string;
+  /** Estimated investor margin after applying profit-sharing agreement */
+  projected_investor_margin: string;
+  /** amount_allocated + projected_investor_margin */
+  projected_return: string;
+  /** projected_investor_margin / amount_allocated × 100 */
+  projected_margin_pct: string;
+  profit_threshold_pct: string;
+  investor_share_pct: string;
+}

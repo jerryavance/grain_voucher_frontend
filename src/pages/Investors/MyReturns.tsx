@@ -2,11 +2,11 @@
 /**
  * My Returns page (MY INVESTMENTS → My Returns).
  *
- * FIXES (Image 12):
+ * FIXES:
  *  - "My Returns seems not updating with latest Trades" — backend settlement
- *    trigger was broken; now fixed. This page auto-refreshes on mount.
- *  - NEW: Added "Receivables" tab as requested by client, showing all buyer
- *    invoices where the investor's capital funded the sale, with margin per invoice.
+ *    trigger was fixed. This page auto-refreshes on mount.
+ *  - Receivables tab now shows projected margin fields from the backend so
+ *    investors can see probable returns before settlement completes.
  */
 import React, { useEffect, useState, useCallback } from "react";
 import {
@@ -23,15 +23,17 @@ import {
   TableContainer,
   TableHead,
   TableRow,
-  TablePagination,
+  Tooltip,
   Typography,
   Skeleton,
   Alert,
   AlertTitle,
 } from "@mui/material";
 import { TrendingUp } from "@mui/icons-material";
+import InfoOutlinedIcon from "@mui/icons-material/InfoOutlined";
 import { toast } from "react-hot-toast";
 import SourcingService from "../Sourcing/Sourcing.service";
+import { IInvestorReceivable } from "../Sourcing/Sourcing.interface";
 import {
   formatCurrency,
   formatDate,
@@ -45,7 +47,7 @@ type TabKey = "settled" | "active" | "receivables";
 const MyReturns: React.FC = () => {
   const [activeTab, setActiveTab] = useState<TabKey>("settled");
   const [allocations, setAllocations] = useState<any[]>([]);
-  const [receivables, setReceivables] = useState<any[]>([]);
+  const [receivables, setReceivables] = useState<IInvestorReceivable[]>([]);
   const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(0);
   const [rowsPerPage] = useState(20);
@@ -63,7 +65,7 @@ const MyReturns: React.FC = () => {
     try {
       if (activeTab === "receivables") {
         const data = await SourcingService.getInvestorReceivables();
-        setReceivables(Array.isArray(data) ? data : data.results || []);
+        setReceivables(Array.isArray(data) ? data : []);
       } else {
         const statusParam =
           activeTab === "settled" ? "settled" : "active";
@@ -309,9 +311,16 @@ const AllocationsTable: React.FC<{
   );
 };
 
-// ─── Receivables Table (NEW) ────────────────────────────────────────────────
+// ─── Receivables Table ──────────────────────────────────────────────────────
+//
+// Two column groups:
+//   LEFT  — invoice / receivable status (what the buyer owes)
+//   RIGHT — investor's projected & settled margin (probable return)
+//
+// Projected margin is always live (recalculated from current order P&L).
+// Settled margin is non-zero only after TradeSettlement completes.
 
-const ReceivablesTable: React.FC<{ data: any[] }> = ({ data }) => {
+const ReceivablesTable: React.FC<{ data: IInvestorReceivable[] }> = ({ data }) => {
   if (data.length === 0) {
     return (
       <Card elevation={0} sx={{ border: "1px solid #e0e0e0", p: 4 }}>
@@ -323,94 +332,248 @@ const ReceivablesTable: React.FC<{ data: any[] }> = ({ data }) => {
     );
   }
 
+  // Totals row
+  const totals = data.reduce(
+    (acc, item) => ({
+      invoiceAmountDue:  acc.invoiceAmountDue  + Number(item.invoice_amount_due),
+      invoiceAmountPaid: acc.invoiceAmountPaid + Number(item.invoice_amount_paid),
+      invoiceBalanceDue: acc.invoiceBalanceDue + Number(item.invoice_balance_due),
+      amountAllocated:   acc.amountAllocated   + Number(item.amount_allocated),
+      projectedMargin:   acc.projectedMargin   + Number(item.projected_investor_margin),
+      projectedReturn:   acc.projectedReturn   + Number(item.projected_return),
+      settledMargin:     acc.settledMargin     + Number(item.investor_margin),
+    }),
+    {
+      invoiceAmountDue: 0, invoiceAmountPaid: 0, invoiceBalanceDue: 0,
+      amountAllocated: 0,  projectedMargin: 0,   projectedReturn: 0,
+      settledMargin: 0,
+    }
+  );
+
   return (
-    <Card elevation={0} sx={{ border: "1px solid #e0e0e0" }}>
-      <TableContainer>
-        <Table>
-          <TableHead>
-            <TableRow>
-              <TableCell>#</TableCell>
-              <TableCell>Invoice #</TableCell>
-              <TableCell>Buyer</TableCell>
-              <TableCell>Order #</TableCell>
-              <TableCell>Invoice Amount</TableCell>
-              <TableCell>Amount Paid</TableCell>
-              <TableCell>Balance Due</TableCell>
-              <TableCell>Invoice Status</TableCell>
-              <TableCell>Allocation #</TableCell>
-              <TableCell>Capital Deployed</TableCell>
-              <TableCell>Investor Margin</TableCell>
-              <TableCell>Issued</TableCell>
-              <TableCell>Due Date</TableCell>
-            </TableRow>
-          </TableHead>
-          <TableBody>
-            {data.map((item, idx) => (
-              <TableRow key={item.buyer_invoice_id || idx} hover>
-                <TableCell>{idx + 1}</TableCell>
-                <TableCell sx={{ fontWeight: 600 }}>
-                  {item.invoice_number}
+    <Box>
+      {/* Explanatory banner */}
+      <Alert
+        severity="info"
+        icon={<InfoOutlinedIcon fontSize="inherit" />}
+        sx={{ mb: 2 }}
+      >
+        <strong>Projected Margin</strong> is your estimated return on each trade
+        based on the current order P&L and your profit-sharing agreement — updated
+        live before settlement. <strong>Settled Margin</strong> is the confirmed
+        amount credited to your account after the invoice is fully paid.
+      </Alert>
+
+      <Card elevation={0} sx={{ border: "1px solid #e0e0e0" }}>
+        <TableContainer>
+          <Table size="small" sx={{ minWidth: 1100 }}>
+            <TableHead>
+              {/* Group header row */}
+              <TableRow sx={{ bgcolor: "#1565c0" }}>
+                <TableCell colSpan={2} sx={{ color: "#fff", fontWeight: 700, fontSize: "0.7rem", letterSpacing: 1, textTransform: "uppercase", borderRight: "1px solid rgba(255,255,255,0.2)" }}>
+                  Trade
                 </TableCell>
-                <TableCell>{item.buyer_name}</TableCell>
-                <TableCell>{item.buyer_order_number}</TableCell>
-                <TableCell>
-                  {formatCurrency(item.invoice_amount_due)}
+                <TableCell colSpan={5} sx={{ color: "#fff", fontWeight: 700, fontSize: "0.7rem", letterSpacing: 1, textTransform: "uppercase", borderRight: "1px solid rgba(255,255,255,0.2)" }}>
+                  Invoice / Receivable
                 </TableCell>
-                <TableCell
-                  sx={{
-                    color:
-                      Number(item.invoice_amount_paid) > 0
-                        ? "#4caf50"
-                        : "inherit",
-                  }}
-                >
-                  {formatCurrency(item.invoice_amount_paid)}
+                <TableCell colSpan={2} sx={{ color: "#fff", fontWeight: 700, fontSize: "0.7rem", letterSpacing: 1, textTransform: "uppercase", borderRight: "1px solid rgba(255,255,255,0.2)" }}>
+                  Your Capital
                 </TableCell>
-                <TableCell
-                  sx={{
-                    color:
-                      Number(item.invoice_balance_due) > 0
-                        ? "#f44336"
-                        : "#4caf50",
-                    fontWeight: 600,
-                  }}
-                >
-                  {formatCurrency(item.invoice_balance_due)}
+                <TableCell colSpan={4} sx={{ color: "#e8f5e9", fontWeight: 700, fontSize: "0.7rem", letterSpacing: 1, textTransform: "uppercase" }}>
+                  📈 Your Return
                 </TableCell>
-                <TableCell>
-                  <Chip
-                    label={formatStatus(item.invoice_status)}
-                    size="small"
-                    sx={{
-                      bgcolor: getStatusColor(item.invoice_status),
-                      color: "#fff",
-                      fontWeight: 600,
-                    }}
-                  />
-                </TableCell>
-                <TableCell>{item.allocation_number}</TableCell>
-                <TableCell>
-                  {formatCurrency(item.amount_allocated)}
-                </TableCell>
-                <TableCell
-                  sx={{
-                    color:
-                      Number(item.investor_margin) >= 0
-                        ? "#4caf50"
-                        : "#f44336",
-                    fontWeight: 600,
-                  }}
-                >
-                  {formatCurrency(item.investor_margin)}
-                </TableCell>
-                <TableCell>{formatDate(item.invoice_issued_at)}</TableCell>
-                <TableCell>{formatDate(item.invoice_due_date)}</TableCell>
               </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-      </TableContainer>
-    </Card>
+              {/* Column header row */}
+              <TableRow sx={{ bgcolor: "action.hover" }}>
+                {/* Trade */}
+                <TableCell sx={{ fontWeight: 700, whiteSpace: "nowrap" }}>Invoice #</TableCell>
+                <TableCell sx={{ fontWeight: 700, whiteSpace: "nowrap" }}>Buyer · Grain · Hub</TableCell>
+                {/* Invoice */}
+                <TableCell sx={{ fontWeight: 700, whiteSpace: "nowrap" }}>Inv. Amount</TableCell>
+                <TableCell sx={{ fontWeight: 700, whiteSpace: "nowrap" }}>Paid</TableCell>
+                <TableCell sx={{ fontWeight: 700, whiteSpace: "nowrap" }}>Balance Due</TableCell>
+                <TableCell sx={{ fontWeight: 700, whiteSpace: "nowrap" }}>Status</TableCell>
+                <TableCell sx={{ fontWeight: 700, whiteSpace: "nowrap" }}>Due Date</TableCell>
+                {/* Capital */}
+                <TableCell sx={{ fontWeight: 700, whiteSpace: "nowrap" }}>Capital Deployed</TableCell>
+                <TableCell sx={{ fontWeight: 700, whiteSpace: "nowrap" }}>
+                  <Tooltip title="Your share of total capital in this trade">
+                    <span>Share %</span>
+                  </Tooltip>
+                </TableCell>
+                {/* Return */}
+                <TableCell sx={{ fontWeight: 700, whiteSpace: "nowrap", color: "#1565c0" }}>
+                  <Tooltip title="Estimated margin applying your profit-sharing agreement to the current order gross profit. Updates live.">
+                    <span style={{ display: "flex", alignItems: "center", gap: 4 }}>
+                      Proj. Margin <InfoOutlinedIcon sx={{ fontSize: 13, opacity: 0.7 }} />
+                    </span>
+                  </Tooltip>
+                </TableCell>
+                <TableCell sx={{ fontWeight: 700, whiteSpace: "nowrap", color: "#1565c0" }}>
+                  <Tooltip title="amount_allocated + projected_investor_margin">
+                    <span>Proj. Return</span>
+                  </Tooltip>
+                </TableCell>
+                <TableCell sx={{ fontWeight: 700, whiteSpace: "nowrap", color: "#1565c0" }}>
+                  <Tooltip title="projected_investor_margin ÷ amount_allocated × 100">
+                    <span>Proj. ROI %</span>
+                  </Tooltip>
+                </TableCell>
+                <TableCell sx={{ fontWeight: 700, whiteSpace: "nowrap", color: "#2e7d32" }}>
+                  <Tooltip title="Confirmed margin credited to your account after full payment (0 until settlement completes)">
+                    <span style={{ display: "flex", alignItems: "center", gap: 4 }}>
+                      Settled Margin <InfoOutlinedIcon sx={{ fontSize: 13, opacity: 0.7 }} />
+                    </span>
+                  </Tooltip>
+                </TableCell>
+              </TableRow>
+            </TableHead>
+
+            <TableBody>
+              {data.map((item, idx) => {
+                const projMargin  = Number(item.projected_investor_margin);
+                const projReturn  = Number(item.projected_return);
+                const projRoi     = Number(item.projected_margin_pct);
+                const settledMgn  = Number(item.investor_margin);
+                const isSettled   = item.allocation_status === "settled";
+                const balanceDue  = Number(item.invoice_balance_due);
+                const amtPaid     = Number(item.invoice_amount_paid);
+                const proportion  = (Number(item.allocation_proportion) * 100).toFixed(1);
+
+                return (
+                  <TableRow key={item.buyer_invoice_id || idx} hover>
+                    {/* Invoice # */}
+                    <TableCell sx={{ fontWeight: 700, color: "primary.main", whiteSpace: "nowrap" }}>
+                      {item.invoice_number}
+                    </TableCell>
+
+                    {/* Buyer · Grain · Hub */}
+                    <TableCell>
+                      <Typography variant="body2" fontWeight={600}>{item.buyer_name}</Typography>
+                      <Typography variant="caption" color="text.secondary">
+                        {item.grain_type}{item.hub_name ? ` · ${item.hub_name}` : ""}
+                      </Typography>
+                    </TableCell>
+
+                    {/* Invoice amount */}
+                    <TableCell sx={{ whiteSpace: "nowrap" }}>
+                      {formatCurrency(item.invoice_amount_due)}
+                    </TableCell>
+
+                    {/* Amount paid */}
+                    <TableCell sx={{ color: amtPaid > 0 ? "#4caf50" : "inherit", whiteSpace: "nowrap" }}>
+                      {formatCurrency(item.invoice_amount_paid)}
+                    </TableCell>
+
+                    {/* Balance due */}
+                    <TableCell sx={{ color: balanceDue > 0 ? "#f44336" : "#4caf50", fontWeight: 600, whiteSpace: "nowrap" }}>
+                      {formatCurrency(item.invoice_balance_due)}
+                    </TableCell>
+
+                    {/* Status */}
+                    <TableCell>
+                      <Chip
+                        label={formatStatus(item.invoice_status)}
+                        size="small"
+                        sx={{ bgcolor: getStatusColor(item.invoice_status), color: "#fff", fontWeight: 600, fontSize: "0.68rem" }}
+                      />
+                    </TableCell>
+
+                    {/* Due date */}
+                    <TableCell sx={{ whiteSpace: "nowrap", color: balanceDue > 0 && item.invoice_status === "overdue" ? "#f44336" : "inherit" }}>
+                      {formatDate(item.invoice_due_date)}
+                    </TableCell>
+
+                    {/* Capital deployed */}
+                    <TableCell sx={{ fontWeight: 600, whiteSpace: "nowrap" }}>
+                      {formatCurrency(item.amount_allocated)}
+                    </TableCell>
+
+                    {/* Capital share % */}
+                    <TableCell>
+                      <Chip
+                        label={`${proportion}%`}
+                        size="small"
+                        variant="outlined"
+                        sx={{ fontWeight: 600, fontSize: "0.7rem" }}
+                      />
+                    </TableCell>
+
+                    {/* Projected margin */}
+                    <TableCell sx={{ whiteSpace: "nowrap" }}>
+                      <Typography
+                        variant="body2"
+                        fontWeight={700}
+                        sx={{ color: projMargin >= 0 ? "#1565c0" : "#f44336" }}
+                      >
+                        {formatCurrency(projMargin)}
+                      </Typography>
+                      <Typography variant="caption" color="text.secondary">
+                        threshold: {item.profit_threshold_pct}% · share: {item.investor_share_pct}%
+                      </Typography>
+                    </TableCell>
+
+                    {/* Projected return */}
+                    <TableCell sx={{ fontWeight: 700, whiteSpace: "nowrap", color: "#1565c0" }}>
+                      {formatCurrency(projReturn)}
+                    </TableCell>
+
+                    {/* Projected ROI % */}
+                    <TableCell>
+                      <Chip
+                        label={`${projRoi.toFixed(2)}%`}
+                        size="small"
+                        sx={{
+                          bgcolor: projRoi >= 0 ? "#e3f2fd" : "#ffebee",
+                          color:   projRoi >= 0 ? "#1565c0" : "#c62828",
+                          fontWeight: 700,
+                          fontSize: "0.72rem",
+                        }}
+                      />
+                    </TableCell>
+
+                    {/* Settled margin */}
+                    <TableCell sx={{ whiteSpace: "nowrap" }}>
+                      {isSettled ? (
+                        <Typography variant="body2" fontWeight={700} sx={{ color: "#2e7d32" }}>
+                          {formatCurrency(settledMgn)}
+                        </Typography>
+                      ) : (
+                        <Typography variant="caption" color="text.secondary" sx={{ fontStyle: "italic" }}>
+                          Pending settlement
+                        </Typography>
+                      )}
+                    </TableCell>
+                  </TableRow>
+                );
+              })}
+            </TableBody>
+
+            {/* Totals footer */}
+            <TableBody>
+              <TableRow sx={{ bgcolor: "#f6f9fd", borderTop: "2px solid #1565c0" }}>
+                <TableCell colSpan={2} sx={{ fontWeight: 700, color: "text.secondary", fontSize: "0.75rem", letterSpacing: 0.5 }}>
+                  TOTALS ({data.length} invoice{data.length !== 1 ? "s" : ""})
+                </TableCell>
+                <TableCell sx={{ fontWeight: 700 }}>{formatCurrency(totals.invoiceAmountDue)}</TableCell>
+                <TableCell sx={{ fontWeight: 700, color: "#4caf50" }}>{formatCurrency(totals.invoiceAmountPaid)}</TableCell>
+                <TableCell sx={{ fontWeight: 700, color: totals.invoiceBalanceDue > 0 ? "#f44336" : "#4caf50" }}>
+                  {formatCurrency(totals.invoiceBalanceDue)}
+                </TableCell>
+                <TableCell />{/* status */}
+                <TableCell />{/* due date */}
+                <TableCell sx={{ fontWeight: 700 }}>{formatCurrency(totals.amountAllocated)}</TableCell>
+                <TableCell />{/* share % */}
+                <TableCell sx={{ fontWeight: 800, color: "#1565c0" }}>{formatCurrency(totals.projectedMargin)}</TableCell>
+                <TableCell sx={{ fontWeight: 800, color: "#1565c0" }}>{formatCurrency(totals.projectedReturn)}</TableCell>
+                <TableCell />{/* ROI */}
+                <TableCell sx={{ fontWeight: 800, color: "#2e7d32" }}>{formatCurrency(totals.settledMargin)}</TableCell>
+              </TableRow>
+            </TableBody>
+          </Table>
+        </TableContainer>
+      </Card>
+    </Box>
   );
 };
 

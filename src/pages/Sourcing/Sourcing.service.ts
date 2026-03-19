@@ -14,6 +14,7 @@ import {
   IBuyerDashboard, IBuyerCreditStatus,
   IAggregatorTradeCost, IAggregatorTradeCostsResults,
   IRejectedLot, IRejectedLotsResults,
+  IInvestorReceivable,
 } from "./Sourcing.interface";
 
 export const SourcingService = {
@@ -196,7 +197,7 @@ export const SourcingService = {
       params: { ...filters, investor_account: accountId },
     }).then(r => r.data);
   },
-  async getInvestorReceivables(): Promise<any> {
+  async getInvestorReceivables(): Promise<IInvestorReceivable[]> {
     return instance.get("sourcing/investor-allocations/receivables/").then(r => r.data);
   },
 
