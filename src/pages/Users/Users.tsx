@@ -1,160 +1,211 @@
-import { Box, Button } from "@mui/material";
+import {
+  Box, Button, Chip, FormControl, InputLabel,
+  MenuItem, Select, Typography,
+} from "@mui/material";
 import { useEffect, useState } from "react";
 import { toast } from "react-hot-toast";
 import DeleteIcon from "@mui/icons-material/Delete";
+import EditIcon from "@mui/icons-material/Edit";
+import PeopleIcon from "@mui/icons-material/People";
 import useTitle from "../../hooks/useTitle";
 import { useModalContext } from "../../contexts/ModalDialogContext";
 import { UserService } from "./User.service";
-import { IUsersResults } from "./Users.interface";
-import { IUser } from "../Account/UserProfile/models/User.interface";
+import { IUser, IUsersResults } from "./Users.interface";
 import { IDropdownAction } from "../../components/UI/DropdownActionBtn";
 import SearchInput from "../../components/SearchInput";
 import CustomTable from "../../components/UI/CustomTable";
 import UserColumnShape from "./UserColumnShape";
-import EditIcon from "@mui/icons-material/Edit";
 import UserForm from "./UserForm";
 import { INITIAL_PAGE_SIZE } from "../../api/constants";
 
+// ─── Role filter options (aligned with actual API roles) ─────────────────────
+
+const ROLE_OPTIONS = [
+  { value: "",            label: "All Roles"   },
+  { value: "super_admin", label: "Super Admin" },
+  { value: "hub_admin",   label: "Hub Admin"   },
+  { value: "bdm",         label: "BDM"         },
+  { value: "finance",     label: "Finance"     },
+  { value: "investor",    label: "Investor"    },
+  { value: "farmer",      label: "Farmer"      },
+  { value: "agent",       label: "Agent"       },
+];
+
+// ─── Component ────────────────────────────────────────────────────────────────
+
 const Users = () => {
   useTitle("Users");
-  const { setShowModal } = useModalContext();
+  const { showModal, setShowModal } = useModalContext();
 
-  const [editUser, setEditUser] = useState<IUser | null>(null);
-  const [formType, setFormType] = useState<"Save" | "Update">("Save");
-  const [searchQuery, setSearchQuery] = useState<string>("");
-  const [users, setUsers] = useState<IUsersResults>();
-  const [filters, setFilters] = useState<any>(null);
-  const [loading, setLoading] = useState<boolean>(false);
+  const [editUser, setEditUser]     = useState<IUser | null>(null);
+  const [formType, setFormType]     = useState<"Save" | "Update">("Save");
+  const [searchQuery, setSearchQuery] = useState("");
+  const [roleFilter, setRoleFilter] = useState("");
+  const [users, setUsers]           = useState<IUsersResults>();
+  const [filters, setFilters]       = useState<any>({ page: 1, page_size: INITIAL_PAGE_SIZE });
+  const [loading, setLoading]       = useState(false);
 
   useEffect(() => {
-    
-
-    fetchData(filters);
+    fetchData();
   }, [filters]);
 
-  const fetchData = async (params?: any) => {
+  const fetchData = async () => {
     try {
       setLoading(true);
+      const params: any = { ...filters };
+      if (searchQuery) params.search = searchQuery;
+      if (roleFilter)  params.role   = roleFilter;
       const resp: IUsersResults = await UserService.getUsers(params);
       setUsers(resp);
-      setLoading(false);
     } catch (error) {
-      setLoading(false);
-      console.error("Error fetching Teams:", error);
-    }
-  };
-
-  const handleRefreshData = async () => {
-    try {
-      setLoading(true);
-      const results: any = await UserService.getUsers(searchQuery);
-      setUsers(results);
-      setLoading(false);
-    } catch (error) {
+      console.error("Error fetching users:", error);
+      toast.error("Failed to load users");
+    } finally {
       setLoading(false);
     }
   };
 
-  const handleOpenModal = () => {
+  const handleFilter = () => {
+    setFilters((f: any) => ({ ...f, page: 1 }));
+  };
+
+  // ── Modal helpers ───────────────────────────────────────────────────────────
+  const openCreate = () => {
     setFormType("Save");
+    setEditUser(null);
     setShowModal(true);
   };
 
   const handleCloseModal = () => {
     setShowModal(false);
+    setEditUser(null);
   };
 
-  const handleInputChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const value = event.target.value;
-    setSearchQuery(value);
-  };
-
-  const handleDeactivateUser = async (user: IUser) => {
-    try {
-      await UserService.deactivateUser(user?.id);
-      toast.success("User deactivated successfully");
-      handleRefreshData();
-    } catch (error: any) {
-      toast.error("Something went wrong");
-    }
-  };
-
+  // ── Row actions ─────────────────────────────────────────────────────────────
   const handleEditUser = (user: IUser) => {
     setFormType("Update");
     setEditUser(user);
-    setTimeout(() => {
-      setShowModal(true);
-    });
-  };  
+    setTimeout(() => setShowModal(true));
+  };
+
+  const handleDeactivateUser = async (user: IUser) => {
+    if (!window.confirm(`Deactivate ${user.first_name} ${user.last_name}?`)) return;
+    try {
+      await UserService.deactivateUser(user.id);
+      toast.success("User deactivated");
+      fetchData();
+    } catch {
+      toast.error("Failed to deactivate user");
+    }
+  };
 
   const tableActions: IDropdownAction[] = [
-    {
-      label: "Edit",
-      icon: <EditIcon color="primary" />,
-      onClick: (user: IUser) => handleEditUser(user),
-    },
-    {
-      label: "Deactivate User",
-      icon: <DeleteIcon color="error" />,
-      onClick: (user: IUser) => handleDeactivateUser(user),
-    },
-  ];  
+    { label: "Edit",       icon: <EditIcon color="primary" />, onClick: handleEditUser       },
+    { label: "Deactivate", icon: <DeleteIcon color="error"  />, onClick: handleDeactivateUser },
+  ];
+
+  // ── Role counts for summary chips ───────────────────────────────────────────
+  const roleCounts = (users?.results ?? []).reduce<Record<string, number>>((acc, u) => {
+    acc[u.role] = (acc[u.role] ?? 0) + 1;
+    return acc;
+  }, {});
 
   return (
     <Box pt={2} pb={4}>
-      <Box sx={styles.tablePreHeader}>
+
+      {/* ── Page header ── */}
+      <Box sx={{ display: "flex", alignItems: "center", mb: 3 }}>
+        <PeopleIcon sx={{ fontSize: 36, mr: 1.5, color: "primary.main" }} />
+        <Typography variant="h4">Users</Typography>
+        <Chip
+          label={`${users?.count ?? 0} total`}
+          size="small"
+          sx={{ ml: 1.5, fontWeight: 600 }}
+        />
+      </Box>
+
+      {/* ── Role summary chips ── */}
+      {users && users.results.length > 0 && (
+        <Box sx={{ display: "flex", flexWrap: "wrap", gap: 1, mb: 2 }}>
+          {Object.entries(roleCounts).map(([role, count]) => (
+            <Chip
+              key={role}
+              label={`${role.replace("_", " ")}: ${count}`}
+              size="small"
+              variant="outlined"
+              clickable
+              onClick={() => {
+                setRoleFilter(role === roleFilter ? "" : role);
+                handleFilter();
+              }}
+              sx={{
+                fontWeight: 600,
+                fontSize: "0.72rem",
+                textTransform: "capitalize",
+                borderColor: roleFilter === role ? "#1565c0" : undefined,
+                bgcolor:     roleFilter === role ? "#e3f2fd"  : undefined,
+                color:       roleFilter === role ? "#1565c0"  : undefined,
+              }}
+            />
+          ))}
+        </Box>
+      )}
+
+      {/* ── Filters row ── */}
+      <Box sx={{ display: "flex", gap: 2, alignItems: "center", mb: 2, flexWrap: "wrap" }}>
         <SearchInput
           value={searchQuery}
-          onChange={handleInputChange}
+          onChange={(e: React.ChangeEvent<HTMLInputElement>) => setSearchQuery(e.target.value)}
           type="text"
-          placeholder="Search user..."
+          placeholder="Search by name or phone…"
         />
-
+        <FormControl size="small" sx={{ minWidth: 160 }}>
+          <InputLabel>Role</InputLabel>
+          <Select
+            value={roleFilter}
+            label="Role"
+            onChange={e => { setRoleFilter(e.target.value); handleFilter(); }}
+          >
+            {ROLE_OPTIONS.map(o => (
+              <MenuItem key={o.value} value={o.value}>{o.label}</MenuItem>
+            ))}
+          </Select>
+        </FormControl>
+        <Button variant="outlined" onClick={handleFilter}>
+          Search
+        </Button>
         <Button
-          sx={{ marginLeft: "auto" }}
           variant="contained"
-          onClick={handleOpenModal}
+          onClick={openCreate}
+          sx={{ ml: "auto" }}
         >
-          Create
+          Create User
         </Button>
       </Box>
 
+      {/* ── Table ── */}
       <CustomTable
         columnShape={UserColumnShape(tableActions)}
         data={users?.results || []}
         dataCount={users?.count || 0}
         pageInitialState={{ pageSize: INITIAL_PAGE_SIZE, pageIndex: 0 }}
-        setPageIndex={(page: number) => setFilters({...filters, page})}
-        pageIndex={filters?.page || 1}
-        setPageSize={(size: number) => setFilters({ ...filters, page_size: size })}
+        setPageIndex={(page: number) => setFilters((f: any) => ({ ...f, page: page + 1 }))}
+        pageIndex={filters.page - 1}
+        setPageSize={(size: number) => setFilters((f: any) => ({ ...f, page_size: size, page: 1 }))}
         loading={loading}
       />
 
-      <UserForm
-        callBack={handleRefreshData}
-        formType={formType}
-        handleClose={handleCloseModal}
-        initialValues={{...editUser, ...editUser?.profile}}
-      />
+      {/* ── Form modal ── */}
+      {showModal && (
+        <UserForm
+          callBack={fetchData}
+          formType={formType}
+          handleClose={handleCloseModal}
+          initialValues={{ ...editUser, ...editUser?.profile }}
+        />
+      )}
     </Box>
   );
 };
-
-const styles = {
-  tablePreHeader: {
-    display: "flex",
-    alignItems: "center", // This aligns items vertically
-    gap: 2, // This adds consistent spacing between elements
-    marginBottom: 2,
-  },
-  createButton: {
-    marginLeft: 'auto', // This pushes the button to the right
-    height: 'fit-content', // Ensures button height matches the input
-  },
-  pageSize: {
-    maxWidth: 60,
-    marginLeft: 2,
-  }
-}
 
 export default Users;

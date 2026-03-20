@@ -276,8 +276,9 @@ export const MenuList = (
       visible: isSuperUser,
       isHeader: true,
       subMenu: [
-        { title: "Investor Portal",  Icon: Icons.DashboardCustomizeIcon, path: "/invest",           visible: isSuperUser },
-        { title: "Investors Admin",   Icon: Icons.FolderSharedIcon,       path: "/admin/investors",  visible: isSuperUser },
+        { title: "Investor Portal",      Icon: Icons.DashboardCustomizeIcon, path: "/invest",                        visible: isSuperUser },
+        { title: "Investors Admin",      Icon: Icons.FolderSharedIcon,       path: "/admin/investors",               visible: isSuperUser },
+        { title: "Investor Receivables", Icon: Icons.TrendingUpIcon,         path: "/admin/investors/receivables",   visible: isSuperUser },
       ],
     },
 

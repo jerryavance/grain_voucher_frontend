@@ -5,8 +5,9 @@ export { default as InvestorAccountForm } from './InvestorAccountForm';
 export { default as DepositForm } from './DepositForm';
 export { default as WithdrawalForm } from './WithdrawalForm';
 export { default as ProfitAgreementForm } from './ProfitAgreementForm';
-export { default as MarginPayoutForm } from './MarginPayoutForm';         // NEW
+export { default as MarginPayoutForm } from './MarginPayoutForm';
 export { default as InvestorDetailsModal } from './InvestorDetailsModal';
+export { default as InvestorReceivablesAdmin } from './InvestorReceivablesAdmin';
 
 // Export services
 export { InvestorService } from './Investor.service';

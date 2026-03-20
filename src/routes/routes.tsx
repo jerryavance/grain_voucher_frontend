@@ -91,6 +91,7 @@ const routes = [
       { path: "quality-grades", element: <LazyLoader.QualityGrade /> },
       { path: "price-feeds", element: <LazyLoader.PriceFeed /> },
       { path: "investors", element: <LazyLoader.InvestorsAdmin /> },
+      { path: "investors/receivables", element: <LazyLoader.InvestorReceivablesAdmin /> },
       { path: "pay-roll", element: <LazyLoader.Payroll /> },
 
       // Deposits & Membership

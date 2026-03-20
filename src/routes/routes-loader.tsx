@@ -114,6 +114,7 @@ const RouteLazyLoader = {
   // Investor Views - ALREADY EXISTS
   InvestorDashboard: Loadable(lazy(() => import("../pages/Investors/InvestorDashboard"))),
   InvestorsAdmin: Loadable(lazy(() => import("../pages/Investors/InvestorsAdmin"))),
+  InvestorReceivablesAdmin: Loadable(lazy(() => import("../pages/Investors/InvestorReceivablesAdmin"))),
   
   // 🆕 ADD INVESTOR PORTAL LOADERS HERE
   InvestorReturns: Loadable(lazy(() => import("../pages/Investors/InvestorReturns"))),

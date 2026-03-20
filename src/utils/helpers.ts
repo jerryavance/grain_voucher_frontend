@@ -9,8 +9,9 @@ import { IUser } from "../pages/Users/Users.interface";
 
 export const beautifyName = (user: IUser | undefined) => {
   return (
-    `${user?.first_name} ${user?.last_name}` +
-    (user?.other_name ? ` ${user?.other_name}` : "")
+    `${user?.first_name} ${user?.last_name}` 
+    // +
+    // (user?.other_name ? ` ${user?.other_name}` : "")
   );
 };
 

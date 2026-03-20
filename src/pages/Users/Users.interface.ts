@@ -1,14 +1,27 @@
 import { TOption } from "../../@types/common";
-import { IHub } from "../Hub/Hub.interface";
 
-export interface IUser {
-    email: string;
-    phone_number: string;
+// Hub membership shape returned on the user object
+export interface IUserHub {
     id: string;
+    name: string;
+    slug: string;
+    role: string;
+    status: string;
+}
+
+// Aligned with actual API response from auth/users/
+export interface IUser {
+    id: string;
+    phone_number: string;
     first_name: string;
     last_name: string;
-    other_name?: string;
-    bank_details?: IHub
+    email?: string;
+    role: string;
+    is_superuser: boolean;
+    profile: {
+        location?: string;
+    };
+    hubs: IUserHub[];
 }
 
 export interface IUsersResults {
@@ -25,8 +38,7 @@ export interface IUserFormProps {
     callBack?: () => void;
 }
 
-
 export interface TUserFormProps {
     banks: TOption[];
-    handleBankSearch(value: any): void
-};
+    handleBankSearch(value: any): void;
+}
