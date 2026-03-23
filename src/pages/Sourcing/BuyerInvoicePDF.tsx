@@ -108,6 +108,24 @@ export const generateBuyerInvoiceHTML = (
       </tr>`).join("")
     : `<tr><td colspan="5" style="padding:12px 10px;text-align:center;color:#999;">No line items</td></tr>`;
 
+  // ── Selling expenses HTML (buyer-facing: shown as "Additional Charges") ────
+  const expenses: Array<{ category_display?: string; description?: string; amount?: string | number }> =
+    (invoice as any).sale_expenses || [];
+  const totalExpenses = expenses.reduce(
+    (sum: number, e: any) => sum + Number(e.amount || 0), 0
+  );
+  const grainSubtotal = lines.reduce(
+    (sum: number, l: any) => sum + Number(l.line_total || 0), 0
+  );
+  const expensesHtml = expenses.length > 0
+    ? expenses.map(e => `
+      <tr>
+        <td style="padding:8px 10px;border-bottom:1px solid #f0f4fa;">${e.category_display || "—"}</td>
+        <td style="padding:8px 10px;border-bottom:1px solid #f0f4fa;">${e.description || "—"}</td>
+        <td style="padding:8px 10px;border-bottom:1px solid #f0f4fa;text-align:right;font-weight:600;">${ugx(e.amount)}</td>
+      </tr>`).join("")
+    : "";
+
   // ── Progress bar fill ─────────────────────────────────────────────────────
   const progressColor = paidPct === 100 ? "#15803d" : paidPct > 0 ? "#d97706" : "#2371B9";
 
@@ -309,11 +327,40 @@ export const generateBuyerInvoiceHTML = (
     </tbody>
     <tfoot>
       <tr>
-        <td colspan="4" style="text-align:right;font-size:11px;color:#5c8abf;">Total</td>
-        <td style="text-align:right;font-size:13px;font-weight:800;">${ugx(amountDue)}</td>
+        <td colspan="4" style="text-align:right;font-size:11px;color:#5c8abf;">Grain Subtotal</td>
+        <td style="text-align:right;font-size:13px;font-weight:700;">${ugx(grainSubtotal)}</td>
       </tr>
     </tfoot>
   </table>
+
+  ${expenses.length > 0 ? `
+  <!-- Additional Charges (Selling Expenses) -->
+  <div class="section-heading">Additional Charges</div>
+  <table class="data-table">
+    <thead>
+      <tr>
+        <th>Category</th>
+        <th>Description</th>
+        <th class="r">Amount</th>
+      </tr>
+    </thead>
+    <tbody>
+      ${expensesHtml}
+    </tbody>
+    <tfoot>
+      <tr>
+        <td colspan="2" style="text-align:right;font-size:11px;color:#5c8abf;">Total Additional Charges</td>
+        <td style="text-align:right;font-size:13px;font-weight:700;">${ugx(totalExpenses)}</td>
+      </tr>
+    </tfoot>
+  </table>
+  ` : ""}
+
+  <!-- Grand Total -->
+  <div style="text-align:right;margin-top:6px;padding:10px 0;border-top:2px solid #2371B9;">
+    <span style="font-size:11px;color:#5c8abf;margin-right:20px;">Total</span>
+    <span style="font-size:16px;font-weight:800;color:#1a1a1a;">${ugx(amountDue)}</span>
+  </div>
 
   <!-- Bank instructions + Payment Summary -->
   <div class="bottom-grid">

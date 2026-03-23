@@ -502,6 +502,8 @@ export type TPaymentTableAction = (payment: ISupplierPayment) => void;
  * so investors can see probable returns before settlement.
  */
 export interface IInvestorReceivable {
+  // ✅ FIX: investor_name is now returned by backend
+  investor_name: string;
   // ── Invoice ──
   buyer_invoice_id: string;
   invoice_number: string;

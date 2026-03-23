@@ -3,9 +3,10 @@
  */
 
 import { FC, useEffect, useState } from "react";
-import { Box, Typography } from "@mui/material";
+import { Box, Button, Typography } from "@mui/material";
 import { toast } from "react-hot-toast";
 import EditIcon from "@mui/icons-material/Edit";
+import AddIcon from "@mui/icons-material/Add";
 import useTitle from "../../hooks/useTitle";
 import CustomTable from "../../components/UI/CustomTable";
 import SearchInput from "../../components/SearchInput";
@@ -57,6 +58,14 @@ const AggregatorTradeCosts: FC = () => {
     setShowForm(true);
   };
 
+  // ✅ FIX: New handler for creating a new aggregator cost
+  const handleCreate = () => {
+    setEditRecord(null);
+    setEditOrderId("");
+    setEditOrderNumber("");
+    setShowForm(true);
+  };
+
   const handleCloseForm = () => { setShowForm(false); setEditRecord(null); setEditOrderId(""); setEditOrderNumber(""); };
 
   const tableActions: IDropdownAction[] = [
@@ -70,6 +79,10 @@ const AggregatorTradeCosts: FC = () => {
           <SearchInput value={searchQuery} onChange={(e: React.ChangeEvent<HTMLInputElement>) => setSearchQuery(e.target.value)} onKeyPress={(e: React.KeyboardEvent) => { if (e.key === "Enter") setFilters({ ...filters, search: searchQuery, page: 1 }); }} type="text" placeholder="Search by order number..." />
         </Box>
         <Typography variant="h5" sx={{ mr: "auto" }}>Aggregator Trade Costs</Typography>
+        {/* ✅ FIX: Create button — was missing entirely */}
+        <Button variant="contained" startIcon={<AddIcon />} onClick={handleCreate} sx={{ whiteSpace: "nowrap" }}>
+          New Aggregator Cost
+        </Button>
         <ExportButtons data={records?.results || []} columns={AGG_EXPORT_COLUMNS} filename="aggregator_costs" />
       </Box>
 
@@ -84,7 +97,8 @@ const AggregatorTradeCosts: FC = () => {
         loading={loading}
       />
 
-      {showForm && editOrderId && (
+      {/* ✅ FIX: Form now opens for both create (no editOrderId) and edit */}
+      {showForm && (
         <AggregatorTradeCostForm
           open={showForm} sourceOrderId={editOrderId} sourceOrderNumber={editOrderNumber}
           existingRecord={editRecord} handleClose={handleCloseForm}
