@@ -15,6 +15,7 @@ import {
   IAggregatorTradeCost, IAggregatorTradeCostsResults,
   IRejectedLot, IRejectedLotsResults,
   IInvestorReceivable,
+  IEmdOverview,
 } from "./Sourcing.interface";
 
 export const SourcingService = {
@@ -199,6 +200,9 @@ export const SourcingService = {
   },
   async getInvestorReceivables(): Promise<IInvestorReceivable[]> {
     return instance.get("sourcing/investor-allocations/receivables/").then(r => r.data);
+  },
+  async getEmdOverview(): Promise<IEmdOverview> {
+    return instance.get("sourcing/investor-allocations/emd_overview/").then(r => r.data);
   },
 
   // ── Sale Lots ─────────────────────────────────────────────────────────────

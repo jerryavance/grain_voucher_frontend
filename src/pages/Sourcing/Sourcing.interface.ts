@@ -538,3 +538,24 @@ export interface IInvestorReceivable {
   profit_threshold_pct: string;
   investor_share_pct: string;
 }
+
+// ============ EMD Overview (Sourcing Dashboard) ============
+export interface IEmdInvestorBalance {
+  account_id: string;
+  investor_id: string;
+  investor_name: string;
+  emd_balance: number;
+  emd_utilized: number;
+  total_deposited: number;
+  available_balance: number;
+  total_margin_earned: number;
+  total_margin_paid: number;
+}
+
+export interface IEmdOverview {
+  total_emd_balance: number;
+  total_emd_utilized: number;
+  total_emd_available: number;
+  investor_count: number;
+  investors: IEmdInvestorBalance[];
+}

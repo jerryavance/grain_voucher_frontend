@@ -1,301 +1,532 @@
-/**
- * SourcingDashboard.tsx — FIXED
- *
- * FIXES:
- *   - Quick Action buttons now use proper navigation + modal context
- *   - Report buttons navigate to correct routes
- *   - Added CSV export to dashboard stats
- */
-
-import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
+// sourcing/pages/SourcingDashboard.tsx
+import React, { useEffect, useState } from "react";
 import {
-  Box, Card, CardContent, Typography, Grid, CircularProgress, Alert, Button,
+  Box,
+  Card,
+  CardContent,
+  Chip,
+  Grid,
+  LinearProgress,
+  Skeleton,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow,
+  Typography,
+  Paper,
+  Divider,
+  Avatar,
+  Tooltip,
+  IconButton,
 } from "@mui/material";
+import {
+  AccountBalanceWallet,
+  TrendingUp,
+  ShoppingCart,
+  LocalShipping,
+  Receipt,
+  People,
+  Inventory2,
+  Refresh,
+  ArrowForward,
+  MonetizationOn,
+} from "@mui/icons-material";
+import { useNavigate } from "react-router-dom";
 import { toast } from "react-hot-toast";
-import PeopleIcon from "@mui/icons-material/People";
-import ShoppingCartIcon from "@mui/icons-material/ShoppingCart";
-import ReceiptIcon from "@mui/icons-material/Receipt";
-import MonetizationOnIcon from "@mui/icons-material/MonetizationOn";
-import LocalShippingIcon from "@mui/icons-material/LocalShipping";
-import CheckCircleIcon from "@mui/icons-material/CheckCircle";
-import AddIcon from "@mui/icons-material/Add";
-import useTitle from "../../hooks/useTitle";
-import { useModalContext } from "../../contexts/ModalDialogContext";
 import { SourcingService } from "./Sourcing.service";
-import { formatCurrency, formatWeight } from "./SourcingConstants";
+import {
+  IEmdOverview,
+  IEmdInvestorBalance,
+  IHubPLSummary,
+} from "./Sourcing.interface";
+import { formatCurrency } from "./SourcingConstants";
 
-interface IDashboardStats {
+// ─── Types ───────────────────────────────────────────────────────────────────
+
+interface ISourcingStats {
   total_suppliers: number;
-  verified_suppliers: number;
-  total_orders: number;
-  pending_orders: number;
-  in_transit_orders: number;
-  completed_orders: number;
-  total_invoices: number;
+  active_orders: number;
   pending_invoices: number;
-  total_grain_sourced_kg: number;
-  total_amount_spent: number;
-  pending_payments: number;
+  available_lots: number;
+  pending_buyer_orders: number;
+  pending_settlements: number;
 }
 
-const SourcingDashboard = () => {
-  useTitle("Sourcing Dashboard");
+// ─── Helpers ─────────────────────────────────────────────────────────────────
+
+const StatCard: React.FC<{
+  label: string;
+  value: string | number;
+  icon: React.ReactNode;
+  color?: string;
+  onClick?: () => void;
+}> = ({ label, value, icon, color = "#1976d2", onClick }) => (
+  <Card
+    elevation={0}
+    onClick={onClick}
+    sx={{
+      border: "1px solid",
+      borderColor: "divider",
+      cursor: onClick ? "pointer" : "default",
+      transition: "all 0.2s",
+      "&:hover": onClick
+        ? { borderColor: color, boxShadow: `0 0 0 1px ${color}20` }
+        : {},
+    }}
+  >
+    <CardContent sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", py: 2 }}>
+      <Box>
+        <Typography variant="caption" color="text.secondary" fontWeight={600} textTransform="uppercase" sx={{ letterSpacing: 0.5 }}>
+          {label}
+        </Typography>
+        <Typography variant="h5" fontWeight={700} sx={{ mt: 0.5 }}>
+          {value}
+        </Typography>
+      </Box>
+      <Avatar sx={{ bgcolor: `${color}14`, width: 48, height: 48 }}>
+        {React.cloneElement(icon as React.ReactElement, { sx: { fontSize: 26, color } })}
+      </Avatar>
+    </CardContent>
+  </Card>
+);
+
+// ─── EMD Overview Panel ──────────────────────────────────────────────────────
+
+const EmdOverviewPanel: React.FC<{
+  emdData: IEmdOverview | null;
+  loading: boolean;
+  onRefresh: () => void;
+}> = ({ emdData, loading, onRefresh }) => {
   const navigate = useNavigate();
-  const { setShowModal } = useModalContext();
-
-  const [stats, setStats] = useState<IDashboardStats | null>(null);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    fetchDashboardStats();
-  }, []);
-
-  const fetchDashboardStats = async () => {
-    try {
-      setLoading(true);
-      const [suppliers, orders, invoices] = await Promise.all([
-        SourcingService.getSuppliers({}),
-        SourcingService.getSourceOrders({}),
-        SourcingService.getSupplierInvoices({}),
-      ]);
-
-      const dashboardStats: IDashboardStats = {
-        total_suppliers: suppliers.count,
-        verified_suppliers: suppliers.results.filter((s: any) => s.is_verified).length,
-        total_orders: orders.count,
-        pending_orders: orders.results.filter((o: any) => ['open', 'accepted'].includes(o.status)).length,
-        in_transit_orders: orders.results.filter((o: any) => o.status === 'in_transit').length,
-        completed_orders: orders.results.filter((o: any) => o.status === 'completed').length,
-        total_invoices: invoices.count,
-        pending_invoices: invoices.results.filter((i: any) => ['pending', 'partial'].includes(i.status)).length,
-        total_grain_sourced_kg: orders.results
-          .filter((o: any) => o.status === 'completed')
-          .reduce((sum: number, o: any) => sum + parseFloat(o.quantity_kg), 0),
-        total_amount_spent: invoices.results
-          .filter((i: any) => i.status === 'paid')
-          .reduce((sum: number, i: any) => sum + parseFloat(i.amount_paid), 0),
-        pending_payments: invoices.results
-          .filter((i: any) => ['pending', 'partial'].includes(i.status))
-          .reduce((sum: number, i: any) => sum + parseFloat(i.balance_due), 0),
-      };
-
-      setStats(dashboardStats);
-    } catch {
-      toast.error("Failed to load dashboard statistics");
-    } finally {
-      setLoading(false);
-    }
-  };
 
   if (loading) {
     return (
-      <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '60vh' }}>
-        <CircularProgress />
+      <Card elevation={0} sx={{ border: "1px solid", borderColor: "divider" }}>
+        <CardContent>
+          <Skeleton variant="text" width={200} height={32} />
+          <Grid container spacing={2} sx={{ mt: 1 }}>
+            {[1, 2, 3].map((i) => (
+              <Grid item xs={12} sm={4} key={i}>
+                <Skeleton variant="rectangular" height={80} sx={{ borderRadius: 1 }} />
+              </Grid>
+            ))}
+          </Grid>
+          <Skeleton variant="rectangular" height={200} sx={{ mt: 2, borderRadius: 1 }} />
+        </CardContent>
+      </Card>
+    );
+  }
+
+  if (!emdData) return null;
+
+  const utilizationPct =
+    emdData.total_emd_balance + emdData.total_emd_utilized > 0
+      ? (emdData.total_emd_utilized / (emdData.total_emd_balance + emdData.total_emd_utilized)) * 100
+      : 0;
+
+  return (
+    <Card elevation={0} sx={{ border: "1px solid", borderColor: "divider" }}>
+      <CardContent>
+        {/* Header */}
+        <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
+          <Box display="flex" alignItems="center" gap={1}>
+            <AccountBalanceWallet sx={{ color: "#1976d2", fontSize: 28 }} />
+            <Typography variant="h6" fontWeight={700}>
+              EMD Capital Overview
+            </Typography>
+            <Chip
+              label={`${emdData.investor_count} investor${emdData.investor_count !== 1 ? "s" : ""}`}
+              size="small"
+              variant="outlined"
+              sx={{ ml: 1 }}
+            />
+          </Box>
+          <Box display="flex" gap={1}>
+            <Tooltip title="Refresh balances">
+              <IconButton size="small" onClick={onRefresh}>
+                <Refresh fontSize="small" />
+              </IconButton>
+            </Tooltip>
+            <Tooltip title="Manage investors">
+              <IconButton size="small" onClick={() => navigate("/admin/investors")}>
+                <ArrowForward fontSize="small" />
+              </IconButton>
+            </Tooltip>
+          </Box>
+        </Box>
+
+        {/* Summary cards */}
+        <Grid container spacing={2} mb={3}>
+          <Grid item xs={12} sm={4}>
+            <Box
+              sx={{
+                p: 2,
+                borderRadius: 1.5,
+                bgcolor: "#e8f5e9",
+                border: "1px solid #c8e6c9",
+              }}
+            >
+              <Typography variant="caption" color="text.secondary" fontWeight={600}>
+                AVAILABLE EMD BALANCE
+              </Typography>
+              <Typography variant="h5" fontWeight={700} color="success.dark" sx={{ mt: 0.5 }}>
+                {formatCurrency(emdData.total_emd_balance)}
+              </Typography>
+              <Typography variant="caption" color="text.secondary">
+                Capital ready for new trades
+              </Typography>
+            </Box>
+          </Grid>
+          <Grid item xs={12} sm={4}>
+            <Box
+              sx={{
+                p: 2,
+                borderRadius: 1.5,
+                bgcolor: "#fff3e0",
+                border: "1px solid #ffe0b2",
+              }}
+            >
+              <Typography variant="caption" color="text.secondary" fontWeight={600}>
+                EMD UTILIZED
+              </Typography>
+              <Typography variant="h5" fontWeight={700} color="warning.dark" sx={{ mt: 0.5 }}>
+                {formatCurrency(emdData.total_emd_utilized)}
+              </Typography>
+              <Typography variant="caption" color="text.secondary">
+                Locked in active trades
+              </Typography>
+            </Box>
+          </Grid>
+          <Grid item xs={12} sm={4}>
+            <Box
+              sx={{
+                p: 2,
+                borderRadius: 1.5,
+                bgcolor: "#e3f2fd",
+                border: "1px solid #bbdefb",
+              }}
+            >
+              <Typography variant="caption" color="text.secondary" fontWeight={600}>
+                TOTAL CAPITAL COMMITTED
+              </Typography>
+              <Typography variant="h5" fontWeight={700} color="primary.dark" sx={{ mt: 0.5 }}>
+                {formatCurrency(emdData.total_emd_balance + emdData.total_emd_utilized)}
+              </Typography>
+              <Typography variant="caption" color="text.secondary">
+                Available + Utilized
+              </Typography>
+            </Box>
+          </Grid>
+        </Grid>
+
+        {/* Utilization bar */}
+        <Box mb={3}>
+          <Box display="flex" justifyContent="space-between" mb={0.5}>
+            <Typography variant="body2" color="text.secondary">
+              Capital Utilization
+            </Typography>
+            <Typography variant="body2" fontWeight={600}>
+              {utilizationPct.toFixed(1)}%
+            </Typography>
+          </Box>
+          <LinearProgress
+            variant="determinate"
+            value={utilizationPct}
+            sx={{
+              height: 8,
+              borderRadius: 4,
+              bgcolor: "#e0e0e0",
+              "& .MuiLinearProgress-bar": {
+                borderRadius: 4,
+                bgcolor: utilizationPct > 80 ? "#f44336" : utilizationPct > 50 ? "#ff9800" : "#4caf50",
+              },
+            }}
+          />
+        </Box>
+
+        <Divider sx={{ mb: 2 }} />
+
+        {/* Per-investor table */}
+        <Typography variant="subtitle2" fontWeight={600} mb={1.5} color="text.secondary">
+          INVESTOR BALANCES
+        </Typography>
+        <TableContainer component={Paper} variant="outlined" sx={{ borderRadius: 1.5 }}>
+          <Table size="small">
+            <TableHead>
+              <TableRow sx={{ bgcolor: "#fafafa" }}>
+                <TableCell sx={{ fontWeight: 600 }}>Investor</TableCell>
+                <TableCell align="right" sx={{ fontWeight: 600 }}>Available EMD</TableCell>
+                <TableCell align="right" sx={{ fontWeight: 600 }}>Utilized</TableCell>
+                <TableCell align="right" sx={{ fontWeight: 600 }}>Margin Earned</TableCell>
+                <TableCell align="center" sx={{ fontWeight: 600 }}>Utilization</TableCell>
+              </TableRow>
+            </TableHead>
+            <TableBody>
+              {emdData.investors.length > 0 ? (
+                emdData.investors.map((inv: IEmdInvestorBalance) => {
+                  const invTotal = inv.emd_balance + inv.emd_utilized;
+                  const invUtil = invTotal > 0 ? (inv.emd_utilized / invTotal) * 100 : 0;
+                  return (
+                    <TableRow key={inv.account_id} hover>
+                      <TableCell>
+                        <Box display="flex" alignItems="center" gap={1}>
+                          <Avatar
+                            sx={{
+                              width: 30,
+                              height: 30,
+                              fontSize: 13,
+                              bgcolor: "#1976d2",
+                            }}
+                          >
+                            {inv.investor_name
+                              .split(" ")
+                              .map((n) => n[0])
+                              .join("")
+                              .slice(0, 2)
+                              .toUpperCase()}
+                          </Avatar>
+                          <Typography variant="body2" fontWeight={500}>
+                            {inv.investor_name}
+                          </Typography>
+                        </Box>
+                      </TableCell>
+                      <TableCell align="right">
+                        <Typography
+                          variant="body2"
+                          fontWeight={600}
+                          color={inv.emd_balance > 0 ? "success.main" : "text.disabled"}
+                        >
+                          {formatCurrency(inv.emd_balance)}
+                        </Typography>
+                      </TableCell>
+                      <TableCell align="right">
+                        <Typography variant="body2" color="text.secondary">
+                          {formatCurrency(inv.emd_utilized)}
+                        </Typography>
+                      </TableCell>
+                      <TableCell align="right">
+                        <Typography variant="body2" color="text.secondary">
+                          {formatCurrency(inv.total_margin_earned)}
+                        </Typography>
+                      </TableCell>
+                      <TableCell align="center">
+                        <Box display="flex" alignItems="center" gap={1} justifyContent="center">
+                          <LinearProgress
+                            variant="determinate"
+                            value={invUtil}
+                            sx={{
+                              width: 60,
+                              height: 6,
+                              borderRadius: 3,
+                              bgcolor: "#e0e0e0",
+                              "& .MuiLinearProgress-bar": {
+                                borderRadius: 3,
+                                bgcolor: invUtil > 80 ? "#f44336" : invUtil > 50 ? "#ff9800" : "#4caf50",
+                              },
+                            }}
+                          />
+                          <Typography variant="caption" color="text.secondary" sx={{ minWidth: 32 }}>
+                            {invUtil.toFixed(0)}%
+                          </Typography>
+                        </Box>
+                      </TableCell>
+                    </TableRow>
+                  );
+                })
+              ) : (
+                <TableRow>
+                  <TableCell colSpan={5} align="center" sx={{ py: 4 }}>
+                    <Typography variant="body2" color="text.disabled">
+                      No investor accounts found
+                    </Typography>
+                  </TableCell>
+                </TableRow>
+              )}
+            </TableBody>
+          </Table>
+        </TableContainer>
+      </CardContent>
+    </Card>
+  );
+};
+
+// ─── Main SourcingDashboard Component ────────────────────────────────────────
+
+const SourcingDashboard: React.FC = () => {
+  const navigate = useNavigate();
+  const [emdData, setEmdData] = useState<IEmdOverview | null>(null);
+  const [plSummary, setPlSummary] = useState<IHubPLSummary | null>(null);
+  const [stats, setStats] = useState<ISourcingStats | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [emdLoading, setEmdLoading] = useState(true);
+
+  useEffect(() => {
+    fetchAll();
+  }, []);
+
+  const fetchAll = async () => {
+    setLoading(true);
+    await Promise.allSettled([fetchEmdOverview(), fetchStats(), fetchPLSummary()]);
+    setLoading(false);
+  };
+
+  const fetchEmdOverview = async () => {
+    setEmdLoading(true);
+    try {
+      const data = await SourcingService.getEmdOverview();
+      setEmdData(data);
+    } catch (err: any) {
+      console.error("Failed to load EMD overview:", err);
+    } finally {
+      setEmdLoading(false);
+    }
+  };
+
+  const fetchStats = async () => {
+    try {
+      // Fetch quick counts in parallel
+      const [suppliers, orders, invoices, lots] = await Promise.allSettled([
+        SourcingService.getSuppliers({ page_size: 1 }),
+        SourcingService.getSourceOrders({ page_size: 1, status: "accepted" }),
+        SourcingService.getSupplierInvoices({ page_size: 1, status: "pending" }),
+        SourcingService.getSaleLots({ page_size: 1, status: "available" }),
+      ]);
+
+      setStats({
+        total_suppliers: suppliers.status === "fulfilled" ? suppliers.value.count : 0,
+        active_orders: orders.status === "fulfilled" ? orders.value.count : 0,
+        pending_invoices: invoices.status === "fulfilled" ? invoices.value.count : 0,
+        available_lots: lots.status === "fulfilled" ? lots.value.count : 0,
+        pending_buyer_orders: 0,
+        pending_settlements: 0,
+      });
+    } catch (err) {
+      console.error("Failed to load stats:", err);
+    }
+  };
+
+  const fetchPLSummary = async () => {
+    try {
+      const data = await SourcingService.getHubPLSummary();
+      setPlSummary(data);
+    } catch (err) {
+      console.error("Failed to load P&L summary:", err);
+    }
+  };
+
+  if (loading && !emdData && !stats) {
+    return (
+      <Box p={3}>
+        <Skeleton variant="text" width={300} height={50} />
+        <Grid container spacing={2} mt={1}>
+          {[...Array(6)].map((_, i) => (
+            <Grid item xs={12} sm={6} md={4} key={i}>
+              <Skeleton variant="rectangular" height={100} sx={{ borderRadius: 1 }} />
+            </Grid>
+          ))}
+        </Grid>
+        <Skeleton variant="rectangular" height={400} sx={{ mt: 3, borderRadius: 1 }} />
       </Box>
     );
   }
 
-  if (!stats) {
-    return <Alert severity="error">Failed to load dashboard data. Please try again.</Alert>;
-  }
-
-  const statCards = [
-    {
-      title: "Total Suppliers", value: stats.total_suppliers,
-      subtitle: `${stats.verified_suppliers} verified`,
-      icon: <PeopleIcon sx={{ fontSize: 50, color: 'primary.main' }} />,
-      color: "primary.light",
-      action: () => navigate("/admin/sourcing/suppliers"),
-    },
-    {
-      title: "Total Orders", value: stats.total_orders,
-      subtitle: `${stats.pending_orders} pending`,
-      icon: <ShoppingCartIcon sx={{ fontSize: 50, color: 'info.main' }} />,
-      color: "info.light",
-      action: () => navigate("/admin/sourcing/orders"),
-    },
-    {
-      title: "In Transit", value: stats.in_transit_orders,
-      subtitle: "Active deliveries",
-      icon: <LocalShippingIcon sx={{ fontSize: 50, color: 'warning.main' }} />,
-      color: "warning.light",
-      action: () => navigate("/admin/sourcing/orders"),
-    },
-    {
-      title: "Completed Orders", value: stats.completed_orders,
-      subtitle: "Successfully delivered",
-      icon: <CheckCircleIcon sx={{ fontSize: 50, color: 'success.main' }} />,
-      color: "success.light",
-      action: () => navigate("/admin/sourcing/orders"),
-    },
-    {
-      title: "Total Grain Sourced", value: formatWeight(stats.total_grain_sourced_kg),
-      subtitle: "All time",
-      icon: <LocalShippingIcon sx={{ fontSize: 50, color: 'success.main' }} />,
-      color: "success.light",
-      action: () => navigate("/admin/sourcing/orders"),
-    },
-    {
-      title: "Total Amount Spent", value: formatCurrency(stats.total_amount_spent),
-      subtitle: "Paid invoices",
-      icon: <MonetizationOnIcon sx={{ fontSize: 50, color: 'success.main' }} />,
-      color: "success.light",
-      action: () => navigate("/admin/sourcing/invoices"),
-    },
-    {
-      title: "Pending Invoices", value: stats.pending_invoices,
-      subtitle: formatCurrency(stats.pending_payments),
-      icon: <ReceiptIcon sx={{ fontSize: 50, color: 'error.main' }} />,
-      color: "error.light",
-      action: () => navigate("/admin/sourcing/invoices"),
-    },
-    {
-      title: "Total Invoices", value: stats.total_invoices,
-      subtitle: "All time",
-      icon: <ReceiptIcon sx={{ fontSize: 50, color: 'primary.main' }} />,
-      color: "primary.light",
-      action: () => navigate("/admin/sourcing/invoices"),
-    },
-  ];
-
-  // ✅ FIX: Quick actions now work — navigate to proper routes or open modals
-  const quickActions = [
-    {
-      label: "Create New Source Order",
-      action: () => navigate("/admin/sourcing/orders"),
-      // User clicks "Create Order" on the orders page
-    },
-    {
-      label: "Add New Supplier",
-      action: () => navigate("/admin/sourcing/suppliers"),
-    },
-    {
-      label: "Record Delivery",
-      action: () => navigate("/admin/sourcing/deliveries"),
-    },
-    {
-      label: "Record Payment",
-      action: () => navigate("/admin/sourcing/payments"),
-    },
-    {
-      label: "New Buyer Order",
-      action: () => navigate("/admin/sourcing/buyer-orders"),
-    },
-    {
-      label: "View Stock Inventory",
-      action: () => navigate("/admin/sourcing/sale-lots"),
-    },
-  ];
-
-  // ✅ FIX: Report links now navigate to actual pages with data
-  const reportActions = [
-    {
-      label: "Supplier Performance",
-      action: () => navigate("/admin/sourcing/suppliers"),
-    },
-    {
-      label: "Source Orders Report",
-      action: () => navigate("/admin/sourcing/orders"),
-    },
-    {
-      label: "Payment History",
-      action: () => navigate("/admin/sourcing/payments"),
-    },
-    {
-      label: "Investor Allocations",
-      action: () => navigate("/admin/sourcing/investor-allocations"),
-    },
-    {
-      label: "Buyer Orders & P&L",
-      action: () => navigate("/admin/sourcing/buyer-orders"),
-    },
-    {
-      label: "Trade Settlements",
-      action: () => navigate("/admin/sourcing/settlements"),
-    },
-  ];
-
   return (
-    <Box pt={2} pb={4}>
-      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
-        <Button variant="outlined" onClick={fetchDashboardStats}>Refresh</Button>
+    <Box p={3}>
+      {/* Header */}
+      <Box display="flex" justifyContent="space-between" alignItems="center" mb={3}>
+        <Box>
+          <Typography variant="h4" fontWeight={700}>
+            Sourcing Dashboard
+          </Typography>
+          <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
+            Overview of procurement, capital, and trade activity
+          </Typography>
+        </Box>
       </Box>
 
-      {/* Statistics Cards */}
-      <Grid container spacing={3}>
-        {statCards.map((stat, index) => (
-          <Grid item xs={12} sm={6} md={3} key={index}>
-            <Card
-              sx={{
-                cursor: 'pointer',
-                transition: 'transform 0.2s, box-shadow 0.2s',
-                '&:hover': { transform: 'translateY(-4px)', boxShadow: 4 },
-              }}
-              onClick={stat.action}
-            >
-              <CardContent>
-                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                  <Box sx={{ flexGrow: 1 }}>
-                    <Typography color="text.primary" gutterBottom variant="overline">
-                      {stat.title}
-                    </Typography>
-                    <Typography variant="h4" sx={{ mb: 1 }}>{stat.value}</Typography>
-                    <Typography variant="body2" color="text.primary">{stat.subtitle}</Typography>
-                  </Box>
-                  <Box sx={{ bgcolor: stat.color, borderRadius: 2, p: 1.5 }}>{stat.icon}</Box>
-                </Box>
-              </CardContent>
-            </Card>
+      {/* Quick stat cards */}
+      <Grid container spacing={2} mb={3}>
+        <Grid item xs={12} sm={6} md={3}>
+          <StatCard
+            label="Suppliers"
+            value={stats?.total_suppliers ?? "—"}
+            icon={<People />}
+            color="#7c4dff"
+            onClick={() => navigate("/admin/sourcing/suppliers")}
+          />
+        </Grid>
+        <Grid item xs={12} sm={6} md={3}>
+          <StatCard
+            label="Active Orders"
+            value={stats?.active_orders ?? "—"}
+            icon={<ShoppingCart />}
+            color="#ff9800"
+            onClick={() => navigate("/admin/sourcing/orders")}
+          />
+        </Grid>
+        <Grid item xs={12} sm={6} md={3}>
+          <StatCard
+            label="Pending Invoices"
+            value={stats?.pending_invoices ?? "—"}
+            icon={<Receipt />}
+            color="#f44336"
+            onClick={() => navigate("/admin/sourcing/invoices")}
+          />
+        </Grid>
+        <Grid item xs={12} sm={6} md={3}>
+          <StatCard
+            label="Available Stock"
+            value={stats?.available_lots ?? "—"}
+            icon={<Inventory2 />}
+            color="#4caf50"
+            onClick={() => navigate("/admin/sourcing/sale-lots")}
+          />
+        </Grid>
+      </Grid>
+
+      {/* P&L summary cards */}
+      {plSummary && (
+        <Grid container spacing={2} mb={3}>
+          <Grid item xs={12} sm={6} md={3}>
+            <StatCard
+              label="Total Revenue"
+              value={formatCurrency(plSummary.total_buyer_revenue)}
+              icon={<MonetizationOn />}
+              color="#2e7d32"
+            />
           </Grid>
-        ))}
-      </Grid>
-
-      {/* Quick Actions & Reports */}
-      <Grid container spacing={3} sx={{ mt: 2 }}>
-        <Grid item xs={12} md={6}>
-          <Card>
-            <CardContent>
-              <Typography variant="h6" gutterBottom>Quick Actions</Typography>
-              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1, mt: 2 }}>
-                {quickActions.map((qa) => (
-                  <Button
-                    key={qa.label}
-                    variant="outlined"
-                    fullWidth
-                    startIcon={<AddIcon />}
-                    onClick={qa.action}
-                    sx={{ justifyContent: "flex-start" }}
-                  >
-                    {qa.label}
-                  </Button>
-                ))}
-              </Box>
-            </CardContent>
-          </Card>
+          <Grid item xs={12} sm={6} md={3}>
+            <StatCard
+              label="Gross Profit"
+              value={formatCurrency(plSummary.gross_profit)}
+              icon={<TrendingUp />}
+              color="#1565c0"
+            />
+          </Grid>
+          <Grid item xs={12} sm={6} md={3}>
+            <StatCard
+              label="Settled Trades"
+              value={plSummary.settled_trades}
+              icon={<LocalShipping />}
+              color="#6a1b9a"
+              onClick={() => navigate("/admin/sourcing/settlements")}
+            />
+          </Grid>
+          <Grid item xs={12} sm={6} md={3}>
+            <StatCard
+              label="Gross Margin"
+              value={`${plSummary.gross_margin_pct}%`}
+              icon={<TrendingUp />}
+              color="#00838f"
+            />
+          </Grid>
         </Grid>
+      )}
 
-        <Grid item xs={12} md={6}>
-          <Card>
-            <CardContent>
-              <Typography variant="h6" gutterBottom>Reports & Views</Typography>
-              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1, mt: 2 }}>
-                {reportActions.map((ra) => (
-                  <Button
-                    key={ra.label}
-                    variant="outlined"
-                    fullWidth
-                    onClick={ra.action}
-                    sx={{ justifyContent: "flex-start" }}
-                  >
-                    {ra.label}
-                  </Button>
-                ))}
-              </Box>
-            </CardContent>
-          </Card>
-        </Grid>
-      </Grid>
+      {/* EMD Overview – the main new feature */}
+      <EmdOverviewPanel emdData={emdData} loading={emdLoading} onRefresh={fetchEmdOverview} />
     </Box>
   );
 };

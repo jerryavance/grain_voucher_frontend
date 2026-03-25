@@ -7,8 +7,34 @@ import DashboardLayout from "../components/Layouts/DashboardLayout";
 import { LoginPortal } from "../pages/Authentication/Login/LoginPortal";
 import LazyLoader from "./routes-loader";
 
+// ── Smart redirect: admins land on Sourcing Dashboard, others on general Dashboard ──
+const STAFF_ROLES = ["super_admin", "hub_admin", "bdm", "finance"];
+
+const DefaultRedirect = () => {
+  // Attempt to read the stored user role — adapt this to your auth context
+  try {
+    const raw = localStorage.getItem("user") || sessionStorage.getItem("user");
+    if (raw) {
+      const user = JSON.parse(raw);
+      const role = user?.role || user?.user?.role || "";
+      if (STAFF_ROLES.includes(role)) {
+        return <Navigate to="/admin/sourcing/dashboard" replace />;
+      }
+      if (role === "farmer") {
+        return <Navigate to="/supplier/dashboard" replace />;
+      }
+      if (role === "investor") {
+        return <Navigate to="/invest" replace />;
+      }
+    }
+  } catch {
+    // fall through to default
+  }
+  return <Navigate to="/dashboard" replace />;
+};
+
 const routes = [
-  { path: "/", element: <Navigate to="/dashboard" replace /> },
+  { path: "/", element: <DefaultRedirect /> },
   { path: "/login", element: <GuestGuard><LoginPortal /></GuestGuard> },
   { path: "/register", element: <GuestGuard><LoginPortal /></GuestGuard> },
 
