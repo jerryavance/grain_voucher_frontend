@@ -52,6 +52,11 @@ interface ISourcingStats {
   available_lots: number;
   pending_buyer_orders: number;
   pending_settlements: number;
+  // ✅ NEW: Payment visibility
+  supplier_payments_completed: number;
+  supplier_payments_total_amount: number;
+  buyer_payments_confirmed: number;
+  buyer_payments_total_amount: number;
 }
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
@@ -386,13 +391,35 @@ const SourcingDashboard: React.FC = () => {
 
   const fetchStats = async () => {
     try {
-      // Fetch quick counts in parallel
-      const [suppliers, orders, invoices, lots] = await Promise.allSettled([
+      // ✅ FIX: Also fetch payment stats for dashboard visibility (Issue 8)
+      const [suppliers, orders, invoices, lots, supplierPayments, buyerPayments] = await Promise.allSettled([
         SourcingService.getSuppliers({ page_size: 1 }),
         SourcingService.getSourceOrders({ page_size: 1, status: "accepted" }),
         SourcingService.getSupplierInvoices({ page_size: 1, status: "pending" }),
         SourcingService.getSaleLots({ page_size: 1, status: "available" }),
+        SourcingService.getSupplierPayments({ page_size: 5, status: "completed" }),
+        SourcingService.getBuyerPayments({ page_size: 5, status: "confirmed" }),
       ]);
+
+      // Compute total supplier payments
+      let spTotal = 0;
+      let spCount = 0;
+      if (supplierPayments.status === "fulfilled") {
+        spCount = supplierPayments.value.count;
+        spTotal = (supplierPayments.value.results || []).reduce(
+          (sum: number, p: any) => sum + Number(p.amount || 0), 0
+        );
+      }
+
+      // Compute total buyer payments
+      let bpTotal = 0;
+      let bpCount = 0;
+      if (buyerPayments.status === "fulfilled") {
+        bpCount = buyerPayments.value.count;
+        bpTotal = (buyerPayments.value.results || []).reduce(
+          (sum: number, p: any) => sum + Number(p.amount || 0), 0
+        );
+      }
 
       setStats({
         total_suppliers: suppliers.status === "fulfilled" ? suppliers.value.count : 0,
@@ -401,6 +428,10 @@ const SourcingDashboard: React.FC = () => {
         available_lots: lots.status === "fulfilled" ? lots.value.count : 0,
         pending_buyer_orders: 0,
         pending_settlements: 0,
+        supplier_payments_completed: spCount,
+        supplier_payments_total_amount: spTotal,
+        buyer_payments_confirmed: bpCount,
+        buyer_payments_total_amount: bpTotal,
       });
     } catch (err) {
       console.error("Failed to load stats:", err);
@@ -482,6 +513,48 @@ const SourcingDashboard: React.FC = () => {
             icon={<Inventory2 />}
             color="#4caf50"
             onClick={() => navigate("/admin/sourcing/sale-lots")}
+          />
+        </Grid>
+      </Grid>
+
+      {/* ✅ NEW: Payments Made cards — Issue 8 */}
+      <Grid container spacing={2} mb={3}>
+        <Grid item xs={12} sm={6} md={3}>
+          <StatCard
+            label="Supplier Payments Made"
+            value={stats?.supplier_payments_completed ?? "—"}
+            icon={<MonetizationOn />}
+            color="#e65100"
+            onClick={() => navigate("/admin/sourcing/supplier-payments")}
+          />
+        </Grid>
+        <Grid item xs={12} sm={6} md={3}>
+          <StatCard
+            label="Supplier Payments Total"
+            value={stats?.supplier_payments_total_amount
+              ? formatCurrency(stats.supplier_payments_total_amount)
+              : "—"}
+            icon={<AccountBalanceWallet />}
+            color="#e65100"
+          />
+        </Grid>
+        <Grid item xs={12} sm={6} md={3}>
+          <StatCard
+            label="Buyer Payments Received"
+            value={stats?.buyer_payments_confirmed ?? "—"}
+            icon={<MonetizationOn />}
+            color="#2e7d32"
+            onClick={() => navigate("/admin/sourcing/buyer-payments")}
+          />
+        </Grid>
+        <Grid item xs={12} sm={6} md={3}>
+          <StatCard
+            label="Buyer Payments Total"
+            value={stats?.buyer_payments_total_amount
+              ? formatCurrency(stats.buyer_payments_total_amount)
+              : "—"}
+            icon={<AccountBalanceWallet />}
+            color="#2e7d32"
           />
         </Grid>
       </Grid>

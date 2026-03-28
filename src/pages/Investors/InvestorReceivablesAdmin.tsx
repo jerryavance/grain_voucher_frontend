@@ -32,8 +32,28 @@ import { SourcingService } from "../Sourcing/Sourcing.service";
 import { IInvestorReceivable } from "../Sourcing/Sourcing.interface";
 import { formatCurrency } from "../Sourcing/SourcingConstants";
 import { formatDateToDDMMYYYY } from "../../utils/date_formatter";
+import { ExportButtons } from "../Sourcing/ExportUtils";
 
 // ─── Status chip helper ───────────────────────────────────────────────────────
+
+// ✅ NEW: Export column definitions for Excel/CSV export
+const RECEIVABLES_EXPORT_COLUMNS = [
+  { header: "Investor", key: "investor_name" },
+  { header: "Invoice #", key: "invoice_number" },
+  { header: "Buyer", key: "buyer_name" },
+  { header: "Grain Type", key: "grain_type" },
+  { header: "Destination Warehouse", key: "hub_name" },
+  { header: "Invoice Amount", key: "invoice_amount_due" },
+  { header: "Paid", key: "invoice_amount_paid" },
+  { header: "Balance Due", key: "invoice_balance_due" },
+  { header: "Status", key: "invoice_status" },
+  { header: "Due Date", key: "invoice_due_date" },
+  { header: "Capital Deployed", key: "amount_allocated" },
+  { header: "Est. Margin", key: "projected_investor_margin" },
+  { header: "Est. Return", key: "projected_return" },
+  { header: "Est. ROI %", key: "projected_margin_pct" },
+  { header: "Allocation #", key: "allocation_number" },
+];
 
 const StatusChip = ({ value }: { value: string }) => (
   <Chip
@@ -119,14 +139,22 @@ const InvestorReceivablesAdmin = () => {
           <TrendingUpIcon sx={{ fontSize: 36, color: "primary.main" }} />
           <Typography variant="h4">Investor Receivables</Typography>
         </Box>
-        <Button
-          variant="outlined"
-          startIcon={loading ? <CircularProgress size={16} /> : <RefreshIcon />}
-          onClick={fetchData}
-          disabled={loading}
-        >
-          Refresh
-        </Button>
+        <Box sx={{ display: "flex", gap: 1, alignItems: "center" }}>
+          {/* ✅ NEW: Excel/CSV export buttons */}
+          <ExportButtons
+            data={filtered}
+            columns={RECEIVABLES_EXPORT_COLUMNS}
+            filename="investor_receivables"
+          />
+          <Button
+            variant="outlined"
+            startIcon={loading ? <CircularProgress size={16} /> : <RefreshIcon />}
+            onClick={fetchData}
+            disabled={loading}
+          >
+            Refresh
+          </Button>
+        </Box>
       </Box>
 
       {/* ── Info banner ── */}
@@ -230,7 +258,7 @@ const InvestorReceivablesAdmin = () => {
                 <TableRow sx={{ bgcolor: "#1565c0" }}>
                   <TableCell sx={thStyle}>Investor</TableCell>
                   <TableCell sx={thStyle}>Invoice #</TableCell>
-                  <TableCell sx={thStyle}>Buyer · Grain · Hub</TableCell>
+                  <TableCell sx={thStyle}>Buyer · Grain · Warehouse</TableCell>
                   <TableCell sx={thStyle}>Invoice Amount</TableCell>
                   <TableCell sx={thStyle}>Paid</TableCell>
                   <TableCell sx={thStyle}>Balance Due</TableCell>
@@ -278,7 +306,7 @@ const InvestorReceivablesAdmin = () => {
                         {item.invoice_number}
                       </TableCell>
 
-                      {/* Buyer · Grain · Hub */}
+                      {/* Buyer · Grain · Warehouse */}
                       <TableCell>
                         <Typography variant="body2" fontWeight={600}>{item.buyer_name}</Typography>
                         <Typography variant="caption" color="text.primary">

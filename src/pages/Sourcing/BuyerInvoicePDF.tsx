@@ -265,7 +265,7 @@ export const generateBuyerInvoiceHTML = (
   </div>
   <div class="meta-strip" style="margin-top:-4px;">
     <div class="meta-cell">
-      <div class="meta-label">Hub</div>
+      <div class="meta-label">Destination Warehouse</div>
       <div class="meta-value">${invoice.hub_name || "—"}</div>
     </div>
     <div class="meta-cell">

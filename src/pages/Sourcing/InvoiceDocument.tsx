@@ -427,7 +427,7 @@ const InvoiceDocument: React.FC<IInvoiceDocumentProps> = (props) => {
               <>
                 <Text style={[s.partyLabel, { marginTop: 8 }]}>Supplier</Text>
                 <Text style={s.partyName}>{supplierName}</Text>
-                {supplierHub ? <Text style={s.partyLine}>Hub: {supplierHub}</Text> : null}
+                {supplierHub ? <Text style={s.partyLine}>Destination Warehouse: {supplierHub}</Text> : null}
               </>
             ) : null}
           </View>

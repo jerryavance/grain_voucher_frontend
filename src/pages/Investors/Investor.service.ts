@@ -133,9 +133,12 @@ export const InvestorService = {
 
   /**
    * Mark an approved payout as actually paid (physical disbursement confirmed).
+   * ✅ FIX: Now sends payment_reference in request body (required by backend).
    */
-  async markMarginPayoutPaid(id: string): Promise<{ message: string }> {
-    return instance.post(`investors/margin-payouts/${id}/mark_paid/`).then((r) => r.data);
+  async markMarginPayoutPaid(id: string, paymentReference: string): Promise<{ message: string }> {
+    return instance.post(`investors/margin-payouts/${id}/mark_paid/`, {
+      payment_reference: paymentReference,
+    }).then((r) => r.data);
   },
 
   /**

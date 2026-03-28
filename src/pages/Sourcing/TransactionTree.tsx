@@ -18,6 +18,8 @@ import {
   TableRow,
   Paper,
   Alert,
+  Button,
+  Tooltip,
 } from "@mui/material";
 import {
   CheckCircle,
@@ -25,6 +27,8 @@ import {
   ExpandMore,
   ExpandLess,
   ArrowBack,
+  PictureAsPdf,
+  TableChart,
 } from "@mui/icons-material";
 import { useParams, useNavigate } from "react-router-dom";
 import { toast } from "react-hot-toast";
@@ -211,6 +215,208 @@ const TransactionTree: React.FC = () => {
     },
   ];
 
+  // ── Export helpers (plain functions — not hooks — OK after early returns) ──
+  const handlePrintPDF = () => {
+    window.print();
+  };
+
+  const handleExportExcel = () => {
+    if (!tree) return;
+    const o = tree.source_order;
+    const alloc = tree.investor_allocation;
+    const wb = tree.weighbridge;
+    const inv = tree.supplier_invoice;
+    const lot = tree.sale_lot;
+    const stl = tree.trade_settlement;
+
+    // Build flat rows for Excel
+    const rows: Record<string, any>[] = [];
+
+    // Source order row
+    rows.push({
+      Section: "Source Order",
+      Reference: o.order_number,
+      Detail: `${o.grain_type_name || o.grain_type_detail?.name || ""} — ${o.supplier_name || o.supplier_detail?.business_name || ""}`,
+      "Qty (kg)": Number(o.quantity_kg || 0),
+      "Amount (UGX)": Number(o.total_cost || 0),
+      Status: o.status_display || o.status,
+      Date: o.created_at,
+    });
+
+    // Allocation
+    if (alloc) {
+      rows.push({
+        Section: "Investor Allocation",
+        Reference: alloc.allocation_number,
+        Detail: alloc.investor_name,
+        "Qty (kg)": "",
+        "Amount (UGX)": Number(alloc.amount_allocated || 0),
+        Status: alloc.status,
+        Date: alloc.allocated_at,
+      });
+    }
+
+    // Deliveries
+    tree.deliveries.forEach((d: any) => {
+      rows.push({
+        Section: "Delivery",
+        Reference: d.id,
+        Detail: `Driver: ${d.driver_name || "—"} / Vehicle: ${d.vehicle_number || "—"}`,
+        "Qty (kg)": "",
+        "Amount (UGX)": "",
+        Status: d.apparent_condition,
+        Date: d.received_at,
+      });
+    });
+
+    // Weighbridge
+    if (wb) {
+      rows.push({
+        Section: "Weighbridge",
+        Reference: wb.vehicle_number,
+        Detail: `Gross: ${Number(wb.gross_weight_kg).toLocaleString()} / Tare: ${Number(wb.tare_weight_kg).toLocaleString()}`,
+        "Qty (kg)": Number(wb.net_weight_kg || 0),
+        "Amount (UGX)": "",
+        Status: `Variance: ${Number(wb.quantity_variance_kg || 0).toLocaleString()} kg`,
+        Date: wb.weighed_at,
+      });
+    }
+
+    // Supplier Invoice
+    if (inv) {
+      rows.push({
+        Section: "Supplier Invoice",
+        Reference: inv.invoice_number,
+        Detail: `Due: ${formatCurrency(inv.amount_due)} / Paid: ${formatCurrency(inv.amount_paid)}`,
+        "Qty (kg)": "",
+        "Amount (UGX)": Number(inv.amount_due || 0),
+        Status: inv.status,
+        Date: inv.issued_at,
+      });
+    }
+
+    // Supplier Payments
+    tree.supplier_payments?.forEach((p: any) => {
+      rows.push({
+        Section: "Supplier Payment",
+        Reference: p.payment_number,
+        Detail: `Method: ${p.method || "—"} / Ref: ${p.reference_number || "—"}`,
+        "Qty (kg)": "",
+        "Amount (UGX)": Number(p.amount || 0),
+        Status: p.status,
+        Date: p.created_at,
+      });
+    });
+
+    // Sale Lot
+    if (lot) {
+      rows.push({
+        Section: "Stock Lot",
+        Reference: lot.lot_number,
+        Detail: `Available: ${Number(lot.available_quantity_kg).toLocaleString()} / Sold: ${Number(lot.sold_quantity_kg).toLocaleString()} kg`,
+        "Qty (kg)": Number(lot.original_quantity_kg || 0),
+        "Amount (UGX)": Number(lot.total_sourcing_cost || 0),
+        Status: lot.status,
+        Date: lot.created_at,
+      });
+    }
+
+    // Buyer Orders
+    tree.buyer_orders.forEach((bo: any) => {
+      rows.push({
+        Section: "Buyer Order",
+        Reference: bo.order_number,
+        Detail: bo.buyer_name,
+        "Qty (kg)": "",
+        "Amount (UGX)": Number(bo.subtotal || 0),
+        Status: bo.status_display || bo.status,
+        Date: bo.created_at,
+      });
+      // Lines
+      bo.lines?.forEach((line: any) => {
+        rows.push({
+          Section: "  ↳ Order Line",
+          Reference: line.lot_number || "",
+          Detail: `${Number(line.quantity_kg).toLocaleString()} kg @ ${formatCurrency(line.sale_price_per_kg)}/kg`,
+          "Qty (kg)": Number(line.quantity_kg || 0),
+          "Amount (UGX)": Number(line.line_total || 0),
+          Status: `Profit: ${formatCurrency(line.line_gross_profit)}`,
+          Date: "",
+        });
+      });
+      // Invoice
+      if (bo.buyer_invoice) {
+        rows.push({
+          Section: "  ↳ Buyer Invoice",
+          Reference: bo.buyer_invoice.invoice_number,
+          Detail: `Balance: ${formatCurrency(bo.buyer_invoice.balance_due)}`,
+          "Qty (kg)": "",
+          "Amount (UGX)": Number(bo.buyer_invoice.amount_due || 0),
+          Status: bo.buyer_invoice.status,
+          Date: bo.buyer_invoice.due_date,
+        });
+      }
+      // Buyer Payments
+      bo.buyer_payments?.forEach((p: any) => {
+        rows.push({
+          Section: "  ↳ Buyer Payment",
+          Reference: p.payment_number,
+          Detail: `Method: ${p.method} / Ref: ${p.reference_number || "—"}`,
+          "Qty (kg)": "",
+          "Amount (UGX)": Number(p.amount || 0),
+          Status: p.status,
+          Date: p.payment_date || p.created_at,
+        });
+      });
+    });
+
+    // Settlement
+    if (stl) {
+      rows.push({
+        Section: "Trade Settlement",
+        Reference: stl.settlement_number,
+        Detail: `Revenue: ${formatCurrency(stl.buyer_revenue)} / COGS: ${formatCurrency(stl.total_cogs)}`,
+        "Qty (kg)": "",
+        "Amount (UGX)": Number(stl.gross_profit || 0),
+        Status: stl.status,
+        Date: stl.settled_at,
+      });
+      rows.push({
+        Section: "  ↳ Profit Split",
+        Reference: "",
+        Detail: `Investor: ${formatCurrency(stl.investor_margin)} (${stl.investor_share_pct}%) / Platform: ${formatCurrency(stl.platform_fee)} (${stl.platform_share_pct}%)`,
+        "Qty (kg)": "",
+        "Amount (UGX)": Number(stl.investor_return || 0),
+        Status: `Investor Return`,
+        Date: "",
+      });
+    }
+
+    // Convert to CSV
+    if (rows.length === 0) {
+      toast.error("No data to export");
+      return;
+    }
+    const headers = Object.keys(rows[0]);
+    const csvContent = [
+      headers.join(","),
+      ...rows.map((row) =>
+        headers.map((h) => {
+          const val = String(row[h] ?? "").replace(/,/g, "").replace(/"/g, '""');
+          return `"${val}"`;
+        }).join(",")
+      ),
+    ].join("\n");
+
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+    const link = document.createElement("a");
+    link.href = URL.createObjectURL(blob);
+    link.download = `Trade_Tree_${o.order_number}.csv`;
+    link.click();
+    URL.revokeObjectURL(link.href);
+    toast.success("Trade tree exported to CSV");
+  };
+
   return (
     <Box p={3}>
       {/* ── Header ────────────────────────────────────────────────────── */}
@@ -235,6 +441,29 @@ const TransactionTree: React.FC = () => {
           variant="outlined"
           sx={{ ml: 1 }}
         />
+        {/* ✅ NEW: Export buttons */}
+        <Box sx={{ ml: "auto", display: "flex", gap: 1 }}>
+          <Tooltip title="Print / Save as PDF">
+            <Button
+              size="small"
+              variant="outlined"
+              startIcon={<PictureAsPdf />}
+              onClick={handlePrintPDF}
+            >
+              PDF
+            </Button>
+          </Tooltip>
+          <Tooltip title="Export trade tree to CSV / Excel">
+            <Button
+              size="small"
+              variant="outlined"
+              startIcon={<TableChart />}
+              onClick={handleExportExcel}
+            >
+              Excel
+            </Button>
+          </Tooltip>
+        </Box>
       </Box>
       <Typography variant="body2" color="text.primary" mb={3}>
         {order.hub_name || order.hub_detail?.name} &bull; {order.grain_type_name || order.grain_type_detail?.name} &bull; {formatKg(order.quantity_kg)}
@@ -361,7 +590,7 @@ const Row: React.FC<{ label: string; value: React.ReactNode; bold?: boolean }> =
 
 const OrderDetail: React.FC<{ order: any }> = ({ order }) => (
   <Grid container spacing={1}>
-    <Row label="Hub" value={order.hub_name || order.hub_detail?.name || "—"} />
+    <Row label="Destination Warehouse" value={order.hub_name || order.hub_detail?.name || "—"} />
     <Row label="Grain Type" value={order.grain_type_name || order.grain_type_detail?.name || "—"} />
     <Row label="Supplier" value={order.supplier_name || order.supplier_detail?.business_name || "—"} />
     <Row label="Quantity" value={formatKg(order.quantity_kg)} />
@@ -408,7 +637,7 @@ const DeliveriesDetail: React.FC<{ deliveries: any[] }> = ({ deliveries }) => (
     <Table size="small">
       <TableHead>
         <TableRow sx={{ bgcolor: "action.hover" }}>
-          {["Hub", "Driver", "Vehicle", "Condition", "Received At", "Notes"].map((h) => (
+          {["Dest. Warehouse", "Driver", "Vehicle", "Condition", "Received At", "Notes"].map((h) => (
             <TableCell key={h} sx={{ fontWeight: 700, fontSize: "0.75rem" }}>{h}</TableCell>
           ))}
         </TableRow>

@@ -386,7 +386,7 @@ export const generateSupplierInvoiceHTML = (
       <div class="meta-value">${invoice.due_date ? formatDate(invoice.due_date) : "—"}</div>
     </div>
     <div class="meta-cell">
-      <div class="meta-label">Hub</div>
+      <div class="meta-label">Destination Warehouse</div>
       <div class="meta-value">${invoice.hub_name || "—"}</div>
     </div>
     <div class="meta-cell">
@@ -446,7 +446,7 @@ export const generateSupplierInvoiceHTML = (
           <div class="grain-name">${invoice.grain_type_name || "Grain Purchase"}</div>
           <div class="grain-meta">
             ${invoice.trade_type_display ? `Trade: ${invoice.trade_type_display}` : ""}
-            ${invoice.hub_name ? ` · Hub: ${invoice.hub_name}` : ""}
+            ${invoice.hub_name ? ` · Dest. Warehouse: ${invoice.hub_name}` : ""}
           </div>
         </td>
         <td>${qty > 0 ? fmt(qty) + " KG" : "—"}</td>

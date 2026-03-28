@@ -71,18 +71,24 @@ export interface IProfitSharingAgreement {
 }
 
 // Interface for MarginPayout (new model - backend change #2)
+// ✅ FIX: Added period_start, period_end, payout_number, payment_reference
 export interface IMarginPayout {
     id: string;
+    payout_number: string;
     investor: IInvestor;
     investor_account: string;
     investor_account_id: string;
     trade_financing?: string;
     amount: string;
+    period_start: string;
+    period_end: string;
     status: 'pending' | 'approved' | 'paid' | 'cancelled';
     notes: string;
+    requested_by?: IInvestor;
     approved_by?: IInvestor;
     approved_at?: string;
     paid_at?: string;
+    payment_reference?: string;
     cancelled_at?: string;
     created_at: string;
     updated_at: string;

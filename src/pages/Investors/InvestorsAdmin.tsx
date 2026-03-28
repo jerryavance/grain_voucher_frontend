@@ -257,18 +257,17 @@ const InvestorsAdmin = () => {
   };
 
   const handleMarkMarginPayoutPaid = async (payout: IMarginPayout) => {
-    if (
-      !window.confirm(
-        `Confirm physical disbursement of UGX ${parseFloat(payout.amount).toLocaleString()} to ${payout.investor?.first_name}?`
-      )
-    )
-      return;
+    // ✅ FIX: Prompt for payment reference (required by backend)
+    const paymentRef = window.prompt(
+      `Enter payment reference (e.g. bank ref, MoMo TxID) for disbursement of UGX ${parseFloat(payout.amount).toLocaleString()} to ${payout.investor?.first_name}:`
+    );
+    if (!paymentRef) return; // user cancelled or left empty
     try {
-      const res = await InvestorService.markMarginPayoutPaid(payout.id);
+      const res = await InvestorService.markMarginPayoutPaid(payout.id, paymentRef);
       toast.success(res.message || "Payout marked as paid");
       fetchData();
     } catch (err: any) {
-      toast.error(err.response?.data?.detail || "Failed to mark paid");
+      toast.error(err.response?.data?.detail || err.response?.data?.error || "Failed to mark paid");
     }
   };
 

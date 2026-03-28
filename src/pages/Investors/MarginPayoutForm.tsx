@@ -12,11 +12,28 @@ import uniqueId from "../../utils/generateId";
 import { InvestorService } from "./Investor.service";
 import { IMarginPayoutFormProps } from "./Investor.interface";
 
+// ✅ FIX: Helper to get current month date range for period_start / period_end
+const getCurrentMonthStart = (): string => {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-01`;
+};
+
+const getCurrentMonthEnd = (): string => {
+  const d = new Date();
+  const lastDay = new Date(d.getFullYear(), d.getMonth() + 1, 0).getDate();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(lastDay).padStart(2, "0")}`;
+};
+
+// ✅ FIX: Added period_start and period_end to validation schema
 const validation = Yup.object().shape({
   investor_account_id: Yup.string().required("Investor account is required"),
   amount: Yup.number()
     .positive("Amount must be positive")
     .required("Amount is required"),
+  period_start: Yup.date().required("Period start is required"),
+  period_end: Yup.date()
+    .required("Period end is required")
+    .min(Yup.ref("period_start"), "Period end must be after start"),
   notes: Yup.string(),
 });
 
@@ -49,6 +66,26 @@ const MarginPayoutForm: FC<IMarginPayoutFormProps> = ({
       type: "number",
       uiType: "number",
       uiBreakpoints: { xs: 12, sm: 12, md: 12, lg: 12, xl: 12 },
+      required: true,
+    },
+    // ✅ FIX: Added period_start field (was missing — caused 400 error)
+    {
+      name: "period_start",
+      initailValue: getCurrentMonthStart(),
+      label: "Period Start",
+      type: "date",
+      uiType: "date",
+      uiBreakpoints: { xs: 12, sm: 6, md: 6, lg: 6, xl: 6 },
+      required: true,
+    },
+    // ✅ FIX: Added period_end field (was missing — caused 400 error)
+    {
+      name: "period_end",
+      initailValue: getCurrentMonthEnd(),
+      label: "Period End",
+      type: "date",
+      uiType: "date",
+      uiBreakpoints: { xs: 12, sm: 6, md: 6, lg: 6, xl: 6 },
       required: true,
     },
     {
@@ -117,6 +154,7 @@ const MarginPayoutForm: FC<IMarginPayoutFormProps> = ({
   async function handleSubmit(values: any) {
     setLoading(true);
     try {
+      // ✅ FIX: Payload now includes period_start and period_end
       await InvestorService.createMarginPayout(values);
       toast.success("Margin payout request created. Awaiting approval.");
       form.resetForm();
@@ -127,6 +165,8 @@ const MarginPayoutForm: FC<IMarginPayoutFormProps> = ({
       toast.error(
         err.response?.data?.detail ||
           err.response?.data?.amount?.[0] ||
+          err.response?.data?.period_start?.[0] ||
+          err.response?.data?.period_end?.[0] ||
           err.message ||
           "An error occurred"
       );

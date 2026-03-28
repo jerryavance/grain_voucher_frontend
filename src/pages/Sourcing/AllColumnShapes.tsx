@@ -176,7 +176,8 @@ export const DeliveryRecordColumnShape = (actions: IDropdownAction[]) => [
   },
   {
     // ✅ FIX: was showing UUID, now shows hub name
-    Header: "Hub",
+    // ✅ FIX: Renamed "Hub" → "Destination Warehouse" per client request
+    Header: "Destination Warehouse",
     accessor: "hub",
     minWidth: 130,
     Cell: ({ row }: any) => {
