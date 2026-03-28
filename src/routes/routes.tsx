@@ -33,6 +33,21 @@ const DefaultRedirect = () => {
   return <Navigate to="/dashboard" replace />;
 };
 
+// ── Smart dashboard redirect: staff → sourcing, others → general ──
+const DashboardRedirect = () => {
+  try {
+    const raw = localStorage.getItem("user") || sessionStorage.getItem("user");
+    if (raw) {
+      const user = JSON.parse(raw);
+      const role = user?.role || user?.user?.role || "";
+      if (STAFF_ROLES.includes(role)) {
+        return <Navigate to="/admin/sourcing/dashboard" replace />;
+      }
+    }
+  } catch { /* fall through */ }
+  return <LazyLoader.DashboardSaaS />;
+};
+
 const routes = [
   { path: "/", element: <DefaultRedirect /> },
   { path: "/login", element: <GuestGuard><LoginPortal /></GuestGuard> },
@@ -43,8 +58,8 @@ const routes = [
     path: "/",
     element: <AuthGuard><DashboardLayout /></AuthGuard>,
     children: [
-      // Dashboard
-      { path: "dashboard", element: <LazyLoader.DashboardSaaS /> },
+      // ✅ FIX: Admin users now auto-redirect to sourcing dashboard instead of old dashboard
+      { path: "dashboard", element: <DashboardRedirect /> },
       { path: "dashboard/account/:tabId", element: <LazyLoader.AccountView /> },
 
       // Hub List (public)

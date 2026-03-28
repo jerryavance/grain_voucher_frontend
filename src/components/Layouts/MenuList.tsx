@@ -76,8 +76,9 @@ export const MenuList = (
     //   5. Sales:        Buyers → Buyer Orders → Buyer Invoices → Buyer Payments
     //   6. Settlements:  Settlements & P&L
     // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    // ✅ RENAMED: "Sourcing" → "Buy Now - Pay Later" per client request
     {
-      title: "Sourcing",
+      title: "Buy Now - Pay Later",
       Icon: Icons.LocalShippingIcon,
       visible: isStaff || isHubAdmin || isSuperUser,
       isHeader: true,
@@ -160,7 +161,8 @@ export const MenuList = (
           isHeader: true,
           subMenu: [
             {
-              title: "Stock (Sale Lots)",
+              // ✅ RENAMED: "Stock (Sale Lots)" → "Goods In Transit" per client request
+              title: "Goods In Transit",
               Icon: Icons.InventoryIcon,
               path: "/admin/sourcing/sale-lots",
               visible: isStaff || isHubAdmin || isSuperUser,

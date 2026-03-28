@@ -474,8 +474,13 @@ interface PaymentReceiptPDFButtonProps {
     reference_number: string;
     invoice_number?: string;
     order_number?: string;
+    // ✅ FIX: Accept multiple possible name fields for robust resolution
     buyer_name?: string;
     supplier_name?: string;
+    // Nested objects the API may return
+    supplier_invoice?: any;
+    buyer_invoice?: any;
+    processed_by_detail?: any;
     hub_name?: string;
     grain_type_name?: string;
     quantity_kg?: number;
@@ -483,11 +488,47 @@ interface PaymentReceiptPDFButtonProps {
     confirmed_at?: string | null;
     status: string;
     notes?: string;
+    // catch-all for any extra fields
+    [key: string]: any;
   };
   type: "buyer" | "supplier";
   size?: "small" | "medium" | "large";
   compact?: boolean;
 }
+
+// ✅ FIX: Helper to resolve supplier name from multiple possible paths
+const resolveSupplierName = (payment: any): string => {
+  // Direct flat field
+  if (payment.supplier_name) return payment.supplier_name;
+  // From supplier_invoice → supplier detail
+  const si = payment.supplier_invoice;
+  if (si) {
+    if (typeof si === "object") {
+      if (si.supplier_name) return si.supplier_name;
+      if (si.supplier?.business_name) return si.supplier.business_name;
+      if (si.supplier_detail?.business_name) return si.supplier_detail.business_name;
+    }
+  }
+  // From source_order → supplier
+  const so = payment.source_order;
+  if (so && typeof so === "object") {
+    if (so.supplier_name) return so.supplier_name;
+    if (so.supplier?.business_name) return so.supplier.business_name;
+  }
+  return "Supplier";
+};
+
+// ✅ FIX: Helper to resolve buyer name from multiple possible paths
+const resolveBuyerName = (payment: any): string => {
+  if (payment.buyer_name) return payment.buyer_name;
+  const bi = payment.buyer_invoice;
+  if (bi && typeof bi === "object") {
+    if (bi.buyer_name) return bi.buyer_name;
+    if (bi.buyer_order?.buyer_name) return bi.buyer_order.buyer_name;
+    if (bi.buyer_profile?.business_name) return bi.buyer_profile.business_name;
+  }
+  return "Buyer";
+};
 
 const PaymentReceiptPDFButton: React.FC<PaymentReceiptPDFButtonProps> = ({
   payment, type, size = "small", compact = false,
@@ -499,21 +540,27 @@ const PaymentReceiptPDFButton: React.FC<PaymentReceiptPDFButtonProps> = ({
     try {
       const logoDataUrl = await fetchLogoAsDataUrl();
 
+      // ✅ FIX: Use resolver functions to find name from any available path
       const data: ReceiptData = {
         payment_number: payment.payment_number,
         type,
         payer_name: type === "buyer"
-          ? (payment.buyer_name || "Buyer")
-          : (payment.supplier_name || "Supplier"),
+          ? resolveBuyerName(payment)
+          : resolveSupplierName(payment),
         amount: Number(payment.amount),
         method: payment.method_display || payment.method,
         reference: payment.reference_number || "—",
-        invoice_number: payment.invoice_number || "—",
+        invoice_number: payment.invoice_number
+          || payment.supplier_invoice?.invoice_number
+          || payment.buyer_invoice?.invoice_number
+          || "—",
         payment_date: payment.payment_date,
         confirmed_at: payment.confirmed_at,
         status: payment.status,
         notes: payment.notes,
-        order_number: payment.order_number,
+        order_number: payment.order_number
+          || payment.source_order_number
+          || (typeof payment.source_order === "object" ? payment.source_order?.order_number : undefined),
         hub_name: payment.hub_name,
         grain_type: payment.grain_type_name,
         quantity_kg: payment.quantity_kg,

@@ -28,10 +28,16 @@ const HubForm: FC<IHubFormProps> = ({ handleClose, formType = 'Save', initialVal
     
     const fetchUsers = async (query: string) => {
         try {
-            const response = await UserService.getUsers({ search: query }); // Adjust the API call based on your UserService
+            // ✅ FIX: Fetch all users without role filter — hub_admin role users
+            //         were missing because the API may have defaulted to farmers only.
+            //         Pass page_size to get enough results, and no role filter.
+            const response = await UserService.getUsers({
+                search: query,
+                page_size: 100,
+            });
             const options = response.results.map((user: any) => ({
                 value: user.id,
-                label: `${user.first_name} ${user.last_name} : ${user.phone_number}`, // Display name and phone number
+                label: `${user.first_name} ${user.last_name} : ${user.phone_number} (${user.role || "—"})`,
             }));
             setUserOptions(options);
         } catch (error) {
