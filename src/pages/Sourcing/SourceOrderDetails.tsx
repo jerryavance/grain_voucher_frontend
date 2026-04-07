@@ -72,10 +72,17 @@ const InvestorAllocationForm: FC<{
   }, [open]);
 
   const form = useFormik({
-    initialValues: { investor_account: "", source_order: order.id, amount_allocated: order.total_cost, notes: "" },
+    initialValues: {
+      investor_account: "", source_order: order.id,
+      amount_allocated: order.total_cost,
+      financing_percentage: 100,
+      emd_deduction_timing: "on_assignment",
+      notes: "",
+    },
     validationSchema: Yup.object({
       investor_account: Yup.string().required("Investor account is required"),
       amount_allocated: Yup.number().typeError("Must be a number").positive().required(),
+      financing_percentage: Yup.number().min(1, "Min 1%").max(100, "Max 100%").required(),
     }),
     enableReinitialize: true,
     onSubmit: async (values) => {
@@ -83,7 +90,10 @@ const InvestorAllocationForm: FC<{
       try {
         await SourcingService.createInvestorAllocation({
           investor_account: values.investor_account, source_order: values.source_order,
-          amount_allocated: Number(values.amount_allocated), notes: values.notes,
+          amount_allocated: Number(values.amount_allocated),
+          financing_percentage: Number(values.financing_percentage),
+          emd_deduction_timing: values.emd_deduction_timing as "on_assignment" | "on_weighbridge" | "on_supplier_payment",
+          notes: values.notes,
         });
         toast.success("Investor allocated successfully");
         form.resetForm(); callBack?.(); handleClose();
@@ -92,6 +102,14 @@ const InvestorAllocationForm: FC<{
       } finally { setLoading(false); }
     },
   });
+
+  // Auto-compute amount based on financing percentage
+  useEffect(() => {
+    const pct = Number(form.values.financing_percentage) || 100;
+    const computed = (Number(order.total_cost) * pct / 100).toFixed(2);
+    form.setFieldValue("amount_allocated", computed);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [form.values.financing_percentage, order.total_cost]);
 
   const selected = investorAccounts.find(a => a.id === form.values.investor_account);
   const balance = selected ? (selected.emd_balance ?? selected.available_balance) : 0;
@@ -115,9 +133,32 @@ const InvestorAllocationForm: FC<{
               {form.touched.investor_account && form.errors.investor_account && <FormHelperText>{form.errors.investor_account as string}</FormHelperText>}
             </FormControl>
             {selected && <Alert severity={sufficient ? "success" : "error"}>EMD Balance: {formatCurrency(balance)}{!sufficient && " — Insufficient"}</Alert>}
+            {/* Financing Percentage */}
+            <TextField label="Financing Percentage (%)" type="number" fullWidth
+              value={form.values.financing_percentage}
+              onChange={e => form.setFieldValue("financing_percentage", Math.min(100, Math.max(1, Number(e.target.value) || 100)))}
+              helperText="Set below 100% for partial investor financing (e.g. buyer pays part upfront)"
+              inputProps={{ min: 1, max: 100 }} />
             <TextField label="Amount (UGX) *" type="number" fullWidth value={form.values.amount_allocated}
               onChange={e => form.setFieldValue("amount_allocated", e.target.value)}
-              helperText={`Order total: ${formatCurrency(order.total_cost)}`} />
+              helperText={`Order total: ${formatCurrency(order.total_cost)} × ${form.values.financing_percentage}%`} />
+            {/* EMD Deduction Timing */}
+            <FormControl fullWidth>
+              <InputLabel>When to deduct EMD</InputLabel>
+              <Select value={form.values.emd_deduction_timing} label="When to deduct EMD"
+                onChange={e => form.setFieldValue("emd_deduction_timing", e.target.value)}>
+                <MenuItem value="on_assignment">Immediately (on assignment)</MenuItem>
+                <MenuItem value="on_weighbridge">After weighbridge (goods accepted)</MenuItem>
+                <MenuItem value="on_supplier_payment">After supplier payment</MenuItem>
+              </Select>
+              <FormHelperText>
+                {form.values.emd_deduction_timing === "on_assignment"
+                  ? "EMD locked from investor's balance immediately."
+                  : form.values.emd_deduction_timing === "on_weighbridge"
+                  ? "EMD locked only after goods are weighed and accepted."
+                  : "EMD locked only after the supplier has been paid."}
+              </FormHelperText>
+            </FormControl>
             <TextField label="Notes" multiline rows={2} fullWidth value={form.values.notes} onChange={e => form.setFieldValue("notes", e.target.value)} />
           </Box>
         )}
@@ -246,8 +287,8 @@ const SourceOrderDetails = () => {
             <Button variant="outlined" startIcon={<LocalShippingIcon />} onClick={() => handleAction(() => SourcingService.markInTransit(id!), "Marked in transit")}>Mark In Transit</Button>
           </>
         )}
-        {order.status === "in_transit" && <Button variant="contained" startIcon={<LocalShippingIcon />} onClick={() => setShowDeliveryForm(true)}>Record Delivery</Button>}
-        {order.status === "delivered" && (
+        {["accepted", "in_transit", "sent"].includes(order.status) && <Button variant="contained" startIcon={<LocalShippingIcon />} onClick={() => setShowDeliveryForm(true)}>Record Delivery</Button>}
+        {["delivered", "accepted", "in_transit"].includes(order.status) && (
           <>
             {!order.has_weighbridge && <Button variant="contained" color="primary" startIcon={<ScaleIcon />} onClick={() => setShowWeighbridgeForm(true)}>Record Weighbridge</Button>}
             {isAggregator && <Button variant={aggregatorCost ? "outlined" : "contained"} color="info" startIcon={aggregatorCost ? <EditIcon /> : <StorefrontIcon />} onClick={() => setShowAggregatorCostForm(true)}>{aggregatorCost ? "Edit Aggregator Costs" : "Record Aggregator Costs"}</Button>}
@@ -465,7 +506,7 @@ const SourceOrderDetails = () => {
             </Table>
           </Paper>
         ) : (
-          <Alert severity="info">No delivery records yet. {order.status === "in_transit" && <Button size="small" onClick={() => setShowDeliveryForm(true)}>Record Delivery</Button>}</Alert>
+          <Alert severity="info">No delivery records yet. {["accepted", "in_transit", "sent"].includes(order.status) && <Button size="small" onClick={() => setShowDeliveryForm(true)}>Record Delivery</Button>}</Alert>
         )}
       </TabPanel>
 
@@ -502,7 +543,7 @@ const SourceOrderDetails = () => {
             </Grid>
           </Grid>
         ) : (
-          <Alert severity="info">No weighbridge record yet. {order.status === "delivered" && <Button size="small" onClick={() => setShowWeighbridgeForm(true)}>Record Weighbridge</Button>}</Alert>
+          <Alert severity="info">No weighbridge record yet. {["delivered", "accepted", "in_transit"].includes(order.status) && !order.has_weighbridge && <Button size="small" onClick={() => setShowWeighbridgeForm(true)}>Record Weighbridge</Button>}</Alert>
         )}
       </TabPanel>
 

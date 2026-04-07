@@ -83,7 +83,7 @@ const StatCard: React.FC<{
   >
     <CardContent sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", py: 2 }}>
       <Box>
-        <Typography variant="caption" color="text.secondary" fontWeight={600} textTransform="uppercase" sx={{ letterSpacing: 0.5 }}>
+        <Typography variant="caption" color="text.primary" fontWeight={600} textTransform="uppercase" sx={{ letterSpacing: 0.5 }}>
           {label}
         </Typography>
         <Typography variant="h5" fontWeight={700} sx={{ mt: 0.5 }}>
@@ -173,13 +173,13 @@ const EmdOverviewPanel: React.FC<{
                 border: "1px solid #c8e6c9",
               }}
             >
-              <Typography variant="caption" color="text.secondary" fontWeight={600}>
+              <Typography variant="caption" color="text.primary" fontWeight={600}>
                 AVAILABLE EMD BALANCE
               </Typography>
               <Typography variant="h5" fontWeight={700} color="success.dark" sx={{ mt: 0.5 }}>
                 {formatCurrency(emdData.total_emd_balance)}
               </Typography>
-              <Typography variant="caption" color="text.secondary">
+              <Typography variant="caption" color="text.primary">
                 Capital ready for new trades
               </Typography>
             </Box>
@@ -193,13 +193,13 @@ const EmdOverviewPanel: React.FC<{
                 border: "1px solid #ffe0b2",
               }}
             >
-              <Typography variant="caption" color="text.secondary" fontWeight={600}>
+              <Typography variant="caption" color="text.primary" fontWeight={600}>
                 EMD UTILIZED
               </Typography>
               <Typography variant="h5" fontWeight={700} color="warning.dark" sx={{ mt: 0.5 }}>
                 {formatCurrency(emdData.total_emd_utilized)}
               </Typography>
-              <Typography variant="caption" color="text.secondary">
+              <Typography variant="caption" color="text.primary">
                 Locked in active trades
               </Typography>
             </Box>
@@ -213,13 +213,13 @@ const EmdOverviewPanel: React.FC<{
                 border: "1px solid #bbdefb",
               }}
             >
-              <Typography variant="caption" color="text.secondary" fontWeight={600}>
+              <Typography variant="caption" color="text.primary" fontWeight={600}>
                 TOTAL CAPITAL COMMITTED
               </Typography>
               <Typography variant="h5" fontWeight={700} color="primary.dark" sx={{ mt: 0.5 }}>
                 {formatCurrency(emdData.total_emd_balance + emdData.total_emd_utilized)}
               </Typography>
-              <Typography variant="caption" color="text.secondary">
+              <Typography variant="caption" color="text.primary">
                 Available + Utilized
               </Typography>
             </Box>
@@ -229,7 +229,7 @@ const EmdOverviewPanel: React.FC<{
         {/* Utilization bar */}
         <Box mb={3}>
           <Box display="flex" justifyContent="space-between" mb={0.5}>
-            <Typography variant="body2" color="text.secondary">
+            <Typography variant="body2" color="text.primary">
               Capital Utilization
             </Typography>
             <Typography variant="body2" fontWeight={600}>
@@ -254,7 +254,7 @@ const EmdOverviewPanel: React.FC<{
         <Divider sx={{ mb: 2 }} />
 
         {/* Per-investor table */}
-        <Typography variant="subtitle2" fontWeight={600} mb={1.5} color="text.secondary">
+        <Typography variant="subtitle2" fontWeight={600} mb={1.5} color="text.primary">
           INVESTOR BALANCES
         </Typography>
         <TableContainer component={Paper} variant="outlined" sx={{ borderRadius: 1.5 }}>
@@ -307,12 +307,12 @@ const EmdOverviewPanel: React.FC<{
                         </Typography>
                       </TableCell>
                       <TableCell align="right">
-                        <Typography variant="body2" color="text.secondary">
+                        <Typography variant="body2" color="text.primary">
                           {formatCurrency(inv.emd_utilized)}
                         </Typography>
                       </TableCell>
                       <TableCell align="right">
-                        <Typography variant="body2" color="text.secondary">
+                        <Typography variant="body2" color="text.primary">
                           {formatCurrency(inv.total_margin_earned)}
                         </Typography>
                       </TableCell>
@@ -332,7 +332,7 @@ const EmdOverviewPanel: React.FC<{
                               },
                             }}
                           />
-                          <Typography variant="caption" color="text.secondary" sx={{ minWidth: 32 }}>
+                          <Typography variant="caption" color="text.primary" sx={{ minWidth: 32 }}>
                             {invUtil.toFixed(0)}%
                           </Typography>
                         </Box>
@@ -471,7 +471,7 @@ const SourcingDashboard: React.FC = () => {
           <Typography variant="h4" fontWeight={700}>
             Sourcing Dashboard
           </Typography>
-          <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
+          <Typography variant="body2" color="text.primary" sx={{ mt: 0.5 }}>
             Overview of procurement, capital, and trade activity
           </Typography>
         </Box>

@@ -188,6 +188,8 @@ export const SourcingService = {
     investor_account: string;
     source_order: string;
     amount_allocated: number;
+    financing_percentage?: number;
+    emd_deduction_timing?: "on_assignment" | "on_weighbridge" | "on_supplier_payment";
     notes?: string;
   }): Promise<IInvestorAllocation> {
     return instance.post("sourcing/investor-allocations/", payload).then(r => r.data);
@@ -430,6 +432,64 @@ export const SourcingService = {
   },
   async getQualityGrades(search?: string): Promise<any> {
     return instance.get("vouchers/quality-grades/", { params: { search, page_size: 50 } }).then(r => r.data);
+  },
+
+  // ── NEW: Backend integration endpoints ────────────────────────────────────
+
+  async reassignInvestor(allocationId: string, newInvestorAccountId: string): Promise<any> {
+    return instance.post(`sourcing/investor-allocations/${allocationId}/reassign_investor/`, {
+      new_investor_account_id: newInvestorAccountId,
+    }).then(r => r.data);
+  },
+
+  async exportBuyerInvoicesCsv(params?: any): Promise<Blob> {
+    return instance.get("sourcing/buyer-invoices/export_csv/", {
+      params, responseType: "blob",
+    }).then(r => r.data);
+  },
+
+  async exportSupplierPaymentsCsv(params?: any): Promise<Blob> {
+    return instance.get("sourcing/supplier-payments/export_csv/", {
+      params, responseType: "blob",
+    }).then(r => r.data);
+  },
+
+  async applyInvoicePenalty(invoiceId: string, penaltyRate?: number): Promise<any> {
+    return instance.post(`sourcing/buyer-invoices/${invoiceId}/apply_penalty/`,
+      penaltyRate !== undefined ? { penalty_rate: penaltyRate } : {},
+    ).then(r => r.data);
+  },
+
+  async applyAllPenalties(): Promise<any> {
+    return instance.post("sourcing/buyer-invoices/apply_all_penalties/").then(r => r.data);
+  },
+
+  async createCreditNote(invoiceId: string, payload: { amount: number; reason: string; reference?: string }): Promise<any> {
+    return instance.post(`sourcing/buyer-invoices/${invoiceId}/credit_note/`, payload).then(r => r.data);
+  },
+
+  async createDebitNote(invoiceId: string, payload: { amount: number; reason: string; reference?: string }): Promise<any> {
+    return instance.post(`sourcing/buyer-invoices/${invoiceId}/debit_note/`, payload).then(r => r.data);
+  },
+
+  async editBuyerInvoice(invoiceId: string, payload: any): Promise<any> {
+    return instance.patch(`sourcing/buyer-invoices/${invoiceId}/edit_invoice/`, payload).then(r => r.data);
+  },
+
+  async getLinkedSourceOrders(buyerOrderId: string): Promise<any> {
+    return instance.get(`sourcing/buyer-orders/${buyerOrderId}/linked_source_orders/`).then(r => r.data);
+  },
+
+  async recordDelivery(sourceOrderId: string, payload: any): Promise<any> {
+    return instance.post(`sourcing/source-orders/${sourceOrderId}/record_delivery/`, payload).then(r => r.data);
+  },
+
+  async recordWeighbridge(sourceOrderId: string, payload: any): Promise<any> {
+    return instance.post(`sourcing/source-orders/${sourceOrderId}/record_weighbridge/`, payload).then(r => r.data);
+  },
+
+  async getCreditDebitNotes(params?: any): Promise<any> {
+    return instance.get("sourcing/credit-debit-notes/", { params }).then(r => r.data);
   },
 };
 

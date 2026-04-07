@@ -126,6 +126,9 @@ export interface IInvestorAllocation {
   source_order: string; source_order_number: string; source_order_total_cost: number;
   amount_allocated: number; investor_margin: number; platform_fee: number;
   amount_returned: number; status: 'active'|'settled'|'cancelled';
+  financing_percentage: number;
+  emd_deduction_timing: 'on_assignment'|'on_weighbridge'|'on_supplier_payment';
+  emd_deducted: boolean;
   allocated_at: string; settled_at: string | null; notes: string;
   created_by: string; created_at: string; updated_at: string;
 }
@@ -316,6 +319,7 @@ export interface IBuyerOrder {
   confirmed_at: string | null; dispatched_at: string | null;
   delivered_at: string | null; completed_at: string | null;
   created_at: string; updated_at: string;
+  linked_source_order_numbers?: string[];
 }
 
 export interface IBuyerOrderList {
@@ -394,6 +398,10 @@ export interface IBuyerInvoice {
   status_display: string;
   paid_at: string | null;
   is_overdue: boolean;
+  // ── Penalties (NEW) ──
+  penalty_rate: number;
+  penalty_amount: number;
+  days_overdue: number;
   // ── Cost breakdown (NEW — from backend serializer) ──
   /** Per-lot grain sale lines: qty × price, COGS breakdown */
   order_lines: IBuyerInvoiceOrderLine[];

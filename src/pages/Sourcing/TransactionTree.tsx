@@ -40,11 +40,20 @@ interface TreeData {
   investor_allocation: any;
   deliveries: any[];
   weighbridge: any;
+  aggregator_cost: any;
   supplier_invoice: any;
   supplier_payments: any[];
   sale_lot: any;
+  rejections: any[];
   buyer_orders: any[];
   trade_settlement: any;
+  timeline: Array<{ event: string; timestamp: string | null; detail: string }>;
+  summary: {
+    order_number: string; status: string; grain: string; supplier: string;
+    total_sourcing_cost: string; investor_funded: boolean;
+    investor_name: string | null; has_been_sold: boolean;
+    has_rejections: boolean; is_settled: boolean; timeline_events: number;
+  } | null;
 }
 
 const TransactionTree: React.FC = () => {
@@ -571,6 +580,71 @@ const TransactionTree: React.FC = () => {
           </Box>
         ))}
       </Box>
+
+      {/* ── Trade Timeline ──────────────────────────────────────────────── */}
+      {tree.timeline && tree.timeline.length > 0 && (
+        <Card sx={{ mt: 3 }}>
+          <CardContent>
+            <Typography variant="h6" gutterBottom>
+              Trade Timeline ({tree.timeline.length} events)
+            </Typography>
+            <Divider sx={{ mb: 2 }} />
+            {tree.timeline.map((event: any, idx: number) => (
+              <Box
+                key={idx}
+                sx={{
+                  display: "flex", gap: 2, mb: 2, pl: 2,
+                  borderLeft: "3px solid",
+                  borderColor: idx === tree.timeline.length - 1 ? "primary.main" : "divider",
+                }}
+              >
+                <Box sx={{ minWidth: 140 }}>
+                  <Typography variant="caption" color="text.secondary">
+                    {event.timestamp
+                      ? new Date(event.timestamp).toLocaleDateString("en-GB", {
+                          day: "2-digit", month: "short", year: "numeric",
+                          hour: "2-digit", minute: "2-digit",
+                        })
+                      : "—"}
+                  </Typography>
+                </Box>
+                <Box>
+                  <Typography variant="body2" fontWeight={700}>{event.event}</Typography>
+                  <Typography variant="body2" color="text.secondary">{event.detail}</Typography>
+                </Box>
+              </Box>
+            ))}
+          </CardContent>
+        </Card>
+      )}
+
+      {/* ── Trade Summary ───────────────────────────────────────────────── */}
+      {tree.summary && (
+        <Card sx={{ mt: 2 }}>
+          <CardContent>
+            <Typography variant="h6" gutterBottom>Summary</Typography>
+            <Divider sx={{ mb: 2 }} />
+            <Grid container spacing={1}>
+              {[
+                ["Grain", tree.summary.grain],
+                ["Supplier", tree.summary.supplier],
+                ["Total Cost", tree.summary.total_sourcing_cost ? formatCurrency(Number(tree.summary.total_sourcing_cost)) : "—"],
+                ["Investor", tree.summary.investor_funded ? `Yes — ${tree.summary.investor_name}` : "No"],
+                ["Sold", tree.summary.has_been_sold ? "Yes" : "Not yet"],
+                ["Rejections", tree.summary.has_rejections ? "Yes" : "None"],
+                ["Settled", tree.summary.is_settled ? "Yes" : "Not yet"],
+              ].map(([label, value]) => (
+                <Grid item xs={12} sm={6} md={4} key={label as string}>
+                  <Box sx={{ display: "flex", justifyContent: "space-between", mb: 0.5 }}>
+                    <Typography variant="body2" color="text.secondary">{label}:</Typography>
+                    <Typography variant="body2" fontWeight={600}>{value}</Typography>
+                  </Box>
+                </Grid>
+              ))}
+            </Grid>
+          </CardContent>
+        </Card>
+      )}
     </Box>
   );
 };

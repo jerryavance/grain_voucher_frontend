@@ -138,7 +138,7 @@ export const WeighbridgeRecordFormValidations = Yup.object().shape({
   gross_weight_kg: Yup.number()
     .required("Gross weight is required")
     .min(0.01, "Gross weight must be greater than 0")
-    .max(200000, "Gross weight seems unusually high"),
+    .max(10000000, "Gross weight seems unusually high"),
 
   tare_weight_kg: Yup.number()
     .min(0, "Tare weight cannot be negative")
