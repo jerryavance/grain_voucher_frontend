@@ -491,6 +491,33 @@ export const SourcingService = {
   async getCreditDebitNotes(params?: any): Promise<any> {
     return instance.get("sourcing/credit-debit-notes/", { params }).then(r => r.data);
   },
+
+
+  // ── Reports ───────────────────────────────────────────────────────────────
+ 
+  async getReceivablesAgingReport(params?: any): Promise<any> {
+    return instance.get("sourcing/reports/receivables_aging/", { params }).then(r => r.data);
+  },
+ 
+  async getBuyerLedgerReport(params?: any): Promise<any> {
+    return instance.get("sourcing/reports/buyer_ledger/", { params }).then(r => r.data);
+  },
+ 
+  async getAssetsLiabilitiesReport(params?: any): Promise<any> {
+    return instance.get("sourcing/reports/assets_liabilities/", { params }).then(r => r.data);
+  },
+ 
+  async getInvestorExposureReport(params?: any): Promise<any> {
+    return instance.get("sourcing/reports/investor_exposure/", { params }).then(r => r.data);
+  },
+ 
+  async getTradePnlReport(params?: any): Promise<any> {
+    return instance.get("sourcing/reports/trade_pnl/", { params }).then(r => r.data);
+  },
+ 
+  async getSupplierPayablesReport(params?: any): Promise<any> {
+    return instance.get("sourcing/reports/supplier_payables/", { params }).then(r => r.data);
+  },
 };
 
 export default SourcingService;

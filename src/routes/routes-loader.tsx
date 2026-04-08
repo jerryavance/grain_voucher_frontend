@@ -101,6 +101,7 @@ const RouteLazyLoader = {
   BuyerPayments: Loadable(lazy(() => import("../pages/Sourcing/BuyerPayments"))),
   BuyerPaymentDetails: Loadable(lazy(() => import("../pages/Sourcing/BuyerPaymentDetails"))),
   TradeSettlements: Loadable(lazy(() => import("../pages/Sourcing/TradeSettlements"))),
+  SourcingReports: Loadable(lazy(() => import("../pages/Sourcing/Reports"))),
   AggregatorTradeCosts: Loadable(lazy(() => import("../pages/Sourcing/AggregatorTradeCosts"))),
   RejectedLots: Loadable(lazy(() => import("../pages/Sourcing/RejectedLots"))),
 

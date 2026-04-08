@@ -197,6 +197,9 @@ const routes = [
       // Trade Settlements & P&L
       { path: "settlements", element: <LazyLoader.TradeSettlements /> },
 
+      // Reports & Analytics
+      { path: "reports", element: <LazyLoader.SourcingReports /> },
+
       // Aggregator Trade Costs
       { path: "aggregator-costs", element: <LazyLoader.AggregatorTradeCosts /> },
 

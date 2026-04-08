@@ -231,6 +231,18 @@ export const MenuList = (
             },
           ],
         },
+        // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+        // REPORTS
+        // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+        {
+          title: "Reports",
+          Icon: Icons.AssessmentIcon,
+          visible: isSuperUser || isHubAdmin,
+          isHeader: true,
+          subMenu: [
+            { title: "Reports & Analytics", Icon: Icons.AssessmentIcon, path: "/admin/sourcing/reports", visible: isSuperUser || isHubAdmin },
+          ],
+        },
       ],
     },
 
