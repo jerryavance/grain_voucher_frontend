@@ -54,6 +54,8 @@ const LOGISTICS_LABELS: Record<string, string> = {
   bennu_truck: "Bennu Truck", third_party: "Third Party", company: "Company Arranged",
 };
 
+type EmdDeductionTiming = "on_assignment" | "on_weighbridge" | "on_supplier_payment";
+
 // ─── Investor Allocation Form ──────────────────────────────────────────────
 const InvestorAllocationForm: FC<{
   open: boolean; order: ISourceOrder; handleClose: () => void; callBack?: () => void;
@@ -76,7 +78,7 @@ const InvestorAllocationForm: FC<{
       investor_account: "", source_order: order.id,
       amount_allocated: order.total_cost,
       financing_percentage: 100,
-      emd_deduction_timing: "on_assignment",
+      emd_deduction_timing: "on_assignment" as EmdDeductionTiming,
       notes: "",
     },
     validationSchema: Yup.object({
@@ -92,7 +94,7 @@ const InvestorAllocationForm: FC<{
           investor_account: values.investor_account, source_order: values.source_order,
           amount_allocated: Number(values.amount_allocated),
           financing_percentage: Number(values.financing_percentage),
-          emd_deduction_timing: values.emd_deduction_timing as "on_assignment" | "on_weighbridge" | "on_supplier_payment",
+          emd_deduction_timing: values.emd_deduction_timing,
           notes: values.notes,
         });
         toast.success("Investor allocated successfully");
@@ -146,7 +148,7 @@ const InvestorAllocationForm: FC<{
             <FormControl fullWidth>
               <InputLabel>When to deduct EMD</InputLabel>
               <Select value={form.values.emd_deduction_timing} label="When to deduct EMD"
-                onChange={e => form.setFieldValue("emd_deduction_timing", e.target.value)}>
+                onChange={e => form.setFieldValue("emd_deduction_timing", e.target.value as EmdDeductionTiming)}>
                 <MenuItem value="on_assignment">Immediately (on assignment)</MenuItem>
                 <MenuItem value="on_weighbridge">After weighbridge (goods accepted)</MenuItem>
                 <MenuItem value="on_supplier_payment">After supplier payment</MenuItem>

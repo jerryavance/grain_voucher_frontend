@@ -139,8 +139,22 @@ const BuyerInvoices: React.FC = () => {
           </Select>
         </FormControl>
         <Box flex={1} />
-        <Button variant="outlined" startIcon={<DownloadIcon />}>
-          Export
+        <Button variant="outlined" startIcon={<DownloadIcon />} onClick={async () => {
+          try {
+            const blob = await SourcingService.exportBuyerInvoicesCsv({
+              ...(dateFrom && { date_from: dateFrom }),
+              ...(dateTo && { date_to: dateTo }),
+              ...(statusFilter && { status: statusFilter }),
+            });
+            const url = window.URL.createObjectURL(new Blob([blob]));
+            const a = document.createElement("a");
+            a.href = url;
+            a.download = "buyer_invoices.csv";
+            a.click();
+            window.URL.revokeObjectURL(url);
+          } catch { toast.error("Export failed"); }
+        }}>
+          Export CSV
         </Button>
       </Box>
 
@@ -159,6 +173,8 @@ const BuyerInvoices: React.FC = () => {
                 <TableCell>Balance Due</TableCell>
                 <TableCell>Terms</TableCell>
                 <TableCell>Due Date</TableCell>
+                <TableCell>Penalty</TableCell>
+                <TableCell>Overdue</TableCell>
                 <TableCell>Status</TableCell>
               </TableRow>
             </TableHead>
@@ -224,6 +240,14 @@ const BuyerInvoices: React.FC = () => {
                         : "—"}
                     </TableCell>
                     <TableCell>{formatDate(inv.due_date)}</TableCell>
+                    <TableCell sx={{ color: Number(inv.penalty_amount || 0) > 0 ? "error.main" : "text.secondary" }}>
+                      {Number(inv.penalty_amount || 0) > 0 ? formatCurrency(inv.penalty_amount) : "—"}
+                    </TableCell>
+                    <TableCell>
+                      {Number(inv.days_overdue || 0) > 0
+                        ? <Chip label={`${inv.days_overdue}d`} size="small" color="error" variant="outlined" />
+                        : "—"}
+                    </TableCell>
                     <TableCell>
                       <Chip
                         label={formatStatus(inv.status).toUpperCase()}

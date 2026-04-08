@@ -61,6 +61,15 @@ const SupplierPayments = () => {
         </FormControl>
         <DateRangeFilter dateFrom={filters.date_from} dateTo={filters.date_to} onApply={(f, t) => setFilters({ ...filters, date_from: f, date_to: t, page: 1 })} />
         <ExportButtons data={payments?.results || []} columns={SUPPLIER_PAYMENT_EXPORT_COLUMNS} filename="supplier_payments" />
+       <Button variant="outlined" size="small" onClick={async () => {
+          try {
+            const blob = await SourcingService.exportSupplierPaymentsCsv(filters);
+            const url = window.URL.createObjectURL(new Blob([blob]));
+            const a = document.createElement("a"); a.href = url; a.download = "supplier_payments_all.csv"; a.click();
+            window.URL.revokeObjectURL(url);
+            toast.success("Exported all payments");
+          } catch { toast.error("Export failed"); }
+        }}>Export All (CSV)</Button>
         <Button sx={{ ml: "auto" }} variant="contained" startIcon={<AddIcon />} onClick={() => setShowModal(true)}>Record Payment</Button>
       </Box>
       <CustomTable columnShape={SupplierPaymentColumnShape(tableActions)} data={payments?.results || []} dataCount={payments?.count || 0} pageInitialState={{ pageSize: INITIAL_PAGE_SIZE, pageIndex: 0 }} setPageIndex={(p: number) => setFilters({ ...filters, page: p + 1 })} pageIndex={filters?.page ? filters.page - 1 : 0} setPageSize={(s: number) => setFilters({ ...filters, page_size: s, page: 1 })} loading={loading} />

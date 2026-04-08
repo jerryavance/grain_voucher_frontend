@@ -188,8 +188,8 @@ export const SourcingService = {
     investor_account: string;
     source_order: string;
     amount_allocated: number;
-    financing_percentage?: number;
-    emd_deduction_timing?: "on_assignment" | "on_weighbridge" | "on_supplier_payment";
+    financing_percentage: number;
+    emd_deduction_timing: "on_assignment" | "on_weighbridge" | "on_supplier_payment";
     notes?: string;
   }): Promise<IInvestorAllocation> {
     return instance.post("sourcing/investor-allocations/", payload).then(r => r.data);

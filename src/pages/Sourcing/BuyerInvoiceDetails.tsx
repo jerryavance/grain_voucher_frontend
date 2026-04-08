@@ -27,6 +27,9 @@ import ArrowBackIcon from "@mui/icons-material/ArrowBack";
 import PaymentIcon from "@mui/icons-material/Payment";
 import ReceiptIcon from "@mui/icons-material/Receipt";
 import CheckCircleIcon from "@mui/icons-material/CheckCircle";
+import WarningAmberIcon from "@mui/icons-material/WarningAmber";
+import EditIcon from "@mui/icons-material/Edit";
+import NoteAddIcon from "@mui/icons-material/NoteAdd";
 import useTitle from "../../hooks/useTitle";
 import LoadingScreen from "../../components/LoadingScreen";
 import ProgressIndicator from "../../components/UI/ProgressIndicator";
@@ -170,6 +173,13 @@ const BuyerInvoiceDetails: FC = () => {
   const [payments, setPayments] = useState<IBuyerPayment[]>([]);
   const [loading, setLoading] = useState(true);
   const [showPaymentDialog, setShowPaymentDialog] = useState(false);
+  const [showPenaltyDialog, setShowPenaltyDialog] = useState(false);
+  const [showCreditNoteDialog, setShowCreditNoteDialog] = useState(false);
+  const [showDebitNoteDialog, setShowDebitNoteDialog] = useState(false);
+  const [penaltyRate, setPenaltyRate] = useState("");
+  const [noteAmount, setNoteAmount] = useState("");
+  const [noteReason, setNoteReason] = useState("");
+  const [actionLoading, setActionLoading] = useState(false);
 
   useTitle(invoice ? `Invoice ${invoice.invoice_number}` : "Buyer Invoice");
 
@@ -259,6 +269,26 @@ const BuyerInvoiceDetails: FC = () => {
             View Order
           </Button>
         )}
+        {/* ── NEW: Penalty button ── */}
+        {invoice.is_overdue && invoice.status !== "paid" && invoice.status !== "cancelled" && (
+          <Button variant="contained" color="warning" startIcon={<WarningAmberIcon />}
+            onClick={() => setShowPenaltyDialog(true)}>
+            Apply Penalty
+          </Button>
+        )}
+        {/* ── NEW: Credit/Debit Note buttons ── */}
+        {invoice.status !== "paid" && invoice.status !== "cancelled" && (
+          <>
+            <Button variant="outlined" color="success" startIcon={<NoteAddIcon />}
+              onClick={() => { setNoteAmount(""); setNoteReason(""); setShowCreditNoteDialog(true); }}>
+              Credit Note
+            </Button>
+            <Button variant="outlined" color="error" startIcon={<NoteAddIcon />}
+              onClick={() => { setNoteAmount(""); setNoteReason(""); setShowDebitNoteDialog(true); }}>
+              Debit Note
+            </Button>
+          </>
+        )}
       </Box>
 
       {/* ── Status alerts ── */}
@@ -283,6 +313,8 @@ const BuyerInvoiceDetails: FC = () => {
           { label: "Amount Paid",    value: formatCurrency(invoice.amount_paid), color: "success.main" },
           { label: "Balance Due",    value: formatCurrency(invoice.balance_due), color: Number(invoice.balance_due) > 0 ? "error.main" : "success.main" },
           { label: "Gross Profit",   value: formatCurrency(grossProfit), color: grossProfit >= 0 ? "success.main" : "error.main" },
+          ...(Number(invoice.penalty_amount || 0) > 0 ? [{ label: "Penalty", value: formatCurrency(invoice.penalty_amount), color: "error.main" }] : []),
+          ...(Number(invoice.days_overdue || 0) > 0 ? [{ label: "Days Overdue", value: `${invoice.days_overdue} days`, color: "error.main" }] : []),
         ].map(({ label, value, color }) => (
           <Grid key={label} item xs={6} sm={3}>
             <Card elevation={0} sx={{ border: "1px solid #e0e0e0" }}>
@@ -594,6 +626,97 @@ const BuyerInvoiceDetails: FC = () => {
           callBack={fetchData}
         />
       )}
+
+      {/* ── Apply Penalty Dialog ── */}
+      <Dialog open={showPenaltyDialog} onClose={() => setShowPenaltyDialog(false)} maxWidth="xs" fullWidth>
+        <DialogTitle>Apply Penalty</DialogTitle>
+        <DialogContent dividers>
+          <Typography gutterBottom>
+            Invoice <strong>{invoice.invoice_number}</strong> is <strong>{invoice.days_overdue || 0} days</strong> overdue.
+          </Typography>
+          <TextField
+            label="Penalty Rate (%)" type="number" fullWidth sx={{ mt: 2 }}
+            value={penaltyRate} onChange={e => setPenaltyRate(e.target.value)}
+            helperText={`Current rate: ${invoice.penalty_rate || 0}%. Penalty = balance × rate% × (days/${30}).`}
+            inputProps={{ min: 0, step: 0.5 }}
+          />
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setShowPenaltyDialog(false)} disabled={actionLoading}>Cancel</Button>
+          <Button variant="contained" color="warning" disabled={actionLoading} onClick={async () => {
+            setActionLoading(true);
+            try {
+              await SourcingService.applyInvoicePenalty(invoice.id, penaltyRate ? Number(penaltyRate) : undefined);
+              toast.success("Penalty applied");
+              setShowPenaltyDialog(false);
+              fetchData();
+            } catch (e: any) { toast.error(e.response?.data?.error || "Failed"); }
+            finally { setActionLoading(false); }
+          }}>
+            {actionLoading ? "Applying..." : "Apply Penalty"}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* ── Credit Note Dialog ── */}
+      <Dialog open={showCreditNoteDialog} onClose={() => setShowCreditNoteDialog(false)} maxWidth="sm" fullWidth>
+        <DialogTitle>Issue Credit Note</DialogTitle>
+        <DialogContent dividers>
+          <Typography variant="body2" color="text.secondary" gutterBottom>
+            A credit note reduces the amount owed on this invoice.
+          </Typography>
+          <TextField label="Amount (UGX)" type="number" fullWidth sx={{ mt: 2, mb: 2 }}
+            value={noteAmount} onChange={e => setNoteAmount(e.target.value)} />
+          <TextField label="Reason" multiline rows={3} fullWidth
+            value={noteReason} onChange={e => setNoteReason(e.target.value)}
+            placeholder="e.g. Quality deduction agreed with buyer" />
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setShowCreditNoteDialog(false)} disabled={actionLoading}>Cancel</Button>
+          <Button variant="contained" color="success" disabled={actionLoading || !noteAmount || !noteReason} onClick={async () => {
+            setActionLoading(true);
+            try {
+              await SourcingService.createCreditNote(invoice.id, { amount: Number(noteAmount), reason: noteReason });
+              toast.success("Credit note issued — invoice amount adjusted");
+              setShowCreditNoteDialog(false);
+              fetchData();
+            } catch (e: any) { toast.error(e.response?.data?.error || "Failed"); }
+            finally { setActionLoading(false); }
+          }}>
+            {actionLoading ? "Issuing..." : "Issue Credit Note"}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* ── Debit Note Dialog ── */}
+      <Dialog open={showDebitNoteDialog} onClose={() => setShowDebitNoteDialog(false)} maxWidth="sm" fullWidth>
+        <DialogTitle>Issue Debit Note</DialogTitle>
+        <DialogContent dividers>
+          <Typography variant="body2" color="text.secondary" gutterBottom>
+            A debit note increases the amount owed on this invoice (e.g. late fees, additional charges).
+          </Typography>
+          <TextField label="Amount (UGX)" type="number" fullWidth sx={{ mt: 2, mb: 2 }}
+            value={noteAmount} onChange={e => setNoteAmount(e.target.value)} />
+          <TextField label="Reason" multiline rows={3} fullWidth
+            value={noteReason} onChange={e => setNoteReason(e.target.value)}
+            placeholder="e.g. Late payment penalty, additional handling charges" />
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setShowDebitNoteDialog(false)} disabled={actionLoading}>Cancel</Button>
+          <Button variant="contained" color="error" disabled={actionLoading || !noteAmount || !noteReason} onClick={async () => {
+            setActionLoading(true);
+            try {
+              await SourcingService.createDebitNote(invoice.id, { amount: Number(noteAmount), reason: noteReason });
+              toast.success("Debit note issued — invoice amount adjusted");
+              setShowDebitNoteDialog(false);
+              fetchData();
+            } catch (e: any) { toast.error(e.response?.data?.error || "Failed"); }
+            finally { setActionLoading(false); }
+          }}>
+            {actionLoading ? "Issuing..." : "Issue Debit Note"}
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Box>
   );
 };

@@ -355,12 +355,16 @@ const BuyerOrderDetails: FC = () => {
   const [showIssueInvoice, setShowIssueInvoice] = useState(false);
   const [availableLots, setAvailableLots] = useState<ISaleLot[]>([]);
   const [actionLoading, setActionLoading] = useState(false);
+  const [linkedSourceOrders, setLinkedSourceOrders] = useState<string[]>([]);
 
   useTitle(order ? `Order ${order.order_number}` : "Buyer Order");
 
   useEffect(() => {
     fetchOrder();
     SourcingService.getAvailableSaleLots().then(setAvailableLots).catch(() => {});
+    if (id) SourcingService.getLinkedSourceOrders(id).then((data: any[]) => {
+      setLinkedSourceOrders(data.map((so: any) => so.order_number));
+    }).catch(() => {});
   }, [id]);
 
   const fetchOrder = async () => {
@@ -493,6 +497,21 @@ const BuyerOrderDetails: FC = () => {
           </Button>
         )}
       </Box>
+
+      {/* Linked Source Orders */}
+      {linkedSourceOrders.length > 0 && (
+        <Alert severity="info" sx={{ mb: 2 }}>
+          <strong>Linked Source Orders:</strong>{" "}
+          {linkedSourceOrders.map((so, i) => (
+            <Chip key={so} label={so} size="small" color="primary" variant="outlined"
+              onClick={() => navigate(`/admin/sourcing/orders/${so}`)}
+              sx={{ ml: 0.5, cursor: "pointer" }} />
+          ))}
+          <Typography variant="caption" display="block" sx={{ mt: 0.5 }}>
+            These are the source orders that supplied the grain in this buyer order.
+          </Typography>
+        </Alert>
+      )}
 
       {/* P&L Summary Cards */}
       <Grid container spacing={2} sx={{ mb: 3 }}>
