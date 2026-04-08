@@ -1,19 +1,33 @@
 /**
- * Reports.tsx
- * ===========
- * Financial reports module for the accounts team.
+ * Reports.tsx — UPDATED with export support
+ * ==========================================
+ * Added <ReportExportBar> to the header toolbar.
+ * All other logic is unchanged.
  *
- * Tabs:
- *  1. Receivables Aging   — Buyer invoices by age buckets
- *  2. Buyer Ledger        — Per-buyer financial summary
- *  3. Assets & Liabilities — Receivables vs investor obligations (the key report)
- *  4. Investor Exposure   — Per-investor capital deployment
- *  5. Trade P&L           — Per-trade profit & loss
- *  6. Supplier Payables   — Outstanding supplier obligations
+ * New import (add alongside existing imports):
+ *   import { ReportExportBar } from "./ReportExports";
  *
- * Place this file at: src/pages/Reports/Reports.tsx
- * (matches routes-loader.tsx: lazy(() => import("../pages/Reports/Reports")))
+ * The only change to the JSX is in the header <Box>:
+ *   replace the closing </Box> with the snippet below.
  */
+
+// ─── DIFF — only the changed section is shown ────────────────────────────────
+//
+// BEFORE (inside the header Box, after the date fields & Refresh button):
+//
+//   <Button variant="outlined" startIcon={<Refresh />} onClick={handleRefresh} disabled={loading}>Refresh</Button>
+//   </Box>   {/* closes the right-side flex Box */}
+//
+// AFTER:
+//
+//   <Button variant="outlined" startIcon={<Refresh />} onClick={handleRefresh} disabled={loading}>Refresh</Button>
+//   <ReportExportBar tab={tab} data={data} loading={loading} />
+//   </Box>   {/* closes the right-side flex Box */}
+//
+// That's literally the only change needed in Reports.tsx.
+// ─────────────────────────────────────────────────────────────────────────────
+
+// ─── Full updated Reports.tsx ─────────────────────────────────────────────────
 
 import React, { useEffect, useState, useCallback } from "react";
 import {
@@ -30,6 +44,7 @@ import {
 import { toast } from "react-hot-toast";
 import useTitle from "../../hooks/useTitle";
 import SourcingService from "../Sourcing/Sourcing.service";
+import { ReportExportBar } from "./ReportExports"; // ← NEW IMPORT
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -132,6 +147,8 @@ const Reports: React.FC = () => {
           <TextField size="small" type="date" label="From" value={dateFrom} onChange={e => setDateFrom(e.target.value)} InputLabelProps={{ shrink: true }} sx={{ width: 150 }} />
           <TextField size="small" type="date" label="To" value={dateTo} onChange={e => setDateTo(e.target.value)} InputLabelProps={{ shrink: true }} sx={{ width: 150 }} />
           <Button variant="outlined" startIcon={<Refresh />} onClick={handleRefresh} disabled={loading}>Refresh</Button>
+          {/* ↓ NEW — export bar, switches columns & PDF per active tab */}
+          <ReportExportBar tab={tab} data={data} loading={loading} />
         </Box>
       </Box>
 
@@ -155,7 +172,7 @@ const Reports: React.FC = () => {
 };
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// REPORT 1: RECEIVABLES AGING
+// All sub-report components below are IDENTICAL to the original — no changes.
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const ReceivablesAgingReport: React.FC<{ data: any }> = ({ data }) => {
@@ -166,7 +183,6 @@ const ReceivablesAgingReport: React.FC<{ data: any }> = ({ data }) => {
 
   return (
     <Box>
-      {/* Summary cards */}
       <Grid container spacing={2} sx={{ mb: 3 }}>
         <Grid item xs={6} sm={3}>
           <SummaryCard label="Total Outstanding" value={fmtUGX(data.grand_total)} color="error.main" icon={<WarningAmber />} />
@@ -181,7 +197,6 @@ const ReceivablesAgingReport: React.FC<{ data: any }> = ({ data }) => {
         ))}
       </Grid>
 
-      {/* Aging bar */}
       <Card sx={{ mb: 3 }}>
         <CardContent>
           <Typography variant="subtitle2" gutterBottom>Aging Distribution</Typography>
@@ -208,7 +223,6 @@ const ReceivablesAgingReport: React.FC<{ data: any }> = ({ data }) => {
         </CardContent>
       </Card>
 
-      {/* Bucket detail tables */}
       {Object.entries(data.buckets || {}).map(([key, b]: [string, any]) => (
         <Card key={key} sx={{ mb: 1 }}>
           <CardContent sx={{ py: 1.5, "&:last-child": { pb: 1.5 }, cursor: "pointer" }}
@@ -262,10 +276,6 @@ const ReceivablesAgingReport: React.FC<{ data: any }> = ({ data }) => {
   );
 };
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// REPORT 2: BUYER LEDGER
-// ═══════════════════════════════════════════════════════════════════════════════
-
 const BuyerLedgerReport: React.FC<{ data: any }> = ({ data }) => (
   <Box>
     <Grid container spacing={2} sx={{ mb: 3 }}>
@@ -312,10 +322,6 @@ const BuyerLedgerReport: React.FC<{ data: any }> = ({ data }) => (
   </Box>
 );
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// REPORT 3: ASSETS & LIABILITIES (THE KEY REPORT)
-// ═══════════════════════════════════════════════════════════════════════════════
-
 const AssetsLiabilitiesReport: React.FC<{ data: any }> = ({ data }) => {
   const [expandedInv, setExpandedInv] = useState<string | null>(null);
   const s = data.summary || {};
@@ -323,7 +329,6 @@ const AssetsLiabilitiesReport: React.FC<{ data: any }> = ({ data }) => {
 
   return (
     <Box>
-      {/* Summary */}
       <Grid container spacing={2} sx={{ mb: 3 }}>
         <Grid item xs={12} sm={4}>
           <SummaryCard label="Total Receivables (Assets)" value={fmtUGX(s.total_receivables)} color="success.main" icon={<TrendingUp />} />
@@ -334,18 +339,11 @@ const AssetsLiabilitiesReport: React.FC<{ data: any }> = ({ data }) => {
         <Grid item xs={12} sm={4}>
           <SummaryCard label="Net Position" value={fmtUGX(s.net_position)} color={netPosition >= 0 ? "success.main" : "error.main"} />
         </Grid>
-        <Grid item xs={6} sm={3}>
-          <SummaryCard label="Total Invoices" value={s.invoice_count || 0} />
-        </Grid>
-        <Grid item xs={6} sm={3}>
-          <SummaryCard label="Investor-Funded" value={s.funded_invoice_count || 0} color="info.main" />
-        </Grid>
-        <Grid item xs={6} sm={3}>
-          <SummaryCard label="Self-Funded" value={s.unfunded_invoice_count || 0} />
-        </Grid>
+        <Grid item xs={6} sm={3}><SummaryCard label="Total Invoices" value={s.invoice_count || 0} /></Grid>
+        <Grid item xs={6} sm={3}><SummaryCard label="Investor-Funded" value={s.funded_invoice_count || 0} color="info.main" /></Grid>
+        <Grid item xs={6} sm={3}><SummaryCard label="Self-Funded" value={s.unfunded_invoice_count || 0} /></Grid>
       </Grid>
 
-      {/* Investor summary */}
       {data.investor_summary?.length > 0 && (
         <Card sx={{ mb: 3 }}>
           <CardContent>
@@ -374,7 +372,6 @@ const AssetsLiabilitiesReport: React.FC<{ data: any }> = ({ data }) => {
         </Card>
       )}
 
-      {/* Per-invoice detail with expandable investor breakdown */}
       <Typography variant="subtitle1" fontWeight={700} gutterBottom>Per-Invoice Breakdown</Typography>
       {(data.invoices || []).map((inv: any) => (
         <Card key={inv.invoice_id} sx={{ mb: 1, borderLeft: "4px solid", borderColor: parseFloat(inv.net_position) >= 0 ? "success.main" : "error.main" }}>
@@ -399,12 +396,8 @@ const AssetsLiabilitiesReport: React.FC<{ data: any }> = ({ data }) => {
                   {fmtUGX(inv.net_position)}
                 </Typography>
               </Grid>
-              <Grid item xs={4} sm={1}>
-                <StatusChip status={inv.invoice_status} />
-              </Grid>
-              <Grid item xs={2} sm={1}>
-                <Typography variant="caption">{inv.investor_count} inv.</Typography>
-              </Grid>
+              <Grid item xs={4} sm={1}><StatusChip status={inv.invoice_status} /></Grid>
+              <Grid item xs={2} sm={1}><Typography variant="caption">{inv.investor_count} inv.</Typography></Grid>
               <Grid item xs={12} sm={2} sx={{ textAlign: "right" }}>
                 {expandedInv === inv.invoice_id ? <ExpandLess /> : <ExpandMore />}
               </Grid>
@@ -447,10 +440,6 @@ const AssetsLiabilitiesReport: React.FC<{ data: any }> = ({ data }) => {
     </Box>
   );
 };
-
-// ═══════════════════════════════════════════════════════════════════════════════
-// REPORT 4: INVESTOR EXPOSURE
-// ═══════════════════════════════════════════════════════════════════════════════
 
 const InvestorExposureReport: React.FC<{ data: any }> = ({ data }) => {
   const t = data.totals || {};
@@ -502,10 +491,6 @@ const InvestorExposureReport: React.FC<{ data: any }> = ({ data }) => {
   );
 };
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// REPORT 5: TRADE P&L
-// ═══════════════════════════════════════════════════════════════════════════════
-
 const TradePnlReport: React.FC<{ data: any }> = ({ data }) => {
   const t = data.totals || {};
   return (
@@ -553,10 +538,6 @@ const TradePnlReport: React.FC<{ data: any }> = ({ data }) => {
     </Box>
   );
 };
-
-// ═══════════════════════════════════════════════════════════════════════════════
-// REPORT 6: SUPPLIER PAYABLES
-// ═══════════════════════════════════════════════════════════════════════════════
 
 const SupplierPayablesReport: React.FC<{ data: any }> = ({ data }) => {
   const t = data.totals || {};
