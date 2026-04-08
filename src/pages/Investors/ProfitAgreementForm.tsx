@@ -1,5 +1,5 @@
 import React, { FC, useRef, useState, useEffect } from "react";
-import { Box, Button } from "@mui/material";
+import { Alert, Box, Button } from "@mui/material";
 import { useFormik } from "formik";
 import ModalDialog from "../../components/UI/Modal/ModalDialog";
 import ProgressIndicator from "../../components/UI/ProgressIndicator";
@@ -165,6 +165,24 @@ const ProfitAgreementForm: FC<IProfitAgreementFormProps> = ({
               formFields={formFields}
               validationSchema={ProfitAgreementValidation}
             />
+            {/* Payout type explanation */}
+            {agreementForm.values.payout_type === "interest" && (
+              <Alert severity="info" sx={{ mt: 2 }}>
+                <strong>Interest Payout:</strong> This investor will receive a fixed{" "}
+                {agreementForm.values.fixed_interest_rate || 0}% return per{" "}
+                {agreementForm.values.interest_period_days || 30} days, regardless of trade
+                performance. The platform absorbs any difference between trade profit and the
+                fixed interest.
+              </Alert>
+            )}
+            {agreementForm.values.payout_type === "margin" && (
+              <Alert severity="info" sx={{ mt: 2 }}>
+                <strong>Margin Payout:</strong> Investor gets{" "}
+                {agreementForm.values.investor_share || 75}% of profit when margin exceeds{" "}
+                {agreementForm.values.profit_threshold || 2}%. Below threshold, investor keeps
+                100% of profit.
+              </Alert>
+            )}
           </Box>
         </form>
       )}

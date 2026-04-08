@@ -290,23 +290,52 @@ const InvestorDetailsModal: FC<IInvestorDetailsModalProps> = ({
               <Divider sx={{ mb: 2 }} />
               <Grid container spacing={2}>
                 <Grid item xs={12} md={4}>
-                  <Typography variant="body2" color="textSecondary">Profit Threshold</Typography>
-                  <Typography variant="body1" fontWeight="bold">
-                    {account.profit_agreement.profit_threshold || 0}%
-                  </Typography>
+                  <Typography variant="body2" color="textSecondary">Payout Type</Typography>
+                  <Chip
+                    label={account.profit_agreement.payout_type === "interest" ? "Interest (Fixed Rate)" : "Margin (Profit Sharing)"}
+                    color={account.profit_agreement.payout_type === "interest" ? "info" : "default"}
+                    size="small"
+                    sx={{ mt: 0.5, fontWeight: 700 }}
+                  />
                 </Grid>
-                <Grid item xs={12} md={4}>
-                  <Typography variant="body2" color="textSecondary">Investor Share</Typography>
-                  <Typography variant="body1" fontWeight="bold" color="success.main">
-                    {account.profit_agreement.investor_share || 0}%
-                  </Typography>
-                </Grid>
-                <Grid item xs={12} md={4}>
-                  <Typography variant="body2" color="textSecondary">BENNU Share</Typography>
-                  <Typography variant="body1" fontWeight="bold" color="info.main">
-                    {account.profit_agreement.bennu_share || 0}%
-                  </Typography>
-                </Grid>
+                {account.profit_agreement.payout_type !== "interest" && (
+                  <>
+                    <Grid item xs={12} md={4}>
+                      <Typography variant="body2" color="textSecondary">Profit Threshold</Typography>
+                      <Typography variant="body1" fontWeight="bold">
+                        {account.profit_agreement.profit_threshold || 0}%
+                      </Typography>
+                    </Grid>
+                    <Grid item xs={12} md={4}>
+                      <Typography variant="body2" color="textSecondary">Investor Share</Typography>
+                      <Typography variant="body1" fontWeight="bold" color="success.main">
+                        {account.profit_agreement.investor_share || 0}%
+                      </Typography>
+                    </Grid>
+                    <Grid item xs={12} md={4}>
+                      <Typography variant="body2" color="textSecondary">BENNU Share</Typography>
+                      <Typography variant="body1" fontWeight="bold" color="info.main">
+                        {account.profit_agreement.bennu_share || 0}%
+                      </Typography>
+                    </Grid>
+                  </>
+                )}
+                {account.profit_agreement.payout_type === "interest" && (
+                  <>
+                    <Grid item xs={12} md={4}>
+                      <Typography variant="body2" color="textSecondary">Fixed Interest Rate</Typography>
+                      <Typography variant="body1" fontWeight="bold" color="warning.main">
+                        {account.profit_agreement.fixed_interest_rate || 0}% per period
+                      </Typography>
+                    </Grid>
+                    <Grid item xs={12} md={4}>
+                      <Typography variant="body2" color="textSecondary">Interest Period</Typography>
+                      <Typography variant="body1" fontWeight="bold">
+                        {account.profit_agreement.interest_period_days || 30} days
+                      </Typography>
+                    </Grid>
+                  </>
+                )}
                 <Grid item xs={12}>
                   <Typography variant="body2" color="textSecondary">Effective Date</Typography>
                   <Typography variant="body1" fontWeight="bold">

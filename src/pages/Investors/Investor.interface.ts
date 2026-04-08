@@ -61,9 +61,12 @@ export interface IProfitSharingAgreement {
     id: string;
     investor: IInvestor;
     investor_account_id: string;
+    payout_type: 'margin' | 'interest';
     profit_threshold: string;
     investor_share: string;
     bennu_share: string;
+    fixed_interest_rate: string;
+    interest_period_days: number;
     effective_date: string;
     notes: string;
     created_at: string;

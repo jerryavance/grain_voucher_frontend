@@ -260,7 +260,7 @@ export const WithdrawalColumnShape = (actions: IDropdownAction[]) => [
   },
 ];
 
-// ─── Profit Agreement Columns ────────────────────────────────────────────────
+// ─── Profit Agreement Columns — UPDATED: payout_type + interest fields ───────
 export const ProfitAgreementColumnShape = (actions: IDropdownAction[]) => [
   {
     Header: "Investor Name",
@@ -272,30 +272,78 @@ export const ProfitAgreementColumnShape = (actions: IDropdownAction[]) => [
     },
   },
   {
-    Header: "Profit Threshold",
+    Header: "Type",
+    accessor: "payout_type",
+    minWidth: 130,
+    Cell: ({ row }: any) => {
+      const t = row.original.payout_type;
+      if (t === "interest") {
+        return (
+          <Chip
+            label={`Interest ${row.original.fixed_interest_rate || 0}%`}
+            size="small" color="info" variant="outlined"
+          />
+        );
+      }
+      return <Chip label="Margin" size="small" color="default" variant="outlined" />;
+    },
+  },
+  {
+    Header: "Threshold",
     accessor: "profit_threshold",
-    minWidth: 140,
-    Cell: ({ row }: any) => <Span>{row.original.profit_threshold}%</Span>,
+    minWidth: 110,
+    Cell: ({ row }: any) => {
+      if (row.original.payout_type === "interest") return <Span>—</Span>;
+      return <Span>{row.original.profit_threshold}%</Span>;
+    },
   },
   {
     Header: "Investor Share",
     accessor: "investor_share",
-    minWidth: 130,
-    Cell: ({ row }: any) => (
-      <Typography color="success.main" variant="body2" fontWeight="bold">
-        {row.original.investor_share}%
-      </Typography>
-    ),
+    minWidth: 120,
+    Cell: ({ row }: any) => {
+      if (row.original.payout_type === "interest") return <Span>—</Span>;
+      return (
+        <Typography color="success.main" variant="body2" fontWeight="bold">
+          {row.original.investor_share}%
+        </Typography>
+      );
+    },
   },
   {
     Header: "BENNU Share",
     accessor: "bennu_share",
-    minWidth: 120,
-    Cell: ({ row }: any) => (
-      <Typography color="info.main" variant="body2" fontWeight="bold">
-        {row.original.bennu_share}%
-      </Typography>
-    ),
+    minWidth: 110,
+    Cell: ({ row }: any) => {
+      if (row.original.payout_type === "interest") return <Span>—</Span>;
+      return (
+        <Typography color="info.main" variant="body2" fontWeight="bold">
+          {row.original.bennu_share}%
+        </Typography>
+      );
+    },
+  },
+  {
+    Header: "Interest Rate",
+    accessor: "fixed_interest_rate",
+    minWidth: 110,
+    Cell: ({ row }: any) => {
+      if (row.original.payout_type !== "interest") return <Span>—</Span>;
+      return (
+        <Typography color="warning.main" variant="body2" fontWeight="bold">
+          {row.original.fixed_interest_rate}%
+        </Typography>
+      );
+    },
+  },
+  {
+    Header: "Period",
+    accessor: "interest_period_days",
+    minWidth: 80,
+    Cell: ({ row }: any) => {
+      if (row.original.payout_type !== "interest") return <Span>—</Span>;
+      return <Span>{row.original.interest_period_days}d</Span>;
+    },
   },
   {
     Header: "Effective Date",

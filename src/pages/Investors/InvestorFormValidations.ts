@@ -22,20 +22,42 @@ export const WithdrawalValidation = Yup.object().shape({
 
 export const ProfitAgreementValidation = Yup.object().shape({
   investor_account_id: Yup.string().required("Investor account is required"),
+  payout_type: Yup.string()
+    .oneOf(["margin", "interest"], "Invalid payout type")
+    .required("Payout type is required"),
   profit_threshold: Yup.number()
-    .min(0, "Profit threshold must be at least 0")
-    .max(100, "Profit threshold cannot exceed 100%")
-    .required("Profit threshold is required"),
+    .when("payout_type", {
+      is: "margin",
+      then: (schema) => schema.min(0).max(100).required("Profit threshold is required"),
+      otherwise: (schema) => schema.nullable().notRequired(),
+    }),
   investor_share: Yup.number()
-    .min(0, "Investor share must be at least 0")
-    .max(100, "Investor share cannot exceed 100%")
-    .required("Investor share is required"),
-    bennu_share: Yup.number()
-    .min(0, "BENNU share must be at least 0")
-    .max(100, "BENNU share cannot exceed 100%")
-    .required("BENNU share is required"),
+    .when("payout_type", {
+      is: "margin",
+      then: (schema) => schema.min(0).max(100).required("Investor share is required"),
+      otherwise: (schema) => schema.nullable().notRequired(),
+    }),
+  bennu_share: Yup.number()
+    .when("payout_type", {
+      is: "margin",
+      then: (schema) => schema.min(0).max(100).required("BENNU share is required"),
+      otherwise: (schema) => schema.nullable().notRequired(),
+    }),
+  fixed_interest_rate: Yup.number()
+    .when("payout_type", {
+      is: "interest",
+      then: (schema) => schema.min(0.01, "Rate must be positive").max(100).required("Interest rate is required"),
+      otherwise: (schema) => schema.nullable().notRequired(),
+    }),
+  interest_period_days: Yup.number()
+    .when("payout_type", {
+      is: "interest",
+      then: (schema) => schema.min(1, "Must be at least 1 day").required("Period is required"),
+      otherwise: (schema) => schema.nullable().notRequired(),
+    }),
   notes: Yup.string(),
 }).test('shares-sum', 'Investor and BENNU shares must sum to 100%', function(values) {
+  if (values.payout_type !== "margin") return true;
   const { investor_share, bennu_share } = values;
   if (
     typeof investor_share === "number" &&
