@@ -240,7 +240,7 @@ const BuyerInvoices: React.FC = () => {
                         : "—"}
                     </TableCell>
                     <TableCell>{formatDate(inv.due_date)}</TableCell>
-                    <TableCell sx={{ color: Number(inv.penalty_amount || 0) > 0 ? "error.main" : "text.secondary" }}>
+                    <TableCell sx={{ color: Number(inv.penalty_amount || 0) > 0 ? "error.main" : "text.primary" }}>
                       {Number(inv.penalty_amount || 0) > 0 ? formatCurrency(inv.penalty_amount) : "—"}
                     </TableCell>
                     <TableCell>

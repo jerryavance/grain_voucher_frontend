@@ -334,7 +334,7 @@ const BuyerInvoiceDetails: FC = () => {
           <Grid key={label} item xs={6} sm={3}>
             <Card elevation={0} sx={{ border: "1px solid #e0e0e0" }}>
               <CardContent sx={{ p: 1.5, "&:last-child": { pb: 1.5 } }}>
-                <Typography variant="overline" color="text.secondary" display="block">
+                <Typography variant="overline" color="text.primary" display="block">
                   {label}
                 </Typography>
                 <Typography variant="h5" fontWeight={700} sx={{ color }}>
@@ -373,13 +373,13 @@ const BuyerInvoiceDetails: FC = () => {
                 ["Paid At",    invoice.paid_at ? formatDateToDDMMYYYY(invoice.paid_at) : "—"],
               ] as [string, string][]).map(([l, v]) => (
                 <Box key={l} sx={{ display: "flex", justifyContent: "space-between", mb: 1.5 }}>
-                  <Span sx={{ fontWeight: 600, color: "text.secondary" }}>{l}:</Span>
+                  <Span sx={{ fontWeight: 600, color: "text.primary" }}>{l}:</Span>
                   <Span sx={{ textAlign: "right" }}>{v}</Span>
                 </Box>
               ))}
               {invoice.notes && (
                 <Box sx={{ mt: 1.5 }}>
-                  <Span sx={{ fontWeight: 600, color: "text.secondary" }}>Notes:</Span>
+                  <Span sx={{ fontWeight: 600, color: "text.primary" }}>Notes:</Span>
                   <Typography variant="body2" sx={{ mt: 0.5 }}>{invoice.notes}</Typography>
                 </Box>
               )}
@@ -404,7 +404,7 @@ const BuyerInvoiceDetails: FC = () => {
                 ["Reg. Number",    buyerRegNumber],
               ] as [string, string][]).map(([l, v]) => (
                 <Box key={l} sx={{ display: "flex", justifyContent: "space-between", mb: 1.5 }}>
-                  <Span sx={{ fontWeight: 600, color: "text.secondary" }}>{l}:</Span>
+                  <Span sx={{ fontWeight: 600, color: "text.primary" }}>{l}:</Span>
                   <Span sx={{ textAlign: "right", maxWidth: "60%" }}>{v}</Span>
                 </Box>
               ))}
@@ -447,7 +447,7 @@ const BuyerInvoiceDetails: FC = () => {
                       <TableCell sx={{ fontWeight: 600 }}>
                         {formatCurrency(line.line_total)}
                       </TableCell>
-                      <TableCell sx={{ color: "text.secondary" }}>
+                      <TableCell sx={{ color: "text.primary" }}>
                         {formatCurrency(line.cogs_per_kg)}
                       </TableCell>
                       <TableCell sx={{ color: "warning.main" }}>
@@ -533,7 +533,7 @@ const BuyerInvoiceDetails: FC = () => {
                       py: 1.25, borderBottom: "1px solid #f0f0f0",
                     }}
                   >
-                    <Span sx={{ color: "text.secondary" }}>{label}</Span>
+                    <Span sx={{ color: "text.primary" }}>{label}</Span>
                     <Span sx={{ fontWeight: 600, color }}>
                       {negative ? `(${formatCurrency(value)})` : formatCurrency(value)}
                     </Span>
@@ -563,7 +563,7 @@ const BuyerInvoiceDetails: FC = () => {
                     mt: 1, pt: 1, borderTop: "1px solid #e0e0e0",
                   }}
                 >
-                  <Span sx={{ color: "text.secondary" }}>Gross Margin %</Span>
+                  <Span sx={{ color: "text.primary" }}>Gross Margin %</Span>
                   <Chip
                     label={`${grossMarginPct.toFixed(2)}%`}
                     size="small"
@@ -677,7 +677,7 @@ const BuyerInvoiceDetails: FC = () => {
       <Dialog open={showCreditNoteDialog} onClose={() => setShowCreditNoteDialog(false)} maxWidth="sm" fullWidth>
         <DialogTitle>Issue Credit Note</DialogTitle>
         <DialogContent dividers>
-          <Typography variant="body2" color="text.secondary" gutterBottom>
+          <Typography variant="body2" color="text.primary" gutterBottom>
             A credit note reduces the amount owed on this invoice.
           </Typography>
           <TextField label="Amount (UGX)" type="number" fullWidth sx={{ mt: 2, mb: 2 }}
@@ -746,7 +746,7 @@ const BuyerInvoiceDetails: FC = () => {
       <Dialog open={showDebitNoteDialog} onClose={() => setShowDebitNoteDialog(false)} maxWidth="sm" fullWidth>
         <DialogTitle>Issue Debit Note</DialogTitle>
         <DialogContent dividers>
-          <Typography variant="body2" color="text.secondary" gutterBottom>
+          <Typography variant="body2" color="text.primary" gutterBottom>
             A debit note increases the amount owed on this invoice (e.g. late fees, additional charges).
           </Typography>
           <TextField label="Amount (UGX)" type="number" fullWidth sx={{ mt: 2, mb: 2 }}

@@ -202,6 +202,12 @@ export const MenuList = (
               visible: isStaff || isHubAdmin || isSuperUser,
             },
             {
+              title: "Proforma Invoices",
+              Icon: Icons.ReceiptIcon,
+              path: "/admin/sourcing/proforma-invoices",
+              visible: isSuperUser,
+            },
+            {
               title: "Buyer Invoices",
               Icon: Icons.ReceiptIcon,
               path: "/admin/sourcing/buyer-invoices",
@@ -277,7 +283,7 @@ export const MenuList = (
     // INVEST (Admin)
     // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
     {
-      title: "Invest",
+      title: "Investors Management",
       Icon: Icons.DashboardCustomizeIcon,
       visible: isSuperUser,
       isHeader: true,
@@ -285,6 +291,7 @@ export const MenuList = (
         { title: "Investor Portal",      Icon: Icons.DashboardCustomizeIcon, path: "/invest",                        visible: isSuperUser },
         { title: "Investors Admin",      Icon: Icons.FolderSharedIcon,       path: "/admin/investors",               visible: isSuperUser },
         { title: "Investor Receivables", Icon: Icons.TrendingUpIcon,         path: "/admin/investors/receivables",   visible: isSuperUser },
+        { title: "Investor Period Returns", Icon: Icons.TrendingUpIcon,      path: "/admin/investors/period-returns", visible: isSuperUser },
       ],
     },
 
