@@ -209,6 +209,7 @@ const routes = [
 
       // Proforma Invoices (PFI)
       { path: "proforma-invoices", element: <LazyLoader.ProformaInvoices /> },
+      { path: "proforma-invoices/:id", element: <LazyLoader.ProformaInvoiceDetails /> },
 
       { path: "orders/:id/tree", element: <LazyLoader.TransactionTree /> }, 
       { path: "payments/:id", element: <LazyLoader.SupplierPaymentDetails /> },
