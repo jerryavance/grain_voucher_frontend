@@ -23,11 +23,15 @@ import useTitle from "../../hooks/useTitle";
 import { formatDateToDDMMYYYY } from "../../utils/date_formatter";
 import { SourcingService } from "./Sourcing.service";
 import { formatCurrency, formatWeight } from "./SourcingConstants";
-import { IBuyerOrder, IBuyerOrderLine, ISaleLot, ISaleExpense } from "./Sourcing.interface";
+import { IBuyerOrder, IBuyerOrderLine, ISaleLot, ISaleExpense, IProformaInvoice } from "./Sourcing.interface";
 
 const BUYER_ORDER_STATUS_COLORS: Record<string, any> = {
-  draft: "default", confirmed: "primary", dispatched: "warning",
+  quotation: "info", draft: "default", confirmed: "primary", dispatched: "warning",
   delivered: "info", invoiced: "secondary", completed: "success", cancelled: "error",
+};
+const PAYMENT_TYPE_COLORS: Record<string, any> = { cash: "success", financed: "secondary" };
+const PFI_STATUS_COLORS: Record<string, any> = {
+  draft: "default", sent: "primary", accepted: "success", rejected: "error", expired: "warning",
 };
 const BUYER_INVOICE_STATUS_COLORS: Record<string, any> = {
   draft: "default", issued: "primary", partial: "warning",
@@ -353,19 +357,47 @@ const BuyerOrderDetails: FC = () => {
   const [showAddLine, setShowAddLine] = useState(false);
   const [showAddExpense, setShowAddExpense] = useState(false);
   const [showIssueInvoice, setShowIssueInvoice] = useState(false);
+  const [showCreatePFI, setShowCreatePFI] = useState(false);
   const [availableLots, setAvailableLots] = useState<ISaleLot[]>([]);
   const [actionLoading, setActionLoading] = useState(false);
   const [linkedSourceOrders, setLinkedSourceOrders] = useState<string[]>([]);
+  const [pfis, setPfis] = useState<IProformaInvoice[]>([]);
+  const [pfiActionLoading, setPfiActionLoading] = useState(false);
 
   useTitle(order ? `Order ${order.order_number}` : "Buyer Order");
 
   useEffect(() => {
     fetchOrder();
     SourcingService.getAvailableSaleLots().then(setAvailableLots).catch(() => {});
-    if (id) SourcingService.getLinkedSourceOrders(id).then((data: any[]) => {
-      setLinkedSourceOrders(data.map((so: any) => so.order_number));
-    }).catch(() => {});
+    if (id) {
+      SourcingService.getLinkedSourceOrders(id).then((data: any[]) => {
+        setLinkedSourceOrders(data.map((so: any) => so.order_number));
+      }).catch(() => {});
+      SourcingService.getProformaInvoices({ buyer_order: id, page_size: 50 })
+        .then(r => setPfis(r.results || []))
+        .catch(() => {});
+    }
   }, [id]);
+
+  const fetchPFIs = () => {
+    if (id) SourcingService.getProformaInvoices({ buyer_order: id, page_size: 50 })
+      .then(r => setPfis(r.results || [])).catch(() => {});
+  };
+
+  const handlePFIAction = async (pfiId: string, action: "send" | "accept" | "reject" | "expire") => {
+    setPfiActionLoading(true);
+    try {
+      if (action === "send") await SourcingService.sendProformaInvoice(pfiId);
+      else if (action === "accept") await SourcingService.acceptProformaInvoice(pfiId);
+      else if (action === "reject") await SourcingService.rejectProformaInvoice(pfiId);
+      else if (action === "expire") await SourcingService.expireProformaInvoice(pfiId);
+      toast.success(`PFI ${action}ed`);
+      fetchPFIs();
+      fetchOrder();
+    } catch (e: any) {
+      toast.error(e?.response?.data?.error || `Failed to ${action} PFI`);
+    } finally { setPfiActionLoading(false); }
+  };
 
   const fetchOrder = async () => {
     setLoading(true);
@@ -417,6 +449,11 @@ const BuyerOrderDetails: FC = () => {
           <Box sx={{ display: "flex", alignItems: "center", gap: 1, flexWrap: "wrap" }}>
             <Typography variant="h5" sx={{ fontWeight: 700 }}>{order.order_number}</Typography>
             <Chip label={order.status.toUpperCase()} color={BUYER_ORDER_STATUS_COLORS[order.status]} />
+            <Chip
+              label={(order.payment_type_display || order.payment_type || "").toUpperCase()}
+              color={PAYMENT_TYPE_COLORS[order.payment_type] ?? "default"}
+              size="small" variant="outlined"
+            />
             {order.invoice_status && (
               <Chip
                 label={`Invoice: ${order.invoice_status.toUpperCase()}`}
@@ -443,6 +480,24 @@ const BuyerOrderDetails: FC = () => {
 
       {/* Action Buttons */}
       <Box sx={{ display: "flex", gap: 1, mb: 3, flexWrap: "wrap" }}>
+        {/* Quotation state — create PFI to send to buyer */}
+        {order.status === "quotation" && (
+          <>
+            <Button
+              variant="contained" color="primary" startIcon={<ReceiptIcon />}
+              onClick={() => navigate(`/admin/sourcing/proforma-invoices?buyer_order=${order.id}`)}
+            >
+              Create PFI
+            </Button>
+            <Button
+              variant="outlined" color="error"
+              onClick={() => { if (window.confirm("Cancel this order?")) handleAction("cancel"); }}
+              disabled={actionLoading}
+            >
+              Cancel Order
+            </Button>
+          </>
+        )}
         {order.status === "draft" && (
           <>
             <Button
@@ -546,6 +601,7 @@ const BuyerOrderDetails: FC = () => {
         <Tab label={`Lines (${order.lines.length})`} />
         <Tab label={`Expenses (${order.sale_expenses.length})`} />
         <Tab label="Order Info" />
+        <Tab label={`PFIs (${pfis.length})`} />
       </Tabs>
 
       {/* Lines Tab */}
@@ -704,6 +760,85 @@ const BuyerOrderDetails: FC = () => {
             </Grid>
           )}
         </Grid>
+      )}
+
+      {/* PFI Tab */}
+      {tab === 3 && (
+        <Box>
+          <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 2 }}>
+            <Typography variant="h6">Proforma Invoices</Typography>
+            {["quotation", "draft"].includes(order.status) && (
+              <Button
+                variant="contained" size="small" startIcon={<AddIcon />}
+                onClick={() => navigate(`/admin/sourcing/proforma-invoices?buyer_order=${order.id}`)}
+              >
+                New PFI
+              </Button>
+            )}
+          </Box>
+          {pfis.length === 0 ? (
+            <Alert severity="info">No proforma invoices for this order yet.</Alert>
+          ) : (
+            <Paper variant="outlined">
+              <Table size="small">
+                <TableHead>
+                  <TableRow sx={{ bgcolor: "action.hover" }}>
+                    {["PFI #", "Grain", "Qty (kg)", "Unit Price", "Sub-total", "Status", "Sent At", "Actions"].map(h => (
+                      <TableCell key={h} sx={{ fontWeight: 700 }}>{h}</TableCell>
+                    ))}
+                  </TableRow>
+                </TableHead>
+                <TableBody>
+                  {pfis.map(pfi => (
+                    <TableRow key={pfi.id} hover>
+                      <TableCell sx={{ fontWeight: 600, color: "primary.main" }}>{pfi.pfi_number}</TableCell>
+                      <TableCell>{pfi.grain_type_name}</TableCell>
+                      <TableCell>{Number(pfi.quantity_kg).toLocaleString()}</TableCell>
+                      <TableCell>{formatCurrency(pfi.unit_price)}</TableCell>
+                      <TableCell sx={{ fontWeight: 600 }}>{formatCurrency(pfi.sub_total)}</TableCell>
+                      <TableCell>
+                        <Chip label={pfi.status_display} color={PFI_STATUS_COLORS[pfi.status]} size="small" />
+                      </TableCell>
+                      <TableCell>{pfi.sent_at ? formatDateToDDMMYYYY(pfi.sent_at) : "—"}</TableCell>
+                      <TableCell>
+                        <Box sx={{ display: "flex", gap: 0.5 }}>
+                          {pfi.status === "draft" && (
+                            <Button size="small" variant="outlined"
+                              disabled={pfiActionLoading}
+                              onClick={() => handlePFIAction(pfi.id, "send")}>
+                              Send
+                            </Button>
+                          )}
+                          {pfi.status === "sent" && (
+                            <>
+                              <Button size="small" variant="contained" color="success"
+                                disabled={pfiActionLoading}
+                                onClick={() => handlePFIAction(pfi.id, "accept")}>
+                                Accept
+                              </Button>
+                              <Button size="small" variant="outlined" color="error"
+                                disabled={pfiActionLoading}
+                                onClick={() => handlePFIAction(pfi.id, "reject")}>
+                                Reject
+                              </Button>
+                            </>
+                          )}
+                          {["draft", "sent"].includes(pfi.status) && (
+                            <Button size="small" variant="outlined" color="warning"
+                              disabled={pfiActionLoading}
+                              onClick={() => handlePFIAction(pfi.id, "expire")}>
+                              Expire
+                            </Button>
+                          )}
+                        </Box>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </Paper>
+          )}
+        </Box>
       )}
 
       {/* ── Dialogs — always mounted, controlled by open prop ── */}

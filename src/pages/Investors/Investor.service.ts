@@ -6,11 +6,13 @@ import {
   IInvestorWithdrawalsResults,
   IProfitAgreementsResults,
   IMarginPayoutsResults,
+  IInvestorPeriodReturnsResults,
   IInvestorAccount,
   IInvestorDeposit,
   IInvestorWithdrawal,
   IProfitSharingAgreement,
   IMarginPayout,
+  IInvestorPeriodReturn,
 } from "./Investor.interface";
 
 export const InvestorService = {
@@ -147,6 +149,55 @@ export const InvestorService = {
   async cancelMarginPayout(id: string, notes?: string): Promise<{ message: string }> {
     return instance
       .post(`investors/margin-payouts/${id}/cancel/`, notes ? { notes } : {})
+      .then((r) => r.data);
+  },
+
+  // ─── Period Returns (fixed-period interest investors) ────────────────────────
+  async getPeriodReturns(filters: Record<string, any>): Promise<IInvestorPeriodReturnsResults> {
+    return instance.get("investors/period-returns/", { params: filters }).then((r) => r.data);
+  },
+
+  async createPeriodReturn(payload: {
+    investor_account_id: string;
+    profit_sharing_agreement_id: string;
+    capital_committed: string;
+    capital_deployed?: string;
+    interest_earned: string;
+    period_start: string;
+    period_end: string;
+    days_deployed?: number;
+    payout_source?: string;
+    notes?: string;
+  }): Promise<IInvestorPeriodReturn> {
+    return instance.post("investors/period-returns/", payload).then((r) => r.data);
+  },
+
+  async getPeriodReturnDetails(id: string): Promise<IInvestorPeriodReturn> {
+    return instance.get(`investors/period-returns/${id}/`).then((r) => r.data);
+  },
+
+  /**
+   * Approve a pending period return.
+   * payout_source='platform_advance' marks all linked allocations as force_settled.
+   */
+  async approvePeriodReturn(
+    id: string,
+    payout_source: 'buyer_payment' | 'platform_advance' = 'buyer_payment',
+  ): Promise<{ message: string }> {
+    return instance
+      .post(`investors/period-returns/${id}/approve/`, { payout_source })
+      .then((r) => r.data);
+  },
+
+  async markPeriodReturnPaid(id: string, payment_reference: string): Promise<{ message: string }> {
+    return instance
+      .post(`investors/period-returns/${id}/mark_paid/`, { payment_reference })
+      .then((r) => r.data);
+  },
+
+  async cancelPeriodReturn(id: string, notes?: string): Promise<{ message: string }> {
+    return instance
+      .post(`investors/period-returns/${id}/cancel/`, notes ? { notes } : {})
       .then((r) => r.data);
   },
 };

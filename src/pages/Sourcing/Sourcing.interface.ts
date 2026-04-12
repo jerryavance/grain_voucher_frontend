@@ -125,7 +125,8 @@ export interface IInvestorAllocation {
   id: string; allocation_number: string; investor_account: string; investor_name: string;
   source_order: string; source_order_number: string; source_order_total_cost: number;
   amount_allocated: number; investor_margin: number; platform_fee: number;
-  amount_returned: number; status: 'active'|'settled'|'cancelled';
+  amount_returned: number; status: 'active'|'settled'|'force_settled'|'cancelled';
+  expected_return_date: string | null;
   financing_percentage: number;
   emd_deduction_timing: 'on_assignment'|'on_weighbridge'|'on_supplier_payment';
   emd_deducted: boolean;
@@ -287,8 +288,63 @@ export interface IBuyerCreditStatus {
   credit_limit_enforced: boolean;
 }
 
+// ============ Proforma Invoice (PFI) ============
+export type TProformaInvoiceStatus = 'draft'|'sent'|'accepted'|'rejected'|'expired';
+
+export interface IProformaInvoice {
+  id: string;
+  pfi_number: string;
+  buyer_order: string;
+  order_number: string;
+  buyer_name: string;
+  created_by: string;
+  created_by_name: string;
+  // Grain / pricing
+  grain_type: string;
+  grain_type_name: string;
+  quantity_kg: string;
+  unit_price: string;
+  sub_total: string;
+  // Deposit
+  required_deposit: string;
+  paid_deposit: string;
+  total_due: string;
+  // Logistics
+  salesperson: string | null;
+  salesperson_name: string;
+  ship_date: string;
+  shipped_via: string;
+  pick_from: string;
+  // Narratives
+  payment_terms_narrative: string;
+  delivery_timeline_narrative: string;
+  // Bank details
+  bank_name: string;
+  account_number: string;
+  account_name: string;
+  swift_code: string;
+  sort_code: string;
+  branch_code: string;
+  // Signatory
+  signatory_name: string;
+  signatory_title: string;
+  signatory_contact: string;
+  // Status
+  status: TProformaInvoiceStatus;
+  status_display: string;
+  sent_at: string | null;
+  accepted_at: string | null;
+  rejected_at: string | null;
+  expiry_date: string | null;
+  notes: string;
+  created_at: string;
+  updated_at: string;
+}
+export interface IProformaInvoicesResults { results: IProformaInvoice[]; count: number; }
+
 // ============ Buyer Order ============
-export type TBuyerOrderStatus = 'draft'|'confirmed'|'dispatched'|'delivered'|'invoiced'|'completed'|'cancelled';
+export type TBuyerOrderStatus = 'quotation'|'draft'|'confirmed'|'dispatched'|'delivered'|'invoiced'|'completed'|'cancelled';
+export type TPaymentType = 'cash'|'financed';
 
 export interface IBuyerOrderLine {
   id: string; buyer_order: string; sale_lot: string; lot_number: string;
@@ -313,6 +369,16 @@ export interface IBuyerOrder {
   buyer: string | null;
   buyer_detail: IBuyerProfileMinimal | null;
   hub: string; hub_name: string; created_by: string; credit_terms_days: number;
+  // Payment type (cash buyer vs investor-financed)
+  payment_type: TPaymentType;
+  payment_type_display: string;
+  // Pre-sourcing demand fields (set when status = quotation)
+  grain_type: string | null;
+  grain_type_name: string | null;
+  quantity_requested_kg: number | null;
+  // PFI counts
+  pfi_count: number;
+  accepted_pfi: string | null;
   subtotal: number; total_cogs: number; total_selling_expenses: number; gross_profit: number;
   status: TBuyerOrderStatus; notes: string; invoice_status: string | null;
   invoice_balance_due: number | null; lines: IBuyerOrderLine[]; sale_expenses: ISaleExpense[];
@@ -328,6 +394,10 @@ export interface IBuyerOrderList {
   buyer: string | null;
   buyer_detail: IBuyerProfileMinimal | null;
   hub: string; hub_name: string;
+  payment_type: TPaymentType;
+  payment_type_display: string;
+  grain_type_name: string | null;
+  pfi_count: number;
   subtotal: number; gross_profit: number; status: TBuyerOrderStatus;
   invoice_status: string | null; invoice_balance_due: number | null; created_at: string;
 }
@@ -398,10 +468,15 @@ export interface IBuyerInvoice {
   status_display: string;
   paid_at: string | null;
   is_overdue: boolean;
-  // ── Penalties (NEW) ──
+  // ── Penalties ──
   penalty_rate: number;
   penalty_amount: number;
   days_overdue: number;
+  // ── Penalty forgiveness ──
+  penalty_forgiven: boolean;
+  forgiven_by: string | null;
+  forgiven_at: string | null;
+  forgiveness_reason: string;
   // ── Cost breakdown (NEW — from backend serializer) ──
   /** Per-lot grain sale lines: qty × price, COGS breakdown */
   order_lines: IBuyerInvoiceOrderLine[];
@@ -456,7 +531,9 @@ export interface IHubPLSummary {
 export type TNotificationType =
   | 'source_order_created' | 'source_order_status' | 'invoice_generated'
   | 'payment_made' | 'trade_financed' | 'trade_completed'
-  | 'capital_returned' | 'delivery_received' | 'weighbridge_completed';
+  | 'capital_returned' | 'delivery_received' | 'weighbridge_completed'
+  | 'penalty_forgiven' | 'pfi_sent' | 'pfi_accepted' | 'pfi_rejected'
+  | 'period_return_due' | 'period_return_paid';
 
 export interface INotification {
   id: string; user: IUser; notification_type: TNotificationType; type_display: string;

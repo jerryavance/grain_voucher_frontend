@@ -67,10 +67,56 @@ export interface IProfitSharingAgreement {
     bennu_share: string;
     fixed_interest_rate: string;
     interest_period_days: number;
+    // Capital commitment (for interest-type / fixed-period investors)
+    capital_commitment: string;
     effective_date: string;
     notes: string;
     created_at: string;
     updated_at: string;
+}
+
+// Interface for InvestorPeriodReturn (fixed-period capital + interest return)
+export interface IInvestorPeriodReturn {
+    id: string;
+    return_number: string;
+    investor: IInvestor;
+    investor_account_id: string;
+    profit_sharing_agreement_id: string;
+    // Amounts
+    capital_committed: string;
+    capital_deployed: string;
+    interest_earned: string;
+    total_amount: string;
+    suggested_interest: number;
+    // Period
+    period_start: string;
+    period_end: string;
+    days_deployed: number;
+    // Source & status
+    payout_source: 'buyer_payment' | 'platform_advance';
+    status: 'pending' | 'approved' | 'paid' | 'cancelled';
+    // Metadata
+    requested_by: string;
+    requested_by_name: string;
+    approved_by: string | null;
+    approved_by_name: string;
+    approved_at: string | null;
+    paid_at: string | null;
+    payment_reference: string;
+    notes: string;
+    created_at: string;
+    updated_at: string;
+}
+
+export interface IInvestorPeriodReturnsResults {
+    results: IInvestorPeriodReturn[];
+    count: number;
+}
+
+export interface IPeriodReturnFormProps {
+    handleClose: () => void;
+    callBack?: () => void;
+    accountId?: string;
 }
 
 // Interface for MarginPayout (new model - backend change #2)

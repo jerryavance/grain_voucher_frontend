@@ -174,9 +174,11 @@ const BuyerInvoiceDetails: FC = () => {
   const [loading, setLoading] = useState(true);
   const [showPaymentDialog, setShowPaymentDialog] = useState(false);
   const [showPenaltyDialog, setShowPenaltyDialog] = useState(false);
+  const [showForgivePenaltyDialog, setShowForgivePenaltyDialog] = useState(false);
   const [showCreditNoteDialog, setShowCreditNoteDialog] = useState(false);
   const [showDebitNoteDialog, setShowDebitNoteDialog] = useState(false);
   const [penaltyRate, setPenaltyRate] = useState("");
+  const [forgivenessReason, setForgivenessReason] = useState("");
   const [noteAmount, setNoteAmount] = useState("");
   const [noteReason, setNoteReason] = useState("");
   const [actionLoading, setActionLoading] = useState(false);
@@ -269,11 +271,18 @@ const BuyerInvoiceDetails: FC = () => {
             View Order
           </Button>
         )}
-        {/* ── NEW: Penalty button ── */}
-        {invoice.is_overdue && invoice.status !== "paid" && invoice.status !== "cancelled" && (
+        {/* ── Penalty button ── */}
+        {invoice.is_overdue && invoice.status !== "paid" && invoice.status !== "cancelled" && !invoice.penalty_forgiven && (
           <Button variant="contained" color="warning" startIcon={<WarningAmberIcon />}
             onClick={() => setShowPenaltyDialog(true)}>
             Apply Penalty
+          </Button>
+        )}
+        {/* ── Forgive Penalty button (only when a penalty exists and hasn't been forgiven) ── */}
+        {Number(invoice.penalty_amount || 0) > 0 && !invoice.penalty_forgiven && invoice.status !== "cancelled" && (
+          <Button variant="outlined" color="warning" startIcon={<EditIcon />}
+            onClick={() => { setForgivenessReason(""); setShowForgivePenaltyDialog(true); }}>
+            Forgive Penalty
           </Button>
         )}
         {/* ── NEW: Credit/Debit Note buttons ── */}
@@ -303,6 +312,12 @@ const BuyerInvoiceDetails: FC = () => {
       {invoice.is_overdue && invoice.status !== "paid" && (
         <Alert severity="warning" sx={{ mb: 3 }}>
           This invoice is overdue. Due date was {formatDateToDDMMYYYY(invoice.due_date || "")}.
+        </Alert>
+      )}
+      {invoice.penalty_forgiven && (
+        <Alert severity="info" icon={<CheckCircleIcon />} sx={{ mb: 3 }}>
+          Penalty forgiven{invoice.forgiven_at ? ` on ${formatDateToDDMMYYYY(invoice.forgiven_at)}` : ""}.
+          {invoice.forgiveness_reason && <> Reason: <strong>{invoice.forgiveness_reason}</strong></>}
         </Alert>
       )}
 
@@ -684,6 +699,45 @@ const BuyerInvoiceDetails: FC = () => {
             finally { setActionLoading(false); }
           }}>
             {actionLoading ? "Issuing..." : "Issue Credit Note"}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* ── Forgive Penalty Dialog ── */}
+      <Dialog open={showForgivePenaltyDialog} onClose={() => !actionLoading && setShowForgivePenaltyDialog(false)} maxWidth="xs" fullWidth>
+        <DialogTitle>Forgive Penalty</DialogTitle>
+        <DialogContent dividers>
+          <Typography gutterBottom>
+            Current penalty on <strong>{invoice.invoice_number}</strong>:{" "}
+            <strong style={{ color: "#d32f2f" }}>{formatCurrency(invoice.penalty_amount)}</strong>.
+            This will waive the penalty and must be logged with a reason.
+          </Typography>
+          <TextField
+            label="Reason for forgiveness *"
+            multiline rows={3} fullWidth sx={{ mt: 2 }}
+            value={forgivenessReason}
+            onChange={e => setForgivenessReason(e.target.value)}
+            placeholder="e.g. Agreed with buyer, payment delay due to bank error"
+          />
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setShowForgivePenaltyDialog(false)} disabled={actionLoading}>Cancel</Button>
+          <Button
+            variant="contained" color="warning"
+            disabled={actionLoading || !forgivenessReason.trim()}
+            onClick={async () => {
+              setActionLoading(true);
+              try {
+                await SourcingService.forgivePenalty(invoice.id, forgivenessReason.trim());
+                toast.success("Penalty forgiven");
+                setShowForgivePenaltyDialog(false);
+                fetchData();
+              } catch (e: any) {
+                toast.error(e.response?.data?.error || e.response?.data?.reason?.[0] || "Failed to forgive penalty");
+              } finally { setActionLoading(false); }
+            }}
+          >
+            {actionLoading ? "Forgiving..." : "Forgive Penalty"}
           </Button>
         </DialogActions>
       </Dialog>

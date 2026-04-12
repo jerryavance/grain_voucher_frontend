@@ -133,6 +133,7 @@ const routes = [
       { path: "price-feeds", element: <LazyLoader.PriceFeed /> },
       { path: "investors", element: <LazyLoader.InvestorsAdmin /> },
       { path: "investors/receivables", element: <LazyLoader.InvestorReceivablesAdmin /> },
+      { path: "investors/period-returns", element: <LazyLoader.InvestorPeriodReturns /> },
       { path: "pay-roll", element: <LazyLoader.Payroll /> },
 
       // Deposits & Membership
@@ -205,6 +206,9 @@ const routes = [
 
       // Rejected Lots
       { path: "rejections", element: <LazyLoader.RejectedLots /> },
+
+      // Proforma Invoices (PFI)
+      { path: "proforma-invoices", element: <LazyLoader.ProformaInvoices /> },
 
       { path: "orders/:id/tree", element: <LazyLoader.TransactionTree /> }, 
       { path: "payments/:id", element: <LazyLoader.SupplierPaymentDetails /> },

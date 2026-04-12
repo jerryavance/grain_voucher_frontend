@@ -36,7 +36,8 @@ import { IBuyerOrderList, IBuyerOrdersResults, IBuyerProfile } from "./Sourcing.
 import { ExportButtons, BUYER_ORDER_EXPORT_COLUMNS } from "./ExportUtils";
 import DateRangeFilter from "./DateRangeFilter";
 
-const BUYER_ORDER_STATUS_COLORS: Record<string, any> = { draft: "default", confirmed: "primary", dispatched: "warning", delivered: "info", invoiced: "secondary", completed: "success", cancelled: "error" };
+const BUYER_ORDER_STATUS_COLORS: Record<string, any> = { quotation: "info", draft: "default", confirmed: "primary", dispatched: "warning", delivered: "info", invoiced: "secondary", completed: "success", cancelled: "error" };
+const PAYMENT_TYPE_COLORS: Record<string, any> = { cash: "success", financed: "secondary" };
 const BUYER_INVOICE_STATUS_COLORS: Record<string, any> = { draft: "default", issued: "primary", partial: "warning", paid: "success", overdue: "error", cancelled: "error" };
 
 // ── Create Buyer Order Form (same as original, abbreviated for space) ────
@@ -50,7 +51,14 @@ const CreateBuyerOrderForm: FC<{
   const [buyerSearch, setBuyerSearch] = useState("");
   const [buyersLoading, setBuyersLoading] = useState(false);
   const [selectedBuyer, setSelectedBuyer] = useState<IBuyerProfile | null>(null);
+  const [grainTypes, setGrainTypes] = useState<{ value: string; label: string }[]>([]);
   const modalId = useRef(uniqueId()).current;
+
+  useEffect(() => {
+    SourcingService.getGrainTypes().then(r =>
+      setGrainTypes((r.results || r).map((g: any) => ({ value: g.id, label: g.name })))
+    ).catch(() => {});
+  }, []);
 
   useEffect(() => {
     let cancelled = false;
@@ -62,7 +70,7 @@ const CreateBuyerOrderForm: FC<{
   }, [buyerSearch]);
 
   const form = useFormik({
-    initialValues: { buyer: "", buyer_name: "", buyer_contact_name: "", buyer_phone: "", buyer_email: "", buyer_address: "", hub: "", credit_terms_days: 0, notes: "" },
+    initialValues: { buyer: "", buyer_name: "", buyer_contact_name: "", buyer_phone: "", buyer_email: "", buyer_address: "", hub: "", credit_terms_days: 0, payment_type: "financed", grain_type: "", quantity_requested_kg: "", notes: "" },
     validationSchema: Yup.object({
       hub: Yup.string().required("Hub is required"),
       buyer: Yup.string(),
@@ -75,7 +83,9 @@ const CreateBuyerOrderForm: FC<{
     onSubmit: async (values) => {
       setLoading(true);
       try {
-        const payload: any = { hub: values.hub, notes: values.notes, credit_terms_days: values.credit_terms_days };
+        const payload: any = { hub: values.hub, notes: values.notes, credit_terms_days: values.credit_terms_days, payment_type: values.payment_type };
+        if (values.grain_type) payload.grain_type = values.grain_type;
+        if (values.quantity_requested_kg) payload.quantity_requested_kg = Number(values.quantity_requested_kg);
         if (buyerMode === "profile" && values.buyer) { payload.buyer = values.buyer; }
         else { payload.buyer_name = values.buyer_name; payload.buyer_contact_name = values.buyer_contact_name; payload.buyer_phone = values.buyer_phone; payload.buyer_email = values.buyer_email; payload.buyer_address = values.buyer_address; }
         const order = await SourcingService.createBuyerOrder(payload);
@@ -114,6 +124,25 @@ const CreateBuyerOrderForm: FC<{
           <FormControl fullWidth error={Boolean(form.errors.hub)}><InputLabel>Hub *</InputLabel><Select value={form.values.hub} label="Hub *" onChange={e => form.setFieldValue("hub", e.target.value)}>{hubs.map(h => <MenuItem key={h.value} value={h.value}>{h.label}</MenuItem>)}</Select></FormControl>
         </Grid>
         <Grid item xs={12} md={6}><TextField fullWidth label="Credit Terms (Days)" type="number" value={form.values.credit_terms_days} onChange={e => form.setFieldValue("credit_terms_days", parseInt(e.target.value) || 0)} /></Grid>
+        {/* Payment type — cash buyer funds own purchase, financed = investor EMD backs it */}
+        <Grid item xs={12} md={6}>
+          <FormControl fullWidth><InputLabel>Payment Type</InputLabel>
+            <Select value={form.values.payment_type} label="Payment Type" onChange={e => form.setFieldValue("payment_type", e.target.value)}>
+              <MenuItem value="financed">Financed (Investor-backed)</MenuItem>
+              <MenuItem value="cash">Cash (Buyer self-financed)</MenuItem>
+            </Select>
+          </FormControl>
+        </Grid>
+        {/* Pre-sourcing demand — optional grain type + quantity for quotation */}
+        <Grid item xs={12} md={6}>
+          <FormControl fullWidth><InputLabel>Grain Type (optional)</InputLabel>
+            <Select value={form.values.grain_type} label="Grain Type (optional)" onChange={e => form.setFieldValue("grain_type", e.target.value)}>
+              <MenuItem value="">— Not specified —</MenuItem>
+              {grainTypes.map(g => <MenuItem key={g.value} value={g.value}>{g.label}</MenuItem>)}
+            </Select>
+          </FormControl>
+        </Grid>
+        <Grid item xs={12} md={6}><TextField fullWidth label="Quantity Requested (kg)" type="number" value={form.values.quantity_requested_kg} onChange={e => form.setFieldValue("quantity_requested_kg", e.target.value)} helperText="Used for quotation / PFI generation" /></Grid>
         <Grid item xs={12}><TextField fullWidth label="Notes" multiline rows={2} value={form.values.notes} onChange={e => form.setFieldValue("notes", e.target.value)} /></Grid>
       </Grid>
     </ModalDialog>
@@ -149,6 +178,7 @@ const BuyerOrders: FC = () => {
   const columns = [
     { Header: "Order #", accessor: "order_number", minWidth: 170, Cell: ({ row }: any) => <Typography color="primary" variant="body2" sx={{ fontWeight: 700, cursor: "pointer", "&:hover": { textDecoration: "underline" } }} onClick={() => navigate(`/admin/sourcing/buyer-orders/${row.original.id}`)}>{row.original.order_number}</Typography> },
     { Header: "Buyer", accessor: "buyer_name", minWidth: 200, Cell: ({ row }: any) => { const o = row.original; return (<Box><Typography variant="body2" sx={{ fontWeight: 600 }}>{o.buyer_detail?.business_name || o.buyer_name}</Typography>{o.buyer_detail && <Typography variant="caption" color="primary" sx={{ cursor: "pointer" }} onClick={(e: any) => { e.stopPropagation(); navigate(`/admin/sourcing/buyers/${o.buyer}`); }}>View profile →</Typography>}</Box>); } },
+    { Header: "Type", accessor: "payment_type", minWidth: 100, Cell: ({ row }: any) => <Chip label={(row.original.payment_type_display || row.original.payment_type || "—").toUpperCase()} color={PAYMENT_TYPE_COLORS[row.original.payment_type] ?? "default"} size="small" variant="outlined" /> },
     { Header: "Revenue", accessor: "subtotal", minWidth: 130, Cell: ({ row }: any) => <Span sx={{ fontWeight: 600 }}>{formatCurrency(row.original.subtotal)}</Span> },
     { Header: "Gross Profit", accessor: "gross_profit", minWidth: 130, Cell: ({ row }: any) => <Span sx={{ fontWeight: 600, color: row.original.gross_profit >= 0 ? "success.main" : "error.main" }}>{formatCurrency(row.original.gross_profit)}</Span> },
     { Header: "Invoice", accessor: "invoice_status", minWidth: 120, Cell: ({ row }: any) => row.original.invoice_status ? <Chip label={row.original.invoice_status.toUpperCase()} color={BUYER_INVOICE_STATUS_COLORS[row.original.invoice_status]} size="small" /> : <Span sx={{ color: "text.primary", fontSize: 12 }}>Not Issued</Span> },
@@ -165,7 +195,7 @@ const BuyerOrders: FC = () => {
           <InputLabel>Status</InputLabel>
           <Select value={filters.status || ""} label="Status" onChange={e => setFilters({ ...filters, status: e.target.value || undefined, page: 1 })}>
             <MenuItem value="">All</MenuItem>
-            {["draft", "confirmed", "dispatched", "delivered", "invoiced", "completed", "cancelled"].map(s => <MenuItem key={s} value={s}>{s.charAt(0).toUpperCase() + s.slice(1)}</MenuItem>)}
+            {["quotation", "draft", "confirmed", "dispatched", "delivered", "invoiced", "completed", "cancelled"].map(s => <MenuItem key={s} value={s}>{s.charAt(0).toUpperCase() + s.slice(1)}</MenuItem>)}
           </Select>
         </FormControl>
         <DateRangeFilter dateFrom={filters.date_from} dateTo={filters.date_to} onApply={(f, t) => setFilters({ ...filters, date_from: f, date_to: t, page: 1 })} />

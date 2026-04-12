@@ -104,6 +104,7 @@ const RouteLazyLoader = {
   SourcingReports: Loadable(lazy(() => import("../pages/Sourcing/Reports"))),
   AggregatorTradeCosts: Loadable(lazy(() => import("../pages/Sourcing/AggregatorTradeCosts"))),
   RejectedLots: Loadable(lazy(() => import("../pages/Sourcing/RejectedLots"))),
+  ProformaInvoices: Loadable(lazy(() => import("../pages/Sourcing/ProformaInvoices"))),
 
   // 🆕 ADD SUPPLIER PORTAL LOADERS HERE
   SupplierDashboard: Loadable(lazy(() => import("../pages/Sourcing/SupplierDashboard"))),
@@ -120,6 +121,7 @@ const RouteLazyLoader = {
   // 🆕 ADD INVESTOR PORTAL LOADERS HERE
   InvestorReturns: Loadable(lazy(() => import("../pages/Investors/InvestorReturns"))),
   InvestorTransactions: Loadable(lazy(() => import("../pages/Investors/InvestorTransactions"))),
+  InvestorPeriodReturns: Loadable(lazy(() => import("../pages/Investors/InvestorPeriodReturns"))),
 
   // Users - ALREADY EXISTS
   Users: Loadable(lazy(() => import("../pages/Users/Users"))),

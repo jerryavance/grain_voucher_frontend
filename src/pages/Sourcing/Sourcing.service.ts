@@ -16,6 +16,7 @@ import {
   IRejectedLot, IRejectedLotsResults,
   IInvestorReceivable,
   IEmdOverview,
+  IProformaInvoice, IProformaInvoicesResults,
 } from "./Sourcing.interface";
 
 export const SourcingService = {
@@ -492,6 +493,37 @@ export const SourcingService = {
     return instance.get("sourcing/credit-debit-notes/", { params }).then(r => r.data);
   },
 
+
+  // ── Proforma Invoices (PFI) ───────────────────────────────────────────────
+  async getProformaInvoices(filters?: Record<string, any>): Promise<IProformaInvoicesResults> {
+    return instance.get("sourcing/proforma-invoices/", { params: filters }).then(r => r.data);
+  },
+  async getProformaInvoiceDetails(id: string): Promise<IProformaInvoice> {
+    return instance.get(`sourcing/proforma-invoices/${id}/`).then(r => r.data);
+  },
+  async createProformaInvoice(payload: Partial<IProformaInvoice>): Promise<IProformaInvoice> {
+    return instance.post("sourcing/proforma-invoices/", payload).then(r => r.data);
+  },
+  async updateProformaInvoice(id: string, payload: Partial<IProformaInvoice>): Promise<IProformaInvoice> {
+    return instance.patch(`sourcing/proforma-invoices/${id}/`, payload).then(r => r.data);
+  },
+  async sendProformaInvoice(id: string): Promise<IProformaInvoice> {
+    return instance.post(`sourcing/proforma-invoices/${id}/send/`).then(r => r.data);
+  },
+  async acceptProformaInvoice(id: string): Promise<IProformaInvoice> {
+    return instance.post(`sourcing/proforma-invoices/${id}/accept/`).then(r => r.data);
+  },
+  async rejectProformaInvoice(id: string, rejection_reason?: string): Promise<IProformaInvoice> {
+    return instance.post(`sourcing/proforma-invoices/${id}/reject/`, { rejection_reason }).then(r => r.data);
+  },
+  async expireProformaInvoice(id: string): Promise<IProformaInvoice> {
+    return instance.post(`sourcing/proforma-invoices/${id}/expire/`).then(r => r.data);
+  },
+
+  // ── Penalty Forgiveness ───────────────────────────────────────────────────
+  async forgivePenalty(invoiceId: string, reason: string): Promise<IBuyerInvoice> {
+    return instance.post(`sourcing/buyer-invoices/${invoiceId}/forgive_penalty/`, { reason }).then(r => r.data);
+  },
 
   // ── Reports ───────────────────────────────────────────────────────────────
  
