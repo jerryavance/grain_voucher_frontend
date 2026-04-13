@@ -136,6 +136,12 @@ export interface IInvestorAllocation {
 }
 export interface IInvestorAllocationsResults { results: IInvestorAllocation[]; count: number; }
 
+export interface IInvestorProfitAgreement {
+  payout_type: 'margin' | 'interest';
+  fixed_interest_rate?: number | string;
+  interest_period_days?: number;
+}
+
 // UPDATED: added emd_balance, emd_utilized
 export interface IInvestorAccount {
   id: string; investor: IUser; available_balance: number;
@@ -143,6 +149,7 @@ export interface IInvestorAccount {
   // NEW: EMD balance fields — primary source of truth for capital
   emd_balance: number;
   emd_utilized: number;
+  profit_agreement?: IInvestorProfitAgreement;
 }
 
 // ============ Sale Lot ============
