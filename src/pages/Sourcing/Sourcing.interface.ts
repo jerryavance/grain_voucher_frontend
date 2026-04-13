@@ -127,6 +127,7 @@ export interface IInvestorAllocation {
   amount_allocated: number; investor_margin: number; platform_fee: number;
   amount_returned: number; status: 'active'|'settled'|'force_settled'|'cancelled';
   expected_return_date: string | null;
+  payout_type: 'margin' | 'interest';
   financing_percentage: number;
   emd_deduction_timing: 'on_assignment'|'on_weighbridge'|'on_supplier_payment';
   emd_deducted: boolean;

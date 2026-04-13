@@ -79,6 +79,7 @@ const InvestorAllocationForm: FC<{
       amount_allocated: order.total_cost,
       financing_percentage: 100,
       emd_deduction_timing: "on_assignment" as EmdDeductionTiming,
+      expected_return_date: "",
       notes: "",
     },
     validationSchema: Yup.object({
@@ -95,6 +96,7 @@ const InvestorAllocationForm: FC<{
           amount_allocated: Number(values.amount_allocated),
           financing_percentage: Number(values.financing_percentage),
           emd_deduction_timing: values.emd_deduction_timing,
+          expected_return_date: values.expected_return_date || null,
           notes: values.notes,
         });
         toast.success("Investor allocated successfully");
@@ -161,6 +163,17 @@ const InvestorAllocationForm: FC<{
                   : "EMD locked only after the supplier has been paid."}
               </FormHelperText>
             </FormControl>
+            {selected?.profit_agreement?.payout_type === "interest" && (
+              <TextField
+                label="Expected Return Date *"
+                type="date"
+                fullWidth
+                value={form.values.expected_return_date}
+                onChange={e => form.setFieldValue("expected_return_date", e.target.value)}
+                InputLabelProps={{ shrink: true }}
+                helperText={`Capital + interest owed back by this date. Rate: ${selected.profit_agreement.fixed_interest_rate}% per ${selected.profit_agreement.interest_period_days} days.`}
+              />
+            )}
             <TextField label="Notes" multiline rows={2} fullWidth value={form.values.notes} onChange={e => form.setFieldValue("notes", e.target.value)} />
           </Box>
         )}

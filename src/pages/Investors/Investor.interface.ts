@@ -26,6 +26,7 @@ export interface IInvestorAccount {
     emd_balance: string;        // Liquid capital available to back new trades
     emd_utilized: string;       // Capital locked in active allocations
     profit_agreement?: IProfitSharingAgreement;
+    profit_agreements?: IProfitSharingAgreement[];
     created_at: string;
     updated_at: string;
 }

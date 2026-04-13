@@ -115,9 +115,20 @@ const InvestorAllocations: FC = () => {
           color={row.original.emd_deducted ? "success" : "warning"} variant="outlined" />
       ),
     },
+    {
+      Header: "Type", accessor: "payout_type", minWidth: 100,
+      Cell: ({ row }: any) => (
+        <Chip
+          label={row.original.payout_type === "interest" ? "Interest" : "Margin"}
+          color={row.original.payout_type === "interest" ? "info" : "default"}
+          size="small" variant="outlined"
+        />
+      ),
+    },
     { Header: "Margin", accessor: "investor_margin", minWidth: 130, Cell: ({ row }: any) => <Span sx={{ color: Number(row.original.investor_margin) >= 0 ? "success.main" : "error.main" }}>{formatCurrency(row.original.investor_margin)}</Span> },
     { Header: "Returned", accessor: "amount_returned", minWidth: 130, Cell: ({ row }: any) => <Span sx={{ fontWeight: 600, color: "info.main" }}>{formatCurrency(row.original.amount_returned)}</Span> },
     { Header: "Status", accessor: "status", minWidth: 100, Cell: ({ row }: any) => <Chip label={row.original.status.toUpperCase()} color={ALLOCATION_STATUS_COLORS[row.original.status]} size="small" /> },
+    { Header: "Return Date", accessor: "expected_return_date", minWidth: 120, Cell: ({ row }: any) => <Span sx={{ fontSize: 13 }}>{row.original.expected_return_date ? formatDateToDDMMYYYY(row.original.expected_return_date) : "—"}</Span> },
     { Header: "Date", accessor: "allocated_at", minWidth: 110, Cell: ({ row }: any) => <Span sx={{ fontSize: 13 }}>{formatDateToDDMMYYYY(row.original.allocated_at)}</Span> },
     {
       Header: "", accessor: "actions", minWidth: 100,

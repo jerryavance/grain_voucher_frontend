@@ -10,6 +10,11 @@ import {
   LinearProgress,
   Tooltip,
   Chip,
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableRow,
 } from "@mui/material";
 import AccountBalanceWalletIcon from "@mui/icons-material/AccountBalanceWallet";
 import LockIcon from "@mui/icons-material/Lock";
@@ -351,6 +356,48 @@ const InvestorDetailsModal: FC<IInvestorDetailsModalProps> = ({
                   </Grid>
                 )}
               </Grid>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* ── Profit Sharing Agreement History ────────────────────────────── */}
+        {account.profit_agreements && account.profit_agreements.length > 1 && (
+          <Card>
+            <CardContent>
+              <Typography variant="h6" gutterBottom color="primary">
+                Agreement History
+              </Typography>
+              <Divider sx={{ mb: 2 }} />
+              <Box sx={{ overflowX: "auto" }}>
+                <Table size="small">
+                  <TableHead>
+                    <TableRow>
+                      <TableCell><strong>Type</strong></TableCell>
+                      <TableCell><strong>Effective Date</strong></TableCell>
+                      <TableCell><strong>Terms</strong></TableCell>
+                    </TableRow>
+                  </TableHead>
+                  <TableBody>
+                    {account.profit_agreements.map((ag) => (
+                      <TableRow key={ag.id}>
+                        <TableCell>
+                          <Chip
+                            label={ag.payout_type === "interest" ? "Interest" : "Margin"}
+                            color={ag.payout_type === "interest" ? "info" : "default"}
+                            size="small" variant="outlined"
+                          />
+                        </TableCell>
+                        <TableCell>{formatDateToDDMMYYYY(ag.effective_date || new Date())}</TableCell>
+                        <TableCell>
+                          {ag.payout_type === "interest"
+                            ? `${ag.fixed_interest_rate}% per ${ag.interest_period_days} days`
+                            : `${ag.investor_share}% investor / ${ag.bennu_share}% platform (threshold: ${ag.profit_threshold}%)`}
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </Box>
             </CardContent>
           </Card>
         )}
