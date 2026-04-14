@@ -2,9 +2,11 @@
 import React, { useEffect, useState } from "react";
 import {
   Box,
+  Button,
   Card,
   CardContent,
   Chip,
+  GlobalStyles,
   Grid,
   LinearProgress,
   Skeleton,
@@ -14,6 +16,7 @@ import {
   TableContainer,
   TableHead,
   TableRow,
+  TextField,
   Typography,
   Paper,
   Divider,
@@ -32,6 +35,8 @@ import {
   Refresh,
   ArrowForward,
   MonetizationOn,
+  PictureAsPdf,
+  FilterAlt,
 } from "@mui/icons-material";
 import { useNavigate } from "react-router-dom";
 import { toast } from "react-hot-toast";
@@ -367,6 +372,10 @@ const SourcingDashboard: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [emdLoading, setEmdLoading] = useState(true);
 
+  // ── Date range filter ──────────────────────────────────────────────────────
+  const [startDate, setStartDate] = useState<string>("");
+  const [endDate, setEndDate] = useState<string>("");
+
   useEffect(() => {
     fetchAll();
   }, []);
@@ -375,6 +384,21 @@ const SourcingDashboard: React.FC = () => {
     setLoading(true);
     await Promise.allSettled([fetchEmdOverview(), fetchStats(), fetchPLSummary()]);
     setLoading(false);
+  };
+
+  /** Re-fetch with current date filters applied */
+  const applyFilter = () => {
+    setLoading(true);
+    Promise.allSettled([fetchEmdOverview(), fetchStats(), fetchPLSummary()]).then(
+      () => setLoading(false)
+    );
+  };
+
+  const clearFilter = () => {
+    setStartDate("");
+    setEndDate("");
+    // Trigger refetch with empty dates after state update on next tick
+    setTimeout(() => applyFilter(), 0);
   };
 
   const fetchEmdOverview = async () => {
@@ -391,14 +415,17 @@ const SourcingDashboard: React.FC = () => {
 
   const fetchStats = async () => {
     try {
+      const dateParams = startDate && endDate
+        ? { start_date: startDate, end_date: endDate }
+        : {};
       // ✅ FIX: Also fetch payment stats for dashboard visibility (Issue 8)
       const [suppliers, orders, invoices, lots, supplierPayments, buyerPayments] = await Promise.allSettled([
         SourcingService.getSuppliers({ page_size: 1 }),
-        SourcingService.getSourceOrders({ page_size: 1, status: "accepted" }),
-        SourcingService.getSupplierInvoices({ page_size: 1, status: "pending" }),
+        SourcingService.getSourceOrders({ page_size: 1, status: "accepted", ...dateParams }),
+        SourcingService.getSupplierInvoices({ page_size: 1, status: "pending", ...dateParams }),
         SourcingService.getSaleLots({ page_size: 1, status: "available" }),
-        SourcingService.getSupplierPayments({ page_size: 5, status: "completed" }),
-        SourcingService.getBuyerPayments({ page_size: 5, status: "confirmed" }),
+        SourcingService.getSupplierPayments({ page_size: 5, status: "completed", ...dateParams }),
+        SourcingService.getBuyerPayments({ page_size: 5, status: "confirmed", ...dateParams }),
       ]);
 
       // Compute total supplier payments
@@ -440,7 +467,10 @@ const SourcingDashboard: React.FC = () => {
 
   const fetchPLSummary = async () => {
     try {
-      const data = await SourcingService.getHubPLSummary();
+      const dateParams = startDate && endDate
+        ? { start_date: startDate, end_date: endDate }
+        : {};
+      const data = await SourcingService.getHubPLSummary(dateParams);
       setPlSummary(data);
     } catch (err) {
       console.error("Failed to load P&L summary:", err);
@@ -465,8 +495,16 @@ const SourcingDashboard: React.FC = () => {
 
   return (
     <Box p={3}>
+      <GlobalStyles styles={{
+        "@media print": {
+          "body": { WebkitPrintColorAdjust: "exact", printColorAdjust: "exact" },
+          "@page": { margin: "10mm", size: "A4 portrait" },
+          /* Hide nav, header chrome, buttons when printing */
+          ".no-print, button, [role='button']": { display: "none !important" },
+        },
+      }} />
       {/* Header */}
-      <Box display="flex" justifyContent="space-between" alignItems="center" mb={3}>
+      <Box display="flex" justifyContent="space-between" alignItems="flex-start" mb={3} flexWrap="wrap" gap={2}>
         <Box>
           <Typography variant="h4" fontWeight={700}>
             Sourcing Dashboard
@@ -474,6 +512,59 @@ const SourcingDashboard: React.FC = () => {
           <Typography variant="body2" color="text.primary" sx={{ mt: 0.5 }}>
             Overview of procurement, capital, and trade activity
           </Typography>
+        </Box>
+
+        {/* Date range filter + actions */}
+        <Box display="flex" alignItems="center" gap={1} flexWrap="wrap">
+          <TextField
+            label="From"
+            type="date"
+            size="small"
+            value={startDate}
+            onChange={e => setStartDate(e.target.value)}
+            InputLabelProps={{ shrink: true }}
+            sx={{ width: 150 }}
+          />
+          <TextField
+            label="To"
+            type="date"
+            size="small"
+            value={endDate}
+            onChange={e => setEndDate(e.target.value)}
+            InputLabelProps={{ shrink: true }}
+            sx={{ width: 150 }}
+          />
+          <Tooltip title="Apply date filter">
+            <Button
+              variant="contained"
+              size="small"
+              startIcon={<FilterAlt />}
+              onClick={applyFilter}
+              disabled={!startDate || !endDate}
+            >
+              Filter
+            </Button>
+          </Tooltip>
+          {(startDate || endDate) && (
+            <Button size="small" onClick={clearFilter} color="inherit">
+              Clear
+            </Button>
+          )}
+          <Tooltip title="Export dashboard to PDF">
+            <Button
+              variant="outlined"
+              size="small"
+              startIcon={<PictureAsPdf />}
+              onClick={() => window.print()}
+            >
+              Export PDF
+            </Button>
+          </Tooltip>
+          <Tooltip title="Refresh all data">
+            <IconButton size="small" onClick={fetchAll}>
+              <Refresh />
+            </IconButton>
+          </Tooltip>
         </Box>
       </Box>
 

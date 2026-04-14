@@ -6,7 +6,7 @@
  * - Fixed: Processed By and Method display issues resolved via AllColumnShapes
  */
 
-import { Box, Button, MenuItem, Select, FormControl, InputLabel } from "@mui/material";
+import { Box, Button, MenuItem, Select, FormControl, InputLabel, GlobalStyles } from "@mui/material";
 import { Key, useEffect, useState } from "react";
 import { toast } from "react-hot-toast";
 import { useNavigate } from "react-router-dom";
@@ -48,6 +48,13 @@ const SupplierPayments = () => {
 
   return (
     <Box pt={2} pb={4}>
+      <GlobalStyles styles={{
+        "@media print": {
+          ".pagination-controls, .filter-bar": { display: "none !important" },
+          ".data-table": { pageBreakInside: "auto" },
+          "tr": { pageBreakInside: "avoid" },
+        },
+      }} />
       <Box sx={{ display: "flex", alignItems: "center", gap: 2, mb: 2, flexWrap: "wrap" }}>
         <Box sx={{ flexGrow: 1, minWidth: 250 }}>
           <SearchInput value={searchQuery} onChange={(e: any) => setSearchQuery(e.target.value)} onKeyPress={(e: any) => { if (e.key === "Enter") setFilters({ ...filters, search: searchQuery, page: 1 }); }} type="text" placeholder="Search payments..." />

@@ -329,6 +329,9 @@ const BuyerInvoiceDetails: FC = () => {
           { label: "Balance Due",    value: formatCurrency(invoice.balance_due), color: Number(invoice.balance_due) > 0 ? "error.main" : "success.main" },
           { label: "Gross Profit",   value: formatCurrency(grossProfit), color: grossProfit >= 0 ? "success.main" : "error.main" },
           ...(Number(invoice.penalty_amount || 0) > 0 ? [{ label: "Penalty", value: formatCurrency(invoice.penalty_amount), color: "error.main" }] : []),
+          ...(Number((invoice as any).credit_note_amount || 0) > 0 ? [{ label: "Credit Note", value: `− ${formatCurrency((invoice as any).credit_note_amount)}`, color: "success.main" }] : []),
+          ...(Number((invoice as any).debit_note_amount || 0) > 0 ? [{ label: "Debit Note", value: `+ ${formatCurrency((invoice as any).debit_note_amount)}`, color: "warning.main" }] : []),
+          ...(Number((invoice as any).adjusted_amount || 0) > 0 ? [{ label: "Adjusted Amount", value: formatCurrency((invoice as any).adjusted_amount), color: "info.main" }] : []),
           ...(Number(invoice.days_overdue || 0) > 0 ? [{ label: "Days Overdue", value: `${invoice.days_overdue} days`, color: "error.main" }] : []),
         ].map(({ label, value, color }) => (
           <Grid key={label} item xs={6} sm={3}>
@@ -678,7 +681,7 @@ const BuyerInvoiceDetails: FC = () => {
         <DialogTitle>Issue Credit Note</DialogTitle>
         <DialogContent dividers>
           <Typography variant="body2" color="text.primary" gutterBottom>
-            A credit note reduces the amount owed on this invoice.
+            A credit note reduces the amount owed on this invoice. This will be recorded against invoice {invoice.invoice_number}.
           </Typography>
           <TextField label="Amount (UGX)" type="number" fullWidth sx={{ mt: 2, mb: 2 }}
             value={noteAmount} onChange={e => setNoteAmount(e.target.value)} />
@@ -747,7 +750,7 @@ const BuyerInvoiceDetails: FC = () => {
         <DialogTitle>Issue Debit Note</DialogTitle>
         <DialogContent dividers>
           <Typography variant="body2" color="text.primary" gutterBottom>
-            A debit note increases the amount owed on this invoice (e.g. late fees, additional charges).
+            A debit note increases the amount owed on this invoice (e.g. late fees, additional charges). This will be recorded against invoice {invoice.invoice_number}.
           </Typography>
           <TextField label="Amount (UGX)" type="number" fullWidth sx={{ mt: 2, mb: 2 }}
             value={noteAmount} onChange={e => setNoteAmount(e.target.value)} />

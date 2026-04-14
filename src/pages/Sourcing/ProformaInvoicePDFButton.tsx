@@ -103,7 +103,7 @@ export const generatePFIHTML = (
   .doc-title { font-size:22px;font-weight:800;letter-spacing:3px;color:#fff;text-transform:uppercase; }
   .doc-sub { font-size:10px;color:rgba(255,255,255,0.65);margin-top:4px; }
   .accent-bar { height:3px;background:linear-gradient(90deg,#1a5fa0 0%,#5ba3e0 50%,#2371B9 100%); }
-  .body { padding:28px 36px; }
+  .body { padding:20px 28px; }
 
   /* Meta strip */
   .meta-strip { display:grid;grid-template-columns:repeat(5,1fr);border:1px solid #e0e8f4;border-radius:6px;overflow:hidden;margin-bottom:20px; }
@@ -176,6 +176,7 @@ export const generatePFIHTML = (
   .stamp { background:#2371B9;color:#fff;font-size:10px;font-weight:700;padding:5px 14px;border-radius:4px;letter-spacing:1px;text-transform:uppercase; }
 
   @media print {
+    @page { margin:8mm; size:A4 portrait; }
     body { -webkit-print-color-adjust:exact;print-color-adjust:exact; }
     .no-print { display:none !important; }
   }
@@ -187,10 +188,6 @@ export const generatePFIHTML = (
   <div class="header">
     <div class="header-left">
       ${logoHtml}
-      <div>
-        <div class="company-name">BENNU AGFIN</div>
-        <div class="company-sub">Agri-Finance Services</div>
-      </div>
     </div>
     <div class="header-right">
       <div class="doc-title">Proforma Invoice</div>
@@ -289,10 +286,6 @@ export const generatePFIHTML = (
         </tr>
       </tbody>
       <tfoot>
-        <tr>
-          <td colspan="3" style="text-align:right;font-size:11px;color:#5c8abf;">Sub-Total</td>
-          <td style="text-align:right;font-size:13px;font-weight:700;">${ugx(subTotal)}</td>
-        </tr>
       </tfoot>
     </table>
 
@@ -347,10 +340,10 @@ export const generatePFIHTML = (
     <div class="section-heading">Delivery Timeline</div>
     <div class="narrative-box">${pfi.delivery_timeline_narrative}</div>` : ""}
 
-    <!-- Notes -->
+    <!-- Buyer Reference / Customer PO -->
     ${pfi.notes ? `
     <div class="notes-box">
-      <strong>Notes:</strong> ${pfi.notes}
+      <strong>Buyer Reference / Customer PO:</strong> ${pfi.notes}
     </div>` : ""}
 
     <!-- Signatory -->
@@ -361,6 +354,16 @@ export const generatePFIHTML = (
       <div class="signatory-title">${pfi.signatory_title || ""}</div>
       ${pfi.signatory_contact ? `<div style="font-size:11px;color:#666;margin-top:2px;">${pfi.signatory_contact}</div>` : ""}
     </div>` : ""}
+
+    <!-- Signature Block -->
+    <div style="margin-top:24px;display:grid;grid-template-columns:1fr 1fr;gap:40px;">
+      <div style="border-top:1px solid #1a1a1a;padding-top:6px;text-align:center;font-size:10px;color:#555;">
+        Authorized Signature &amp; Stamp
+      </div>
+      <div style="border-top:1px solid #1a1a1a;padding-top:6px;text-align:center;font-size:10px;color:#555;">
+        Received By (Customer Signature)
+      </div>
+    </div>
 
     <!-- Footer -->
     <div class="footer">

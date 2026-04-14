@@ -170,7 +170,7 @@ const generateReceiptHTML = (
   }
 
   /* ── Body ── */
-  .body { padding: 28px 36px; }
+  .body { padding: 20px 28px; }
 
   /* ── Meta strip ── */
   .meta-strip {
@@ -313,8 +313,8 @@ const generateReceiptHTML = (
   }
 
   @media print {
+    @page { margin: 8mm; size: A4 portrait; }
     body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-    @page { margin: 10mm; size: A4 portrait; }
   }
 </style>
 </head>
@@ -324,9 +324,6 @@ const generateReceiptHTML = (
 <div class="header">
   <div class="header-left">
     ${logoHtml}
-    <div class="header-brand">
-      <div class="company-sub">Agfin Services Limited</div>
-    </div>
   </div>
   <div class="header-right">
     <div class="doc-title">${docTitle}</div>
@@ -447,6 +444,16 @@ const generateReceiptHTML = (
     ${receipt.notes}
   </div>
   ` : ""}
+
+  <!-- ── Signature Block ── -->
+  <div style="margin-top:24px;display:grid;grid-template-columns:1fr 1fr;gap:40px;">
+    <div style="border-top:1px solid #1a1a1a;padding-top:6px;text-align:center;font-size:10px;color:#555;">
+      Issued By (Authorized Signature)
+    </div>
+    <div style="border-top:1px solid #1a1a1a;padding-top:6px;text-align:center;font-size:10px;color:#555;">
+      Received By (Customer Signature)
+    </div>
+  </div>
 
   <!-- ── Footer ── -->
   <div class="footer">

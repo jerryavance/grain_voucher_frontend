@@ -253,33 +253,6 @@ export const MenuList = (
     },
 
     // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-    // REPORTS
-    // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-    {
-      title: "Reports",
-      Icon: Icons.AssessmentIcon,
-      visible: isSuperUser || isHubAdmin,
-      isHeader: true,
-      subMenu: [
-        { title: "Reports & Analytics", Icon: Icons.AssessmentIcon, path: "/admin/reports", visible: isSuperUser || isHubAdmin },
-      ],
-    },
-
-    // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-    // VOUCHERS
-    // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-    {
-      title: "Vouchers",
-      Icon: Icons.ReceiptIcon,
-      visible: true,
-      isHeader: true,
-      subMenu: [
-        { title: "My Vouchers",  Icon: Icons.ReceiptIcon,            path: "/vouchers",            visible: true },
-        { title: "Redemptions",  Icon: Icons.ConfirmationNumberIcon, path: "/voucher-management",  visible: isSuperUser },
-      ],
-    },
-
-    // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
     // INVEST (Admin)
     // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
     {
@@ -288,112 +261,134 @@ export const MenuList = (
       visible: isSuperUser,
       isHeader: true,
       subMenu: [
-        { title: "Investor Portal",      Icon: Icons.DashboardCustomizeIcon, path: "/invest",                        visible: isSuperUser },
-        { title: "Investors Admin",      Icon: Icons.FolderSharedIcon,       path: "/admin/investors",               visible: isSuperUser },
-        { title: "Investor Receivables", Icon: Icons.TrendingUpIcon,         path: "/admin/investors/receivables",   visible: isSuperUser },
-        { title: "Investor Period Returns", Icon: Icons.TrendingUpIcon,      path: "/admin/investors/period-returns", visible: isSuperUser },
+        { title: "Investor Portal",         Icon: Icons.DashboardCustomizeIcon, path: "/invest",                         visible: isSuperUser },
+        { title: "Investors Admin",         Icon: Icons.FolderSharedIcon,       path: "/admin/investors",                visible: isSuperUser },
+        { title: "Investor Receivables",    Icon: Icons.TrendingUpIcon,         path: "/admin/investors/receivables",    visible: isSuperUser },
+        { title: "Investor Period Returns", Icon: Icons.TrendingUpIcon,         path: "/admin/investors/period-returns", visible: isSuperUser },
       ],
     },
 
     // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-    // HUBS
+    // PLATFORM TOOLS — secondary modules grouped under one parent
+    // Includes: Reports, Vouchers, Trading, Accounting, Inventories,
+    //           Hubs, Deposits, Admin, Users
     // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
     {
-      title: "Hubs",
-      Icon: Icons.FactoryIcon,
-      visible: true,
+      title: "Platform Tools",
+      Icon: Icons.AdminPanelSettingsIcon,
+      visible: isSuperUser || isHubAdmin || CanCreateDeposit || CanViewHubMembers || CanMakeTrades,
       isHeader: true,
       subMenu: [
-        { title: "Hubs",         Icon: Icons.FactoryIcon,  path: "/hub-list",          visible: true },
-        { title: "Grain Hubs",   Icon: Icons.Agriculture,  path: "/admin/hubs",        visible: isSuperUser },
-        { title: "Hub Members",  Icon: Icons.GroupAddIcon,  path: "/admin/membership",  visible: CanViewHubMembers || isSuperUser },
-      ],
-    },
+        // ── Reports ─────────────────────────────────────────────────────
+        {
+          title: "Reports",
+          Icon: Icons.AssessmentIcon,
+          visible: isSuperUser || isHubAdmin,
+          isHeader: true,
+          subMenu: [
+            { title: "Reports & Analytics", Icon: Icons.AssessmentIcon, path: "/admin/reports", visible: isSuperUser || isHubAdmin },
+          ],
+        },
 
-    // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-    // DEPOSITS
-    // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-    {
-      title: "Deposits",
-      Icon: Icons.AddBusinessIcon,
-      visible: CanCreateDeposit || CanViewHubMembers || isSuperUser,
-      isHeader: true,
-      subMenu: [
-        { title: "Deposit Grain",   Icon: Icons.AddBusinessIcon, path: "/admin/deposit",             visible: CanCreateDeposit || isSuperUser },
-        { title: "Agent Deposits",  Icon: Icons.AddBusinessIcon, path: "/admin/deposit-management",  visible: CanViewHubMembers || isSuperUser },
-      ],
-    },
+        // ── Vouchers ─────────────────────────────────────────────────────
+        {
+          title: "Vouchers",
+          Icon: Icons.ReceiptIcon,
+          visible: true,
+          isHeader: true,
+          subMenu: [
+            { title: "My Vouchers",  Icon: Icons.ReceiptIcon,            path: "/vouchers",           visible: true },
+            { title: "Redemptions",  Icon: Icons.ConfirmationNumberIcon, path: "/voucher-management", visible: isSuperUser },
+          ],
+        },
 
-    // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-    // ADMIN
-    // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-    {
-      title: "Admin",
-      Icon: Icons.PriceChangeIcon,
-      visible: isSuperUser,
-      isHeader: true,
-      subMenu: [
-        { title: "Price Feed",     Icon: Icons.PriceChangeIcon, path: "/admin/price-feeds",     visible: isSuperUser },
-        { title: "Grain Type",     Icon: Icons.GrainIcon,       path: "/admin/grain-types",     visible: isSuperUser },
-        { title: "Quality Grade",  Icon: Icons.GradeIcon,       path: "/admin/quality-grades",  visible: isSuperUser },
-      ],
-    },
+        // ── Trading ───────────────────────────────────────────────────────
+        {
+          title: "Trading",
+          Icon: Icons.TrendingUpIcon,
+          visible: isSuperUser || CanMakeTrades,
+          isHeader: true,
+          subMenu: [
+            { title: "Dashboard", Icon: Icons.TrendingUpIcon, path: "/admin/trade/dashboard", visible: isSuperUser || CanMakeTrades },
+            { title: "Trade",     Icon: Icons.TrendingUpIcon, path: "/admin/trade",           visible: isSuperUser || CanMakeTrades },
+            { title: "CRM",       Icon: Icons.Diversity3Icon, path: "/admin/crm",             visible: isSuperUser || CanMakeTrades },
+          ],
+        },
 
-    // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-    // TRADING
-    // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-    {
-      title: "Trading",
-      Icon: Icons.TrendingUpIcon,
-      visible: isSuperUser || CanMakeTrades,
-      isHeader: true,
-      subMenu: [
-        { title: "Dashboard", Icon: Icons.TrendingUpIcon, path: "/admin/trade/dashboard", visible: isSuperUser || CanMakeTrades },
-        { title: "Trade",     Icon: Icons.TrendingUpIcon, path: "/admin/trade",           visible: isSuperUser || CanMakeTrades },
-        { title: "CRM",       Icon: Icons.Diversity3Icon, path: "/admin/crm",             visible: isSuperUser || CanMakeTrades },
-      ],
-    },
+        // ── Accounting ────────────────────────────────────────────────────
+        {
+          title: "Accounting",
+          Icon: Icons.CalculateIcon,
+          visible: isSuperUser,
+          isHeader: true,
+          subMenu: [
+            { title: "Invoice",         Icon: Icons.ReceiptIcon,      path: "/admin/accounting",                 visible: isSuperUser },
+            { title: "Payments",        Icon: Icons.PaymentsIcon,     path: "/admin/accounting/payments",        visible: isSuperUser },
+            { title: "Journal Entries", Icon: Icons.LibraryBooksIcon, path: "/admin/accounting/journal-entries", visible: isSuperUser },
+            { title: "Budgets",         Icon: Icons.AutoStoriesIcon,  path: "/admin/accounting/budgets",         visible: isSuperUser },
+            { title: "Ledger Entries",  Icon: Icons.AccountTreeIcon,  path: "/admin/accounting/ledger-entries",  visible: isSuperUser },
+          ],
+        },
 
-    // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-    // ACCOUNTING
-    // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-    {
-      title: "Accounting",
-      Icon: Icons.CalculateIcon,
-      visible: isSuperUser,
-      isHeader: true,
-      subMenu: [
-        { title: "Invoice",         Icon: Icons.ReceiptIcon,       path: "/admin/accounting",                  visible: isSuperUser },
-        { title: "Payments",        Icon: Icons.PaymentsIcon,      path: "/admin/accounting/payments",         visible: isSuperUser },
-        { title: "Journal Entries", Icon: Icons.LibraryBooksIcon,  path: "/admin/accounting/journal-entries",  visible: isSuperUser },
-        { title: "Budgets",         Icon: Icons.AutoStoriesIcon,   path: "/admin/accounting/budgets",          visible: isSuperUser },
-        { title: "Ledger Entries",  Icon: Icons.AccountTreeIcon,   path: "/admin/accounting/ledger-entries",   visible: isSuperUser },
-      ],
-    },
+        // ── Inventories ───────────────────────────────────────────────────
+        {
+          title: "Inventories",
+          Icon: Icons.InventoryIcon,
+          visible: isSuperUser,
+          isHeader: true,
+          subMenu: [
+            { title: "Inventories", Icon: Icons.InventoryIcon, path: "/admin/inventories", visible: isSuperUser },
+          ],
+        },
 
-    // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-    // INVENTORIES
-    // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-    {
-      title: "Inventories",
-      Icon: Icons.InventoryIcon,
-      visible: isSuperUser,
-      isHeader: true,
-      subMenu: [
-        { title: "Inventories", Icon: Icons.InventoryIcon, path: "/admin/inventories", visible: isSuperUser },
-      ],
-    },
+        // ── Hubs ──────────────────────────────────────────────────────────
+        {
+          title: "Hubs",
+          Icon: Icons.FactoryIcon,
+          visible: true,
+          isHeader: true,
+          subMenu: [
+            { title: "Hubs",        Icon: Icons.FactoryIcon, path: "/hub-list",         visible: true },
+            { title: "Grain Hubs",  Icon: Icons.Agriculture, path: "/admin/hubs",       visible: isSuperUser },
+            { title: "Hub Members", Icon: Icons.GroupAddIcon, path: "/admin/membership", visible: CanViewHubMembers || isSuperUser },
+          ],
+        },
 
-    // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-    // USERS
-    // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-    {
-      title: "Users",
-      Icon: Icons.GroupsIcon,
-      visible: isSuperUser,
-      isHeader: true,
-      subMenu: [
-        { title: "Users", Icon: Icons.GroupsIcon, path: "/admin/users", visible: isSuperUser },
+        // ── Deposits ──────────────────────────────────────────────────────
+        {
+          title: "Deposits",
+          Icon: Icons.AddBusinessIcon,
+          visible: CanCreateDeposit || CanViewHubMembers || isSuperUser,
+          isHeader: true,
+          subMenu: [
+            { title: "Deposit Grain",  Icon: Icons.AddBusinessIcon, path: "/admin/deposit",            visible: CanCreateDeposit || isSuperUser },
+            { title: "Agent Deposits", Icon: Icons.AddBusinessIcon, path: "/admin/deposit-management", visible: CanViewHubMembers || isSuperUser },
+          ],
+        },
+
+        // ── Admin ─────────────────────────────────────────────────────────
+        {
+          title: "Admin",
+          Icon: Icons.PriceChangeIcon,
+          visible: isSuperUser,
+          isHeader: true,
+          subMenu: [
+            { title: "Price Feed",    Icon: Icons.PriceChangeIcon, path: "/admin/price-feeds",    visible: isSuperUser },
+            { title: "Grain Type",    Icon: Icons.GrainIcon,       path: "/admin/grain-types",    visible: isSuperUser },
+            { title: "Quality Grade", Icon: Icons.GradeIcon,       path: "/admin/quality-grades", visible: isSuperUser },
+          ],
+        },
+
+        // ── Users ─────────────────────────────────────────────────────────
+        {
+          title: "Users",
+          Icon: Icons.GroupsIcon,
+          visible: isSuperUser,
+          isHeader: true,
+          subMenu: [
+            { title: "Users", Icon: Icons.GroupsIcon, path: "/admin/users", visible: isSuperUser },
+          ],
+        },
       ],
     },
   ];

@@ -397,9 +397,9 @@ export const SourcingService = {
   async getTradeSettlementDetails(id: string): Promise<ITradeSettlement> {
     return instance.get(`sourcing/trade-settlements/${id}/`).then(r => r.data);
   },
-  async getHubPLSummary(hubId?: string): Promise<IHubPLSummary> {
+  async getHubPLSummary(extraParams?: Record<string, any>, hubId?: string): Promise<IHubPLSummary> {
     return instance.get("sourcing/trade-settlements/hub_summary/", {
-      params: hubId ? { hub: hubId } : {},
+      params: { ...(hubId ? { hub: hubId } : {}), ...(extraParams || {}) },
     }).then(r => r.data);
   },
 

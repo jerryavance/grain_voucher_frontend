@@ -196,7 +196,7 @@ export const generateSupplierInvoiceHTML = (
   }
 
   /* ── Body ── */
-  .body { padding: 28px 36px; }
+  .body { padding: 20px 28px; }
 
   /* ── Invoice meta strip ── */
   .meta-strip {
@@ -339,8 +339,8 @@ export const generateSupplierInvoiceHTML = (
   }
 
   @media print {
+    @page { margin: 8mm; size: A4 portrait; }
     body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-    @page { margin: 10mm; size: A4 portrait; }
   }
 </style>
 </head>
@@ -350,9 +350,6 @@ export const generateSupplierInvoiceHTML = (
 <div class="header">
   <div class="header-left">
     ${logoHtml}
-    <div class="header-brand">
-      <div class="company-sub">Agfin Services Limited</div>
-    </div>
   </div>
   <div class="header-right">
     <div class="doc-title">Supplier Invoice</div>
@@ -456,10 +453,6 @@ export const generateSupplierInvoiceHTML = (
       </tr>
     </tbody>
     <tfoot>
-      <tr>
-        <td colspan="4" style="text-align:right; font-size:11px; color:#777;">Grain Sub-total</td>
-        <td style="text-align:right; font-size:13px; font-weight:700;">${ugx(grainCost)}</td>
-      </tr>
     </tfoot>
   </table>
 
@@ -534,6 +527,16 @@ export const generateSupplierInvoiceHTML = (
     ${invoice.notes}
   </div>` : ""}
 
+  <!-- ── Signature Block ── -->
+  <div style="margin-top:24px;display:grid;grid-template-columns:1fr 1fr;gap:40px;">
+    <div style="border-top:1px solid #1a1a1a;padding-top:6px;text-align:center;font-size:10px;color:#555;">
+      Supplier Signature
+    </div>
+    <div style="border-top:1px solid #1a1a1a;padding-top:6px;text-align:center;font-size:10px;color:#555;">
+      Authorized by Bennu
+    </div>
+  </div>
+
   <!-- ── Footer ── -->
   <div class="footer">
     <div>
@@ -601,7 +604,6 @@ export const generatePaymentReceiptHTML = (payment: {
 <div class="header">
   <div class="header-left">
     ${logoHtml}
-    <div class="company-sub">Agfin Services Limited</div>
   </div>
   <div class="doc-title">Payment Receipt</div>
 </div>

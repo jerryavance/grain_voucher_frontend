@@ -143,7 +143,7 @@ const CreateBuyerOrderForm: FC<{
           </FormControl>
         </Grid>
         <Grid item xs={12} md={6}><TextField fullWidth label="Quantity Requested (kg)" type="number" value={form.values.quantity_requested_kg} onChange={e => form.setFieldValue("quantity_requested_kg", e.target.value)} helperText="Used for quotation / PFI generation" /></Grid>
-        <Grid item xs={12}><TextField fullWidth label="Notes" multiline rows={2} value={form.values.notes} onChange={e => form.setFieldValue("notes", e.target.value)} /></Grid>
+        <Grid item xs={12}><TextField fullWidth label="Buyer Reference" multiline rows={2} value={form.values.notes} onChange={e => form.setFieldValue("notes", e.target.value)} helperText="Customer PO number or internal reference" /></Grid>
       </Grid>
     </ModalDialog>
   );

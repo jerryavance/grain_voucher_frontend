@@ -147,7 +147,7 @@ export const generateBuyerInvoiceHTML = (
   .doc-title { font-size:22px;font-weight:800;letter-spacing:3px;color:#fff;text-transform:uppercase; }
   .doc-sub { font-size:10px;color:rgba(255,255,255,0.65);margin-top:4px; }
   .accent-bar { height:3px;background:linear-gradient(90deg,#1a5fa0 0%,#5ba3e0 50%,#2371B9 100%); }
-  .body { padding:28px 36px; }
+  .body { padding:20px 28px; }
 
   /* Meta strip */
   .meta-strip { display:grid;grid-template-columns:repeat(5,1fr);border:1px solid #e0e8f4;border-radius:6px;overflow:hidden;margin-bottom:20px; }
@@ -216,7 +216,7 @@ export const generateBuyerInvoiceHTML = (
 
   @media print {
     body { -webkit-print-color-adjust:exact;print-color-adjust:exact; }
-    @page { margin:10mm;size:A4 portrait; }
+    @page { margin:8mm;size:A4 portrait; }
   }
 </style>
 </head>
@@ -227,12 +227,11 @@ export const generateBuyerInvoiceHTML = (
   <div class="header-left">
     ${logoHtml}
     <div>
-      <div style="font-size:16px;font-weight:800;color:#fff;">Bennu Agfin Services</div>
       <div class="company-sub">Grain Sourcing &amp; Trade Finance</div>
     </div>
   </div>
   <div class="header-right">
-    <div class="doc-title">Tax Invoice</div>
+    <div class="doc-title">Commercial Invoice</div>
     <div class="doc-sub">${invoice.invoice_number}</div>
   </div>
 </div>
@@ -273,8 +272,8 @@ export const generateBuyerInvoiceHTML = (
       <div class="meta-value">${fmtDate(invoice.paid_at)}</div>
     </div>
     <div class="meta-cell" style="grid-column:span 2;">
-      <div class="meta-label">Order Reference</div>
-      <div class="meta-value">${invoice.order_number || "—"}</div>
+      <div class="meta-label">Customer PO / Reference</div>
+      <div class="meta-value">${invoice.notes || invoice.order_number || "—"}</div>
     </div>
     <div class="meta-cell dark">
       <div class="meta-label">Status</div>
@@ -325,12 +324,6 @@ export const generateBuyerInvoiceHTML = (
     <tbody>
       ${linesHtml}
     </tbody>
-    <tfoot>
-      <tr>
-        <td colspan="4" style="text-align:right;font-size:11px;color:#5c8abf;">Grain Subtotal</td>
-        <td style="text-align:right;font-size:13px;font-weight:700;">${ugx(grainSubtotal)}</td>
-      </tr>
-    </tfoot>
   </table>
 
   ${expenses.length > 0 ? `
@@ -411,9 +404,23 @@ export const generateBuyerInvoiceHTML = (
 
   ${invoice.notes ? `
   <div class="notes-box">
-    <strong>Notes</strong> &nbsp;
+    <strong>Buyer Reference / Customer PO</strong> &nbsp;
     ${invoice.notes}
   </div>` : ""}
+
+  <!-- Signature block -->
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:40px;margin-top:24px;padding-top:16px;border-top:1px solid #e0e8f4;">
+    <div>
+      <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.8px;color:#5c8abf;margin-bottom:6px;">Authorised by (Seller)</div>
+      <div style="border-bottom:1.5px solid #1a1a1a;height:40px;margin-bottom:4px;"></div>
+      <div style="font-size:10px;color:#888;">Name &amp; Signature &nbsp;/&nbsp; Date</div>
+    </div>
+    <div>
+      <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.8px;color:#5c8abf;margin-bottom:6px;">Received by (Buyer)</div>
+      <div style="border-bottom:1.5px solid #1a1a1a;height:40px;margin-bottom:4px;"></div>
+      <div style="font-size:10px;color:#888;">Name &amp; Signature &nbsp;/&nbsp; Date</div>
+    </div>
+  </div>
 
   <div class="footer">
     <div class="footer-text">
