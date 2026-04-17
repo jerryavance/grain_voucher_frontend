@@ -137,9 +137,9 @@ export const generateSupplierInvoiceHTML = (
 
   // ── Logo HTML ─────────────────────────────────────────────────────────────
   const logoHtml = logoDataUrl
-    ? `<img src="${logoDataUrl}" alt="Bennu Logo" style="height:52px; width:auto; object-fit:contain;" />`
-    : `<div style="width:52px;height:52px;background:#2371B9;border-radius:6px;display:flex;align-items:center;justify-content:center;">
-         <span style="color:#fff;font-weight:900;font-size:20px;">B</span>
+    ? `<img src="${logoDataUrl}" alt="Bennu Logo" style="height:38px; width:auto; object-fit:contain;" />`
+    : `<div style="width:38px;height:38px;background:#2371B9;border-radius:6px;display:flex;align-items:center;justify-content:center;">
+         <span style="color:#fff;font-weight:900;font-size:15px;">B</span>
        </div>`;
 
   // ── Cost breakdown rows HTML ──────────────────────────────────────────────
@@ -164,17 +164,17 @@ export const generateSupplierInvoiceHTML = (
 
   body {
     font-family: 'Inter', 'Helvetica Neue', Arial, sans-serif;
-    font-size: 12px;
+    font-size: 11px;
     color: #1a1a1a;
     background: #fff;
-    line-height: 1.5;
+    line-height: 1.4;
   }
 
   /* ── Header ── */
   .header {
     background: #2371B9;
     color: #fff;
-    padding: 22px 36px;
+    padding: 10px 18px;
     display: flex;
     justify-content: space-between;
     align-items: center;
@@ -185,50 +185,50 @@ export const generateSupplierInvoiceHTML = (
   }
   .header-right { text-align: right; }
   .doc-title {
-    font-size: 24px; font-weight: 800; letter-spacing: 3px; color: #fff; text-transform: uppercase;
+    font-size: 18px; font-weight: 800; letter-spacing: 2px; color: #fff; text-transform: uppercase;
   }
-  .doc-subtitle { font-size: 10px; color: rgba(255,255,255,0.65); margin-top: 3px; letter-spacing: 0.5px; }
+  .doc-subtitle { font-size: 9px; color: rgba(255,255,255,0.65); margin-top: 3px; letter-spacing: 0.5px; }
 
   /* ── Blue accent line ── */
   .accent-bar {
-    height: 3px;
+    height: 2px;
     background: linear-gradient(90deg, #1a5fa0 0%, #5ba3e0 50%, #2371B9 100%);
   }
 
   /* ── Body ── */
-  .body { padding: 20px 28px; }
+  .body { padding: 12px 18px; }
 
   /* ── Invoice meta strip ── */
   .meta-strip {
     display: grid;
-    grid-template-columns: repeat(4, 1fr);
+    grid-template-columns: repeat(8, 1fr);
     gap: 0;
     border: 1px solid #e8e8e8;
     border-radius: 6px;
     overflow: hidden;
-    margin-bottom: 24px;
+    margin-bottom: 12px;
   }
   .meta-cell {
-    padding: 12px 14px;
+    padding: 6px 8px;
     border-right: 1px solid #e8e8e8;
     background: #fafafa;
   }
   .meta-cell:last-child { border-right: none; }
   .meta-cell.highlight { background: #2371B9; color: #fff; }
   .meta-label {
-    font-size: 9px; font-weight: 700; text-transform: uppercase;
-    letter-spacing: 0.8px; color: #5c8abf; margin-bottom: 4px;
+    font-size: 8px; font-weight: 700; text-transform: uppercase;
+    letter-spacing: 0.8px; color: #5c8abf; margin-bottom: 2px;
   }
   .meta-cell.highlight .meta-label { color: rgba(255,255,255,0.6); }
-  .meta-value { font-size: 12px; font-weight: 600; color: #1a1a1a; }
+  .meta-value { font-size: 11px; font-weight: 600; color: #1a1a1a; }
   .meta-cell.highlight .meta-value { color: #fff; }
 
   /* ── Status badge ── */
   .status-badge {
     display: inline-block;
-    padding: 3px 10px;
+    padding: 2px 7px;
     border-radius: 3px;
-    font-size: 10px;
+    font-size: 9px;
     font-weight: 700;
     letter-spacing: 0.8px;
     text-transform: uppercase;
@@ -240,94 +240,94 @@ export const generateSupplierInvoiceHTML = (
   .parties {
     display: grid;
     grid-template-columns: 1fr 1fr;
-    gap: 20px;
-    margin-bottom: 24px;
+    gap: 10px;
+    margin-bottom: 12px;
   }
   .party-card {
     border: 1px solid #e8e8e8;
     border-radius: 6px;
-    padding: 14px 16px;
+    padding: 7px 10px;
   }
   .party-card.issuer { border-left: 3px solid #2371B9; }
   .party-card.payee  { border-left: 3px solid #15803d; }
   .party-role {
-    font-size: 9px; font-weight: 700; text-transform: uppercase;
-    letter-spacing: 1px; margin-bottom: 8px;
+    font-size: 8px; font-weight: 700; text-transform: uppercase;
+    letter-spacing: 1px; margin-bottom: 4px;
   }
   .party-card.issuer .party-role { color: #2371B9; }
   .party-card.payee .party-role  { color: #15803d; }
-  .party-name { font-size: 14px; font-weight: 700; margin-bottom: 4px; }
-  .party-detail { font-size: 11px; color: #666; line-height: 1.6; }
+  .party-name { font-size: 11px; font-weight: 700; margin-bottom: 2px; }
+  .party-detail { font-size: 10px; color: #666; line-height: 1.5; }
 
   /* ── Section heading ── */
   .section-heading {
-    font-size: 10px; font-weight: 700; text-transform: uppercase;
+    font-size: 9px; font-weight: 700; text-transform: uppercase;
     letter-spacing: 1px; color: #5c8abf;
     border-bottom: 2px solid #e0e8f4;
-    padding-bottom: 6px; margin-bottom: 12px;
+    padding-bottom: 4px; margin-bottom: 8px;
   }
 
   /* ── Line items table ── */
-  .line-table { width: 100%; border-collapse: collapse; margin-bottom: 24px; }
+  .line-table { width: 100%; border-collapse: collapse; margin-bottom: 12px; }
   .line-table thead tr {
     background: #2371B9; color: #fff;
   }
   .line-table thead th {
-    padding: 9px 12px; text-align: left;
-    font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.8px;
+    padding: 6px 8px; text-align: left;
+    font-size: 8px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.8px;
   }
   .line-table thead th.right { text-align: right; }
   .line-table tbody td {
-    padding: 10px 12px; border-bottom: 1px solid #f0f4fa; font-size: 12px;
+    padding: 6px 8px; border-bottom: 1px solid #f0f4fa; font-size: 12px;
   }
   .line-table tbody tr:last-child td { border-bottom: none; }
   .line-table tfoot td {
-    padding: 8px 12px; font-size: 12px; font-weight: 600;
+    padding: 5px 8px; font-size: 12px; font-weight: 600;
     background: #f6f9fd; border-top: 2px solid #d0dff0;
   }
-  .grain-name { font-weight: 700; font-size: 13px; }
-  .grain-meta { font-size: 10px; color: #888; margin-top: 2px; }
+  .grain-name { font-weight: 700; font-size: 11px; }
+  .grain-meta { font-size: 9px; color: #888; margin-top: 2px; }
 
   /* ── Two-column bottom ── */
   .bottom-grid {
     display: grid;
     grid-template-columns: 1fr 1fr;
-    gap: 20px;
-    margin-top: 4px;
+    gap: 12px;
+    margin-top: 2px;
   }
 
   /* ── Cost breakdown ── */
   .cost-table { width: 100%; border-collapse: collapse; }
-  .cost-table td { font-size: 11px; }
+  .cost-table td { font-size: 11px; padding: 4px 8px; }
 
   /* ── Summary ── */
   .summary-box { border: 1px solid #e0e8f4; border-radius: 6px; overflow: hidden; }
   .summary-row {
     display: flex; justify-content: space-between; align-items: center;
-    padding: 9px 14px; border-bottom: 1px solid #f0f4fa;
-    font-size: 12px;
+    padding: 6px 10px; border-bottom: 1px solid #f0f4fa;
+    font-size: 11px;
   }
   .summary-row:last-child { border-bottom: none; }
   .summary-row .label { color: #555; }
   .summary-row .value { font-weight: 600; }
   .summary-row.paid .value  { color: #15803d; }
   .summary-row.balance {
-    background: #2371B9; color: #fff; padding: 13px 14px;
+    background: #2371B9; color: #fff; padding: 8px 10px;
   }
   .summary-row.balance .label { color: rgba(255,255,255,0.7); font-weight: 600; font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; }
-  .summary-row.balance .value { color: #fff; font-weight: 800; font-size: 16px; }
+  .summary-row.balance .value { color: #fff; font-weight: 800; font-size: 14px; }
 
   /* ── Notes ── */
   .notes-box {
-    margin-top: 20px; padding: 12px 14px;
+    margin-top: 10px; padding: 6px 10px;
     border: 1px solid #e0e8f4; border-radius: 6px;
-    background: #f6f9fd; font-size: 11px; color: #555;
+    background: #f6f9fd; font-size: 10px; color: #555;
   }
   .notes-box strong { display: block; font-size: 10px; text-transform: uppercase; letter-spacing: 0.8px; color: #5c8abf; margin-bottom: 4px; }
 
   /* ── Footer ── */
   .footer {
-    margin-top: 28px; padding-top: 14px;
+    margin-top: 12px; padding-top: 8px;
     border-top: 1px solid #e0e8f4;
     display: flex; justify-content: space-between; align-items: flex-end;
     font-size: 10px; color: #999;
@@ -339,7 +339,7 @@ export const generateSupplierInvoiceHTML = (
   }
 
   @media print {
-    @page { margin: 8mm; size: A4 portrait; }
+    @page { margin: 6mm; size: A4 portrait; }
     body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
   }
 </style>
@@ -478,13 +478,13 @@ export const generateSupplierInvoiceHTML = (
       </table>
 
       ${invoice.payment_reference ? `
-      <div style="margin-top:14px; padding:10px 12px; background:#f8f8f8; border:1px solid #e8e8e8; border-radius:4px;">
+      <div style="margin-top:8px; padding:6px 8px; background:#f8f8f8; border:1px solid #e8e8e8; border-radius:4px;">
         <div style="font-size:9px;text-transform:uppercase;font-weight:700;letter-spacing:0.8px;color:#7a8899;margin-bottom:3px;">Payment Reference</div>
         <div style="font-family:monospace;font-size:12px;font-weight:600;">${invoice.payment_reference}</div>
       </div>` : ""}
 
       ${invoice.paid_at ? `
-      <div style="margin-top:10px; padding:10px 12px; background:#f0faf0; border:1px solid #c3e6cb; border-radius:4px;">
+      <div style="margin-top:4px; padding:6px 8px; background:#f0faf0; border:1px solid #c3e6cb; border-radius:4px;">
         <div style="font-size:9px;text-transform:uppercase;font-weight:700;letter-spacing:0.8px;color:#2e7d32;margin-bottom:3px;">Paid On</div>
         <div style="font-size:12px;font-weight:600;color:#1b5e20;">${formatDate(invoice.paid_at)}</div>
       </div>` : ""}
@@ -528,11 +528,11 @@ export const generateSupplierInvoiceHTML = (
   </div>` : ""}
 
   <!-- ── Signature Block ── -->
-  <div style="margin-top:24px;display:grid;grid-template-columns:1fr 1fr;gap:40px;">
-    <div style="border-top:1px solid #1a1a1a;padding-top:6px;text-align:center;font-size:10px;color:#555;">
+  <div style="margin-top:10px;display:grid;grid-template-columns:1fr 1fr;gap:40px;">
+    <div style="border-top:1px solid #1a1a1a;padding-top:4px;text-align:center;font-size:9px;color:#555;">
       Supplier Signature
     </div>
-    <div style="border-top:1px solid #1a1a1a;padding-top:6px;text-align:center;font-size:10px;color:#555;">
+    <div style="border-top:1px solid #1a1a1a;padding-top:4px;text-align:center;font-size:9px;color:#555;">
       Authorized by Bennu
     </div>
   </div>

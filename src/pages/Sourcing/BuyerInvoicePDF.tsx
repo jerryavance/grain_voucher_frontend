@@ -91,20 +91,20 @@ export const generateBuyerInvoiceHTML = (
 
   // ── Logo HTML ─────────────────────────────────────────────────────────────
   const logoHtml = logoDataUrl
-    ? `<img src="${logoDataUrl}" alt="Logo" style="height:52px;width:auto;object-fit:contain;" />`
-    : `<div style="height:52px;width:52px;background:#2371B9;border-radius:6px;display:flex;align-items:center;justify-content:center;">
-         <span style="color:#fff;font-weight:900;font-size:20px;">B</span></div>`;
+    ? `<img src="${logoDataUrl}" alt="Logo" style="height:38px;width:auto;object-fit:contain;" />`
+    : `<div style="height:38px;width:38px;background:#2371B9;border-radius:6px;display:flex;align-items:center;justify-content:center;">
+         <span style="color:#fff;font-weight:900;font-size:15px;">B</span></div>`;
 
   // ── Grain sale lines HTML (buyer-facing: no COGS columns) ─────────────────
   const lines: IBuyerInvoiceOrderLine[] = invoice.order_lines || [];
   const linesHtml = lines.length > 0
     ? lines.map(l => `
       <tr>
-        <td style="padding:8px 10px;border-bottom:1px solid #f0f4fa;font-weight:600;color:#1565c0;">${l.lot_number}</td>
-        <td style="padding:8px 10px;border-bottom:1px solid #f0f4fa;">${l.grain_type}</td>
-        <td style="padding:8px 10px;border-bottom:1px solid #f0f4fa;text-align:right;">${fmtNum(l.quantity_kg)} kg</td>
-        <td style="padding:8px 10px;border-bottom:1px solid #f0f4fa;text-align:right;">${ugx(l.sale_price_per_kg)}</td>
-        <td style="padding:8px 10px;border-bottom:1px solid #f0f4fa;text-align:right;font-weight:700;">${ugx(l.line_total)}</td>
+        <td style="padding:5px 8px;border-bottom:1px solid #f0f4fa;font-weight:600;color:#1565c0;">${l.lot_number}</td>
+        <td style="padding:5px 8px;border-bottom:1px solid #f0f4fa;">${l.grain_type}</td>
+        <td style="padding:5px 8px;border-bottom:1px solid #f0f4fa;text-align:right;">${fmtNum(l.quantity_kg)} kg</td>
+        <td style="padding:5px 8px;border-bottom:1px solid #f0f4fa;text-align:right;">${ugx(l.sale_price_per_kg)}</td>
+        <td style="padding:5px 8px;border-bottom:1px solid #f0f4fa;text-align:right;font-weight:700;">${ugx(l.line_total)}</td>
       </tr>`).join("")
     : `<tr><td colspan="5" style="padding:12px 10px;text-align:center;color:#999;">No line items</td></tr>`;
 
@@ -120,9 +120,9 @@ export const generateBuyerInvoiceHTML = (
   const expensesHtml = expenses.length > 0
     ? expenses.map(e => `
       <tr>
-        <td style="padding:8px 10px;border-bottom:1px solid #f0f4fa;">${e.category_display || "—"}</td>
-        <td style="padding:8px 10px;border-bottom:1px solid #f0f4fa;">${e.description || "—"}</td>
-        <td style="padding:8px 10px;border-bottom:1px solid #f0f4fa;text-align:right;font-weight:600;">${ugx(e.amount)}</td>
+        <td style="padding:5px 8px;border-bottom:1px solid #f0f4fa;">${e.category_display || "—"}</td>
+        <td style="padding:5px 8px;border-bottom:1px solid #f0f4fa;">${e.description || "—"}</td>
+        <td style="padding:5px 8px;border-bottom:1px solid #f0f4fa;text-align:right;font-weight:600;">${ugx(e.amount)}</td>
       </tr>`).join("")
     : "";
 
@@ -138,85 +138,85 @@ export const generateBuyerInvoiceHTML = (
 <style>
   @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
   * { margin:0;padding:0;box-sizing:border-box; }
-  body { font-family:'Inter','Helvetica Neue',Arial,sans-serif;font-size:12px;color:#1a1a1a;background:#fff;line-height:1.5; }
+  body { font-family:'Inter','Helvetica Neue',Arial,sans-serif;font-size:11px;color:#1a1a1a;background:#fff;line-height:1.4; }
 
-  .header { background:#2371B9;padding:22px 36px;display:flex;justify-content:space-between;align-items:center; }
+  .header { background:#2371B9;padding:10px 18px;display:flex;justify-content:space-between;align-items:center; }
   .header-left { display:flex;align-items:center;gap:14px; }
   .company-sub { font-size:9px;color:rgba(255,255,255,0.7);letter-spacing:1.5px;text-transform:uppercase;margin-top:2px; }
   .header-right { text-align:right; }
-  .doc-title { font-size:22px;font-weight:800;letter-spacing:3px;color:#fff;text-transform:uppercase; }
+  .doc-title { font-size:18px;font-weight:800;letter-spacing:3px;color:#fff;text-transform:uppercase; }
   .doc-sub { font-size:10px;color:rgba(255,255,255,0.65);margin-top:4px; }
-  .accent-bar { height:3px;background:linear-gradient(90deg,#1a5fa0 0%,#5ba3e0 50%,#2371B9 100%); }
-  .body { padding:20px 28px; }
+  .accent-bar { height:2px;background:linear-gradient(90deg,#1a5fa0 0%,#5ba3e0 50%,#2371B9 100%); }
+  .body { padding:12px 18px; }
 
   /* Meta strip */
-  .meta-strip { display:grid;grid-template-columns:repeat(5,1fr);border:1px solid #e0e8f4;border-radius:6px;overflow:hidden;margin-bottom:20px; }
-  .meta-cell { padding:10px 12px;border-right:1px solid #e0e8f4;background:#f6f9fd; }
+  .meta-strip { display:grid;grid-template-columns:repeat(5,1fr);border:1px solid #e0e8f4;border-radius:6px;overflow:hidden;margin-bottom:8px; }
+  .meta-cell { padding:6px 8px;border-right:1px solid #e0e8f4;background:#f6f9fd; }
   .meta-cell:last-child { border-right:none; }
   .meta-cell.dark { background:#2371B9;color:#fff; }
-  .meta-label { font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:0.8px;color:#5c8abf;margin-bottom:3px; }
+  .meta-label { font-size:8px;font-weight:700;text-transform:uppercase;letter-spacing:0.8px;color:#5c8abf;margin-bottom:2px; }
   .meta-cell.dark .meta-label { color:rgba(255,255,255,0.6); }
-  .meta-value { font-size:12px;font-weight:600;color:#1a1a1a; }
+  .meta-value { font-size:11px;font-weight:600;color:#1a1a1a; }
   .meta-cell.dark .meta-value { color:#fff; }
-  .status-badge { display:inline-block;padding:3px 10px;border-radius:3px;font-size:10px;font-weight:700;letter-spacing:0.8px;text-transform:uppercase;background:${ss.bg};color:${ss.color}; }
+  .status-badge { display:inline-block;padding:2px 7px;border-radius:3px;font-size:9px;font-weight:700;letter-spacing:0.8px;text-transform:uppercase;background:${ss.bg};color:${ss.color}; }
 
   /* Parties */
-  .parties { display:grid;grid-template-columns:1fr 1fr;gap:18px;margin-bottom:20px; }
-  .party-card { border:1px solid #e0e8f4;border-radius:6px;padding:12px 14px; }
+  .parties { display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px; }
+  .party-card { border:1px solid #e0e8f4;border-radius:6px;padding:7px 10px; }
   .party-card.from { border-left:3px solid #2371B9; }
   .party-card.to   { border-left:3px solid #15803d; }
-  .party-role { font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:1px;margin-bottom:6px; }
+  .party-role { font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:1px;margin-bottom:3px; }
   .party-card.from .party-role { color:#2371B9; }
   .party-card.to   .party-role { color:#15803d; }
-  .party-name   { font-size:13px;font-weight:700;margin-bottom:3px; }
-  .party-detail { font-size:11px;color:#666;line-height:1.7; }
+  .party-name   { font-size:11px;font-weight:700;margin-bottom:1px; }
+  .party-detail { font-size:10px;color:#666;line-height:1.5; }
 
   /* Section heading */
-  .section-heading { font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:#5c8abf;border-bottom:2px solid #e0e8f4;padding-bottom:5px;margin-bottom:10px;margin-top:18px; }
+  .section-heading { font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:#5c8abf;border-bottom:2px solid #e0e8f4;padding-bottom:3px;margin-bottom:6px;margin-top:8px; }
 
   /* Tables */
   .data-table { width:100%;border-collapse:collapse;margin-bottom:4px; }
   .data-table thead tr { background:#2371B9;color:#fff; }
-  .data-table thead th { padding:8px 10px;text-align:left;font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:0.7px; }
+  .data-table thead th { padding:5px 8px;text-align:left;font-size:8px;font-weight:700;text-transform:uppercase;letter-spacing:0.7px; }
   .data-table thead th.r { text-align:right; }
   .data-table tbody tr:last-child td { border-bottom:none; }
-  .data-table tfoot td { padding:8px 10px;font-size:12px;font-weight:600;background:#f6f9fd;border-top:2px solid #d0dff0; }
+  .data-table tfoot td { padding:5px 8px;font-size:12px;font-weight:600;background:#f6f9fd;border-top:2px solid #d0dff0; }
 
   /* Bottom grid — bank instructions full width + payment summary side by side */
-  .bottom-grid { display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-top:18px; }
+  .bottom-grid { display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:10px; }
 
   /* Bank table */
   .bank-table { width:100%;border-collapse:collapse; }
-  .bank-table td { font-size:11px;padding:6px 0;border-bottom:1px dotted #e0e8f4; }
+  .bank-table td { font-size:10px;padding:3px 0;border-bottom:1px dotted #e0e8f4; }
   .bank-table tr:last-child td { border-bottom:none; }
   .bank-label { color:#666;width:50%; }
   .bank-value { font-weight:700;text-align:right; }
 
   /* Summary box */
   .summary-box { border:1px solid #e0e8f4;border-radius:6px;overflow:hidden; }
-  .summary-row { display:flex;justify-content:space-between;align-items:center;padding:8px 12px;border-bottom:1px solid #f0f4fa;font-size:12px; }
+  .summary-row { display:flex;justify-content:space-between;align-items:center;padding:5px 10px;border-bottom:1px solid #f0f4fa;font-size:11px; }
   .summary-row:last-child { border-bottom:none; }
   .summary-row .s-label { color:#555; }
   .summary-row .s-value { font-weight:700; }
-  .summary-row.balance { background:#2371B9;color:#fff;padding:12px 12px; }
+  .summary-row.balance { background:#2371B9;color:#fff;padding:8px 10px; }
   .summary-row.balance .s-label { color:rgba(255,255,255,0.7);font-size:11px; }
   .summary-row.balance .s-value { color:#fff;font-size:16px; }
 
   /* Progress */
-  .progress-wrap { margin-top:14px; }
+  .progress-wrap { margin-top:8px; }
   .progress-header { display:flex;justify-content:space-between;font-size:10px;color:#666;margin-bottom:4px; }
   .progress-track { height:6px;background:#e0e8f4;border-radius:3px;overflow:hidden; }
   .progress-fill  { height:100%;width:${paidPct.toFixed(1)}%;background:${progressColor};border-radius:3px;transition:width 0.3s; }
 
   /* Notes / footer */
-  .notes-box { background:#fffbeb;border:1px solid #fde68a;border-radius:6px;padding:12px 14px;margin-top:16px;font-size:11px; }
-  .footer { margin-top:24px;padding-top:10px;border-top:1px solid #e0e8f4;display:flex;justify-content:space-between;align-items:flex-end; }
-  .footer-text { font-size:10px;color:#999; }
+  .notes-box { background:#fffbeb;border:1px solid #fde68a;border-radius:6px;padding:6px 10px;margin-top:8px;font-size:10px; }
+  .footer { margin-top:10px;padding-top:6px;border-top:1px solid #e0e8f4;display:flex;justify-content:space-between;align-items:flex-end; }
+  .footer-text { font-size:9px;color:#999; }
   .stamp { font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#2371B9;border:1.5px solid #2371B9;padding:3px 10px;border-radius:3px; }
 
   @media print {
     body { -webkit-print-color-adjust:exact;print-color-adjust:exact; }
-    @page { margin:8mm;size:A4 portrait; }
+    @page { margin:6mm;size:A4 portrait; }
   }
 </style>
 </head>
@@ -262,7 +262,7 @@ export const generateBuyerInvoiceHTML = (
       <div class="meta-value">${terms}</div>
     </div>
   </div>
-  <div class="meta-strip" style="margin-top:-4px;">
+  <div class="meta-strip" style="margin-top:4px;">
     <div class="meta-cell">
       <div class="meta-label">Destination Warehouse</div>
       <div class="meta-value">${invoice.hub_name || "—"}</div>
@@ -350,9 +350,9 @@ export const generateBuyerInvoiceHTML = (
   ` : ""}
 
   <!-- Grand Total -->
-  <div style="text-align:right;margin-top:6px;padding:10px 0;border-top:2px solid #2371B9;">
+  <div style="text-align:right;margin-top:4px;padding:5px 0;border-top:2px solid #2371B9;">
     <span style="font-size:11px;color:#5c8abf;margin-right:20px;">Total</span>
-    <span style="font-size:16px;font-weight:800;color:#1a1a1a;">${ugx(amountDue)}</span>
+    <span style="font-size:14px;font-weight:800;color:#1a1a1a;">${ugx(amountDue)}</span>
   </div>
 
   <!-- Bank instructions + Payment Summary -->
@@ -409,16 +409,16 @@ export const generateBuyerInvoiceHTML = (
   </div>` : ""}
 
   <!-- Signature block -->
-  <div style="display:grid;grid-template-columns:1fr 1fr;gap:40px;margin-top:24px;padding-top:16px;border-top:1px solid #e0e8f4;">
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:40px;margin-top:12px;padding-top:10px;border-top:1px solid #e0e8f4;">
     <div>
-      <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.8px;color:#5c8abf;margin-bottom:6px;">Authorised by (Seller)</div>
-      <div style="border-bottom:1.5px solid #1a1a1a;height:40px;margin-bottom:4px;"></div>
-      <div style="font-size:10px;color:#888;">Name &amp; Signature &nbsp;/&nbsp; Date</div>
+      <div style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:0.8px;color:#5c8abf;margin-bottom:6px;">Authorised by (Seller)</div>
+      <div style="border-bottom:1.5px solid #1a1a1a;height:32px;margin-bottom:3px;"></div>
+      <div style="font-size:9px;color:#888;">Name &amp; Signature &nbsp;/&nbsp; Date</div>
     </div>
     <div>
-      <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.8px;color:#5c8abf;margin-bottom:6px;">Received by (Buyer)</div>
-      <div style="border-bottom:1.5px solid #1a1a1a;height:40px;margin-bottom:4px;"></div>
-      <div style="font-size:10px;color:#888;">Name &amp; Signature &nbsp;/&nbsp; Date</div>
+      <div style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:0.8px;color:#5c8abf;margin-bottom:6px;">Received by (Buyer)</div>
+      <div style="border-bottom:1.5px solid #1a1a1a;height:32px;margin-bottom:3px;"></div>
+      <div style="font-size:9px;color:#888;">Name &amp; Signature &nbsp;/&nbsp; Date</div>
     </div>
   </div>
 

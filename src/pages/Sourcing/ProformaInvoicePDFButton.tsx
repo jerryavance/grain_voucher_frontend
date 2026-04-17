@@ -73,9 +73,9 @@ export const generatePFIHTML = (
   const ss = statusMap[pfi.status] ?? statusMap.draft;
 
   const logoHtml = logoDataUrl
-    ? `<img src="${logoDataUrl}" alt="Logo" style="height:52px;width:auto;object-fit:contain;" />`
-    : `<div style="height:52px;width:52px;background:#2371B9;border-radius:6px;display:flex;align-items:center;justify-content:center;">
-         <span style="color:#fff;font-weight:900;font-size:20px;">B</span></div>`;
+    ? `<img src="${logoDataUrl}" alt="Logo" style="height:40px;width:auto;object-fit:contain;" />`
+    : `<div style="height:40px;width:40px;background:#2371B9;border-radius:6px;display:flex;align-items:center;justify-content:center;">
+         <span style="color:#fff;font-weight:900;font-size:16px;">B</span></div>`;
 
   // Bank — prefer PFI-level fields, fallback to Bennu defaults
   const bankName    = pfi.bank_name    || "STANBIC BANK";
@@ -93,90 +93,90 @@ export const generatePFIHTML = (
 <style>
   @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
   * { margin:0;padding:0;box-sizing:border-box; }
-  body { font-family:'Inter','Helvetica Neue',Arial,sans-serif;font-size:12px;color:#1a1a1a;background:#fff;line-height:1.5; }
+  body { font-family:'Inter','Helvetica Neue',Arial,sans-serif;font-size:11px;color:#1a1a1a;background:#fff;line-height:1.4; }
 
-  .header { background:#2371B9;padding:22px 36px;display:flex;justify-content:space-between;align-items:center; }
+  .header { background:#2371B9;padding:10px 18px;display:flex;justify-content:space-between;align-items:center; }
   .header-left { display:flex;align-items:center;gap:14px; }
   .company-name { font-size:18px;font-weight:800;color:#fff;letter-spacing:1px; }
   .company-sub { font-size:9px;color:rgba(255,255,255,0.7);letter-spacing:1.5px;text-transform:uppercase;margin-top:2px; }
   .header-right { text-align:right; }
-  .doc-title { font-size:22px;font-weight:800;letter-spacing:3px;color:#fff;text-transform:uppercase; }
+  .doc-title { font-size:18px;font-weight:800;letter-spacing:3px;color:#fff;text-transform:uppercase; }
   .doc-sub { font-size:10px;color:rgba(255,255,255,0.65);margin-top:4px; }
-  .accent-bar { height:3px;background:linear-gradient(90deg,#1a5fa0 0%,#5ba3e0 50%,#2371B9 100%); }
-  .body { padding:20px 28px; }
+  .accent-bar { height:2px;background:linear-gradient(90deg,#1a5fa0 0%,#5ba3e0 50%,#2371B9 100%); }
+  .body { padding:12px 18px; }
 
   /* Meta strip */
-  .meta-strip { display:grid;grid-template-columns:repeat(5,1fr);border:1px solid #e0e8f4;border-radius:6px;overflow:hidden;margin-bottom:20px; }
-  .meta-cell { padding:10px 12px;border-right:1px solid #e0e8f4;background:#f6f9fd; }
+  .meta-strip { display:grid;grid-template-columns:repeat(5,1fr);border:1px solid #e0e8f4;border-radius:6px;overflow:hidden;margin-bottom:10px; }
+  .meta-cell { padding:6px 8px;border-right:1px solid #e0e8f4;background:#f6f9fd; }
   .meta-cell:last-child { border-right:none; }
   .meta-cell.dark { background:#2371B9;color:#fff; }
-  .meta-label { font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:0.8px;color:#5c8abf;margin-bottom:3px; }
+  .meta-label { font-size:8px;font-weight:700;text-transform:uppercase;letter-spacing:0.8px;color:#5c8abf;margin-bottom:2px; }
   .meta-cell.dark .meta-label { color:rgba(255,255,255,0.6); }
-  .meta-value { font-size:12px;font-weight:600;color:#1a1a1a; }
+  .meta-value { font-size:11px;font-weight:600;color:#1a1a1a; }
   .meta-cell.dark .meta-value { color:#fff; }
   .status-badge { display:inline-block;padding:3px 10px;border-radius:3px;font-size:10px;font-weight:700;letter-spacing:0.8px;text-transform:uppercase;background:${ss.bg};color:${ss.color}; }
 
   /* Parties */
-  .parties { display:grid;grid-template-columns:1fr 1fr;gap:18px;margin-bottom:20px; }
-  .party-card { border:1px solid #e0e8f4;border-radius:6px;padding:12px 14px; }
+  .parties { display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px; }
+  .party-card { border:1px solid #e0e8f4;border-radius:6px;padding:7px 10px; }
   .party-card.from { border-left:3px solid #2371B9; }
   .party-card.to   { border-left:3px solid #15803d; }
-  .party-role { font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:1px;margin-bottom:6px; }
+  .party-role { font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:1px;margin-bottom:3px; }
   .party-card.from .party-role { color:#2371B9; }
   .party-card.to   .party-role { color:#15803d; }
-  .party-name   { font-size:13px;font-weight:700;margin-bottom:3px; }
-  .party-detail { font-size:11px;color:#666;line-height:1.7; }
+  .party-name   { font-size:11px;font-weight:700;margin-bottom:1px; }
+  .party-detail { font-size:10px;color:#666;line-height:1.5; }
 
   /* Section heading */
-  .section-heading { font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:#5c8abf;border-bottom:2px solid #e0e8f4;padding-bottom:5px;margin-bottom:10px;margin-top:18px; }
+  .section-heading { font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:#5c8abf;border-bottom:2px solid #e0e8f4;padding-bottom:3px;margin-bottom:6px;margin-top:8px; }
 
   /* Tables */
   .data-table { width:100%;border-collapse:collapse;margin-bottom:4px; }
   .data-table thead tr { background:#2371B9;color:#fff; }
-  .data-table thead th { padding:8px 10px;text-align:left;font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:0.7px; }
+  .data-table thead th { padding:5px 8px;text-align:left;font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:0.7px; }
   .data-table thead th.r { text-align:right; }
-  .data-table tbody td { padding:8px 10px;border-bottom:1px solid #f0f4fa; }
-  .data-table tfoot td { padding:8px 10px;font-size:12px;font-weight:600;background:#f6f9fd;border-top:2px solid #d0dff0; }
+  .data-table tbody td { padding:5px 8px;border-bottom:1px solid #f0f4fa; }
+  .data-table tfoot td { padding:5px 8px;font-size:12px;font-weight:600;background:#f6f9fd;border-top:2px solid #d0dff0; }
 
   /* Bottom grid */
-  .bottom-grid { display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-top:18px; }
+  .bottom-grid { display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:8px; }
 
   /* Bank table */
   .bank-table { width:100%;border-collapse:collapse; }
-  .bank-table td { font-size:11px;padding:6px 0;border-bottom:1px dotted #e0e8f4; }
+  .bank-table td { font-size:10px;padding:3px 0;border-bottom:1px dotted #e0e8f4; }
   .bank-label { color:#888;width:130px; }
   .bank-value { font-weight:600;color:#1a1a1a; }
 
   /* Summary box */
   .summary-box { border:1px solid #e0e8f4;border-radius:6px;overflow:hidden; }
-  .summary-row { display:flex;justify-content:space-between;padding:8px 14px;border-bottom:1px solid #f0f4fa;font-size:12px; }
+  .summary-row { display:flex;justify-content:space-between;padding:5px 10px;border-bottom:1px solid #f0f4fa;font-size:11px; }
   .summary-row:last-child { border-bottom:none; }
   .summary-row.balance { background:#2371B9;color:#fff;font-weight:700;font-size:14px; }
   .s-label { color:inherit; }
   .s-value { font-weight:600; }
 
   /* Narrative box */
-  .narrative-box { border:1px solid #e0e8f4;border-radius:6px;padding:12px 14px;font-size:11px;color:#444;line-height:1.8;white-space:pre-wrap;margin-bottom:12px; }
-  .narrative-label { font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:#5c8abf;margin-bottom:6px; }
+  .narrative-box { border:1px solid #e0e8f4;border-radius:6px;padding:6px 10px;font-size:10px;color:#444;line-height:1.5;white-space:pre-wrap;margin-bottom:6px; }
+  .narrative-label { font-size:8px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:#5c8abf;margin-bottom:3px; }
 
   /* Signatory */
-  .signatory-box { border-top:2px solid #2371B9;padding-top:10px;margin-top:30px; }
-  .signatory-name { font-size:13px;font-weight:700;color:#1a1a1a; }
-  .signatory-title { font-size:11px;color:#666; }
+  .signatory-box { border-top:2px solid #2371B9;padding-top:6px;margin-top:8px; }
+  .signatory-name { font-size:11px;font-weight:700;color:#1a1a1a; }
+  .signatory-title { font-size:10px;color:#666; }
 
   /* Notes */
-  .notes-box { background:#fffbeb;border:1px solid #fde68a;border-radius:6px;padding:10px 14px;margin-top:14px;font-size:11px;color:#78350f; }
+  .notes-box { background:#fffbeb;border:1px solid #fde68a;border-radius:6px;padding:6px 10px;margin-top:8px;font-size:10px;color:#78350f; }
 
   /* Validity */
-  .validity-bar { background:#f0f9ff;border:1px solid #bae6fd;border-radius:6px;padding:10px 14px;margin-bottom:18px;font-size:11px;color:#0369a1;display:flex;align-items:center;gap:8px; }
+  .validity-bar { background:#f0f9ff;border:1px solid #bae6fd;border-radius:6px;padding:5px 10px;margin-bottom:8px;font-size:10px;color:#0369a1;display:flex;align-items:center;gap:8px; }
 
   /* Footer */
-  .footer { margin-top:32px;padding-top:14px;border-top:1px solid #e0e8f4;display:flex;justify-content:space-between;align-items:flex-end; }
-  .footer-text { font-size:10px;color:#999;line-height:1.7; }
-  .stamp { background:#2371B9;color:#fff;font-size:10px;font-weight:700;padding:5px 14px;border-radius:4px;letter-spacing:1px;text-transform:uppercase; }
+  .footer { margin-top:10px;padding-top:8px;border-top:1px solid #e0e8f4;display:flex;justify-content:space-between;align-items:flex-end; }
+  .footer-text { font-size:9px;color:#999;line-height:1.5; }
+  .stamp { background:#2371B9;color:#fff;font-size:9px;font-weight:700;padding:3px 10px;border-radius:4px;letter-spacing:1px;text-transform:uppercase; }
 
   @media print {
-    @page { margin:8mm; size:A4 portrait; }
+    @page { margin:6mm; size:A4 portrait; }
     body { -webkit-print-color-adjust:exact;print-color-adjust:exact; }
     .no-print { display:none !important; }
   }
@@ -251,18 +251,18 @@ export const generatePFIHTML = (
     </div>
 
     <!-- Logistics row -->
-    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:18px;">
-      <div style="background:#f6f9fd;border:1px solid #e0e8f4;border-radius:6px;padding:10px 12px;">
-        <div style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:0.8px;color:#5c8abf;margin-bottom:3px;">Ship Date</div>
-        <div style="font-size:12px;font-weight:600;">${pfi.ship_date || "To be confirmed"}</div>
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:10px;">
+      <div style="background:#f6f9fd;border:1px solid #e0e8f4;border-radius:6px;padding:6px 8px;">
+        <div style="font-size:8px;font-weight:700;text-transform:uppercase;letter-spacing:0.8px;color:#5c8abf;margin-bottom:1px;">Ship Date</div>
+        <div style="font-size:11px;font-weight:600;">${pfi.ship_date || "To be confirmed"}</div>
       </div>
-      <div style="background:#f6f9fd;border:1px solid #e0e8f4;border-radius:6px;padding:10px 12px;">
-        <div style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:0.8px;color:#5c8abf;margin-bottom:3px;">Shipped Via</div>
-        <div style="font-size:12px;font-weight:600;">${pfi.shipped_via || "—"}</div>
+      <div style="background:#f6f9fd;border:1px solid #e0e8f4;border-radius:6px;padding:6px 8px;">
+        <div style="font-size:8px;font-weight:700;text-transform:uppercase;letter-spacing:0.8px;color:#5c8abf;margin-bottom:1px;">Shipped Via</div>
+        <div style="font-size:11px;font-weight:600;">${pfi.shipped_via || "—"}</div>
       </div>
-      <div style="background:#f6f9fd;border:1px solid #e0e8f4;border-radius:6px;padding:10px 12px;">
-        <div style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:0.8px;color:#5c8abf;margin-bottom:3px;">Pick From</div>
-        <div style="font-size:12px;font-weight:600;">${pfi.pick_from || "Ex-Warehouse"}</div>
+      <div style="background:#f6f9fd;border:1px solid #e0e8f4;border-radius:6px;padding:6px 8px;">
+        <div style="font-size:8px;font-weight:700;text-transform:uppercase;letter-spacing:0.8px;color:#5c8abf;margin-bottom:1px;">Pick From</div>
+        <div style="font-size:11px;font-weight:600;">${pfi.pick_from || "Ex-Warehouse"}</div>
       </div>
     </div>
 
@@ -343,7 +343,7 @@ export const generatePFIHTML = (
     <!-- Buyer Reference / Customer PO -->
     ${pfi.notes ? `
     <div class="notes-box">
-      <strong>Buyer Reference / Customer PO:</strong> ${pfi.notes}
+      <strong>Comments:</strong> ${pfi.notes}
     </div>` : ""}
 
     <!-- Signatory -->
@@ -356,11 +356,11 @@ export const generatePFIHTML = (
     </div>` : ""}
 
     <!-- Signature Block -->
-    <div style="margin-top:24px;display:grid;grid-template-columns:1fr 1fr;gap:40px;">
-      <div style="border-top:1px solid #1a1a1a;padding-top:6px;text-align:center;font-size:10px;color:#555;">
+    <div style="margin-top:10px;display:grid;grid-template-columns:1fr 1fr;gap:40px;">
+      <div style="border-top:1px solid #1a1a1a;padding-top:4px;text-align:center;font-size:10px;color:#555;">
         Authorized Signature &amp; Stamp
       </div>
-      <div style="border-top:1px solid #1a1a1a;padding-top:6px;text-align:center;font-size:10px;color:#555;">
+      <div style="border-top:1px solid #1a1a1a;padding-top:4px;text-align:center;font-size:10px;color:#555;">
         Received By (Customer Signature)
       </div>
     </div>
