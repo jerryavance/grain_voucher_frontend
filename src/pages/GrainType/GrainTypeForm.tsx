@@ -87,7 +87,7 @@ const GrainTypeForm: FC<IGrainTypeFormProps> = ({ handleClose, formType = 'Save'
 
     return (
 
-        <ModalDialog title={formType === 'Save' ? "New GrainType" : "Edit GrainType"} onClose={handleReset} id={uniqueId()} ActionButtons={ActionBtns}>
+        <ModalDialog title={formType === 'Save' ? "New Product Type" : "Edit Product Type"} onClose={handleReset} id={uniqueId()} ActionButtons={ActionBtns}>
             <form ref={formRef} onSubmit={newGrainTypeForm.handleSubmit} encType="multipart/form-data" id='GrainType'>
                 <Box sx={{ width: '100%' }}>
                     <FormFactory others={{ sx: { marginBottom: '0rem' } }} formikInstance={newGrainTypeForm} formFields={formFields} validationSchema={GrainTypeFormValidations} />

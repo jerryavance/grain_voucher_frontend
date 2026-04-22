@@ -70,7 +70,7 @@ const CreateBuyerOrderForm: FC<{
   }, [buyerSearch]);
 
   const form = useFormik({
-    initialValues: { buyer: "", buyer_name: "", buyer_contact_name: "", buyer_phone: "", buyer_email: "", buyer_address: "", hub: "", credit_terms_days: 0, payment_type: "financed", grain_type: "", quantity_requested_kg: "", notes: "" },
+    initialValues: { buyer: "", buyer_name: "", buyer_contact_name: "", buyer_phone: "", buyer_email: "", buyer_address: "", hub: "", credit_terms_days: 0, payment_type: "financed", currency: "UGX", grain_type: "", quantity_requested_kg: "", notes: "" },
     validationSchema: Yup.object({
       hub: Yup.string().required("Hub is required"),
       buyer: Yup.string(),
@@ -83,7 +83,7 @@ const CreateBuyerOrderForm: FC<{
     onSubmit: async (values) => {
       setLoading(true);
       try {
-        const payload: any = { hub: values.hub, notes: values.notes, credit_terms_days: values.credit_terms_days, payment_type: values.payment_type };
+        const payload: any = { hub: values.hub, notes: values.notes, credit_terms_days: values.credit_terms_days, payment_type: values.payment_type, currency: values.currency };
         if (values.grain_type) payload.grain_type = values.grain_type;
         if (values.quantity_requested_kg) payload.quantity_requested_kg = Number(values.quantity_requested_kg);
         if (buyerMode === "profile" && values.buyer) { payload.buyer = values.buyer; }
@@ -133,16 +133,28 @@ const CreateBuyerOrderForm: FC<{
             </Select>
           </FormControl>
         </Grid>
+        {/* Currency */}
+        <Grid item xs={12} md={6}>
+          <FormControl fullWidth>
+            <InputLabel>Currency *</InputLabel>
+            <Select value={form.values.currency} label="Currency *" onChange={e => form.setFieldValue("currency", e.target.value)}>
+              <MenuItem value="UGX">UGX — Ugandan Shilling</MenuItem>
+              <MenuItem value="USD">USD — US Dollar</MenuItem>
+              <MenuItem value="EUR">EUR — Euro</MenuItem>
+              <MenuItem value="GBP">GBP — British Pound</MenuItem>
+            </Select>
+          </FormControl>
+        </Grid>
         {/* Pre-sourcing demand — optional grain type + quantity for quotation */}
         <Grid item xs={12} md={6}>
-          <FormControl fullWidth><InputLabel>Grain Type (optional)</InputLabel>
-            <Select value={form.values.grain_type} label="Grain Type (optional)" onChange={e => form.setFieldValue("grain_type", e.target.value)}>
+          <FormControl fullWidth><InputLabel>Product Type (optional)</InputLabel>
+            <Select value={form.values.grain_type} label="Product Type (optional)" onChange={e => form.setFieldValue("grain_type", e.target.value)}>
               <MenuItem value="">— Not specified —</MenuItem>
               {grainTypes.map(g => <MenuItem key={g.value} value={g.value}>{g.label}</MenuItem>)}
             </Select>
           </FormControl>
         </Grid>
-        <Grid item xs={12} md={6}><TextField fullWidth label="Quantity Requested (kg)" type="number" value={form.values.quantity_requested_kg} onChange={e => form.setFieldValue("quantity_requested_kg", e.target.value)} helperText="Used for quotation / PFI generation" /></Grid>
+        <Grid item xs={12} md={6}><TextField fullWidth label="Quantity Requested" type="number" value={form.values.quantity_requested_kg} onChange={e => form.setFieldValue("quantity_requested_kg", e.target.value)} helperText="Enter quantity in the product's unit of measure (kg, litres, …)" /></Grid>
         <Grid item xs={12}><TextField fullWidth label="Buyer Reference" multiline rows={2} value={form.values.notes} onChange={e => form.setFieldValue("notes", e.target.value)} helperText="Customer PO number or internal reference" /></Grid>
       </Grid>
     </ModalDialog>

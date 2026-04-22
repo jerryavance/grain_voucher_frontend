@@ -2,7 +2,22 @@ import { IHub } from "../Hub/Hub.interface";
 import { IUser } from "../Users/Users.interface";
 
 // ============ Grain Type & Quality Grade ============
-export interface IGrainType { id: string; name: string; description?: string; }
+export type TProductCategory = 'grain' | 'pesticide' | 'fertilizer' | 'seed' | 'other';
+export type TUnitOfMeasure = 'kg' | 'litre' | 'tonne' | 'bag' | 'piece';
+
+export interface IGrainType {
+  id: string;
+  name: string;
+  description?: string;
+  /** Broad commodity category (grain, pesticide, fertilizer, seed, other) */
+  product_category: TProductCategory;
+  product_category_display: string;
+  /** Unit used to measure quantity for this product (kg, litre, tonne, …) */
+  unit_of_measure: TUnitOfMeasure;
+  unit_of_measure_display: string;
+  /** Short abbreviation for the unit (kg, L, t, bag, pc) */
+  unit_label: string;
+}
 export interface IQualityGrade { id: string; name: string; min_moisture: number; max_moisture: number; description?: string; }
 
 // ============ Payment Preference ============
@@ -37,6 +52,8 @@ export type TLogisticsType = 'bennu_truck'|'supplier_driver'|'third_party';
 // NEW
 export type TTradeType = 'direct' | 'aggregator';
 
+export type TCurrency = 'UGX' | 'USD' | 'EUR' | 'GBP';
+
 export interface ISourceOrder {
     replacement_order_number: any;
   id: string; order_number: string; supplier: ISupplierProfile; supplier_id?: string;
@@ -49,6 +66,12 @@ export interface ISourceOrder {
   loading_cost: number;
   offloading_cost: number;
   handling_cost: number; other_costs: number; total_cost: number;
+  /** Currency for all monetary amounts on this source order */
+  currency: TCurrency;
+  currency_display: string;
+  /** Unit of measure inherited from the product type (kg, litre, …) */
+  unit_of_measure: TUnitOfMeasure;
+  unit_label: string;
   payment_method: IPaymentPreference | null; payment_method_id?: string;
   logistics_type: TLogisticsType | ''; logistics_type_display: string;
   driver_name: string; driver_phone: string; expected_delivery_date: string | null;
@@ -380,10 +403,16 @@ export interface IBuyerOrder {
   // Payment type (cash buyer vs investor-financed)
   payment_type: TPaymentType;
   payment_type_display: string;
+  /** Currency for all sale amounts on this order */
+  currency: TCurrency;
+  currency_display: string;
   // Pre-sourcing demand fields (set when status = quotation)
   grain_type: string | null;
   grain_type_name: string | null;
   quantity_requested_kg: number | null;
+  /** Unit of measure derived from the product type */
+  unit_of_measure: TUnitOfMeasure | null;
+  unit_label: string | null;
   // PFI counts
   pfi_count: number;
   accepted_pfi: string | null;

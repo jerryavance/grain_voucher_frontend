@@ -47,6 +47,7 @@ export interface IFormField {
   multipleAccounts?: boolean;
 
   // for text input
+  helperText?: string;
   multiline?: boolean;
   rows?: number;
   decimalPlaces?: number;

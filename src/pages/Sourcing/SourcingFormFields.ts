@@ -130,7 +130,8 @@ export const SourceOrderFormFields = (
   {
     name: 'grain_type',
     initailValue: '',
-    label: 'Grain Type *',
+    label: 'Product Type *',
+    helperText: 'Select grain, pesticide, fertilizer, seed, or other product',
     type: 'select',
     uiType: 'select',
     options: grainTypes,
@@ -138,7 +139,7 @@ export const SourceOrderFormFields = (
     required: true,
     handleSearch: handleGrainTypeSearch,
   },
-  // NEW: Trade type
+  // Trade type
   {
     name: 'trade_type',
     initailValue: 'direct',
@@ -152,10 +153,27 @@ export const SourceOrderFormFields = (
     uiBreakpoints: { xs: 12, sm: 12, md: 6 },
     required: true,
   },
+  // Currency (supports multi-currency trades)
+  {
+    name: 'currency',
+    initailValue: 'UGX',
+    label: 'Currency *',
+    type: 'select',
+    uiType: 'select',
+    options: [
+      { value: 'UGX', label: 'UGX — Ugandan Shilling' },
+      { value: 'USD', label: 'USD — US Dollar' },
+      { value: 'EUR', label: 'EUR — Euro' },
+      { value: 'GBP', label: 'GBP — British Pound' },
+    ],
+    uiBreakpoints: { xs: 12, sm: 12, md: 6 },
+    required: true,
+  },
   {
     name: 'quantity_kg',
     initailValue: '',
-    label: 'Quantity (kg) *',
+    label: 'Quantity *',
+    helperText: 'Enter quantity in the unit defined by the product type (kg, litres, tonnes, …)',
     type: 'number',
     uiType: 'text',
     uiBreakpoints: { xs: 12, sm: 12, md: 6 },
@@ -164,7 +182,8 @@ export const SourceOrderFormFields = (
   {
     name: 'offered_price_per_kg',
     initailValue: '',
-    label: 'Price per kg (UGX) *',
+    label: 'Unit Price *',
+    helperText: 'Price per unit of measure (per kg / litre / tonne …) in the selected currency',
     type: 'number',
     uiType: 'text',
     uiBreakpoints: { xs: 12, sm: 12, md: 6 },
