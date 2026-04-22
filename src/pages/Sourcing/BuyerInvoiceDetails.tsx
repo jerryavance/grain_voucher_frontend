@@ -35,7 +35,7 @@ import LoadingScreen from "../../components/LoadingScreen";
 import ProgressIndicator from "../../components/UI/ProgressIndicator";
 import { Span } from "../../components/Typography";
 import { SourcingService } from "./Sourcing.service";
-import { IBuyerInvoice, IBuyerPayment } from "./Sourcing.interface";
+import { IBuyerInvoice, IBuyerPayment, ICreditDebitNote } from "./Sourcing.interface";
 import {
   formatCurrency, INVOICE_STATUS_COLORS, PAYMENT_STATUS_COLORS, PAYMENT_METHOD_OPTIONS,
 } from "./SourcingConstants";
@@ -229,6 +229,16 @@ const BuyerInvoiceDetails: FC = () => {
   const grossProfit    = Number(invoice.gross_profit          || 0);
   const grossMarginPct = Number(invoice.gross_margin_pct      || 0);
 
+  // Credit / debit note totals derived from the notes list
+  const allNotes = invoice.credit_debit_notes || [];
+  const issuedNotes = allNotes.filter((n: ICreditDebitNote) => n.status === "issued");
+  const creditNoteTotal = issuedNotes
+    .filter((n: ICreditDebitNote) => n.note_type === "credit")
+    .reduce((sum: number, n: ICreditDebitNote) => sum + Number(n.amount), 0);
+  const debitNoteTotal = issuedNotes
+    .filter((n: ICreditDebitNote) => n.note_type === "debit")
+    .reduce((sum: number, n: ICreditDebitNote) => sum + Number(n.amount), 0);
+
   return (
     <Box pt={2} pb={4}>
 
@@ -329,9 +339,8 @@ const BuyerInvoiceDetails: FC = () => {
           { label: "Balance Due",    value: formatCurrency(invoice.balance_due), color: Number(invoice.balance_due) > 0 ? "error.main" : "success.main" },
           { label: "Gross Profit",   value: formatCurrency(grossProfit), color: grossProfit >= 0 ? "success.main" : "error.main" },
           ...(Number(invoice.penalty_amount || 0) > 0 ? [{ label: "Penalty", value: formatCurrency(invoice.penalty_amount), color: "error.main" }] : []),
-          ...(Number((invoice as any).credit_note_amount || 0) > 0 ? [{ label: "Credit Note", value: `− ${formatCurrency((invoice as any).credit_note_amount)}`, color: "success.main" }] : []),
-          ...(Number((invoice as any).debit_note_amount || 0) > 0 ? [{ label: "Debit Note", value: `+ ${formatCurrency((invoice as any).debit_note_amount)}`, color: "warning.main" }] : []),
-          ...(Number((invoice as any).adjusted_amount || 0) > 0 ? [{ label: "Adjusted Amount", value: formatCurrency((invoice as any).adjusted_amount), color: "info.main" }] : []),
+          ...(creditNoteTotal > 0 ? [{ label: "Credit Note", value: `− ${formatCurrency(creditNoteTotal)}`, color: "success.main" }] : []),
+          ...(debitNoteTotal > 0 ? [{ label: "Debit Note", value: `+ ${formatCurrency(debitNoteTotal)}`, color: "warning.main" }] : []),
           ...(Number(invoice.days_overdue || 0) > 0 ? [{ label: "Days Overdue", value: `${invoice.days_overdue} days`, color: "error.main" }] : []),
         ].map(({ label, value, color }) => (
           <Grid key={label} item xs={6} sm={3}>
@@ -634,6 +643,55 @@ const BuyerInvoiceDetails: FC = () => {
           )}
         </CardContent>
       </Card>
+
+      {/* ── Credit & Debit Notes ── */}
+      {allNotes.length > 0 && (
+        <Card elevation={0} sx={{ border: "1px solid #e0e0e0", mt: 3 }}>
+          <CardContent>
+            <Typography variant="h6" gutterBottom>Credit &amp; Debit Notes</Typography>
+            <Divider sx={{ mb: 2 }} />
+            <TableContainer>
+              <Table size="small">
+                <TableHead>
+                  <TableRow sx={{ bgcolor: "action.hover" }}>
+                    {["Note #", "Type", "Amount", "Reason", "Status", "Issued At", "Issued By"].map(h => (
+                      <TableCell key={h} sx={{ fontWeight: 700, whiteSpace: "nowrap" }}>{h}</TableCell>
+                    ))}
+                  </TableRow>
+                </TableHead>
+                <TableBody>
+                  {allNotes.map((note: ICreditDebitNote) => (
+                    <TableRow key={note.id} hover>
+                      <TableCell sx={{ fontFamily: "monospace", fontWeight: 600 }}>{note.note_number}</TableCell>
+                      <TableCell>
+                        <Chip
+                          label={note.note_type_display}
+                          size="small"
+                          color={note.note_type === "credit" ? "success" : "warning"}
+                          variant="outlined"
+                        />
+                      </TableCell>
+                      <TableCell sx={{ fontWeight: 600, color: note.note_type === "credit" ? "success.main" : "warning.main" }}>
+                        {note.note_type === "credit" ? "−" : "+"} {formatCurrency(note.amount)}
+                      </TableCell>
+                      <TableCell sx={{ maxWidth: 200 }}>{note.reason}</TableCell>
+                      <TableCell>
+                        <Chip
+                          label={note.status_display}
+                          size="small"
+                          color={note.status === "issued" ? "success" : note.status === "cancelled" ? "error" : "default"}
+                        />
+                      </TableCell>
+                      <TableCell>{note.issued_at ? formatDateToDDMMYYYY(note.issued_at) : "—"}</TableCell>
+                      <TableCell>{note.issued_by_name || "—"}</TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </TableContainer>
+          </CardContent>
+        </Card>
+      )}
 
       {/* ── Payment dialog ── */}
       {showPaymentDialog && (

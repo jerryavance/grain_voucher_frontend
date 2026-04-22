@@ -503,8 +503,25 @@ export interface IBuyerInvoice {
   notes: string;
   created_at: string;
   updated_at: string;
+  credit_debit_notes: ICreditDebitNote[];
 }
 export interface IBuyerInvoicesResults { results: IBuyerInvoice[]; count: number; }
+
+export interface ICreditDebitNote {
+  id: string;
+  note_number: string;
+  note_type: "credit" | "debit";
+  note_type_display: string;
+  amount: string;
+  reason: string;
+  reference: string;
+  status: "draft" | "issued" | "cancelled";
+  status_display: string;
+  issued_at: string | null;
+  issued_by_name: string | null;
+  notes: string;
+  created_at: string;
+}
 
 // ============ Buyer Payment ============
 export interface IBuyerPayment {
