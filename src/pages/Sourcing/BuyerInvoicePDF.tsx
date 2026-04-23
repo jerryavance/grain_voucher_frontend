@@ -6,8 +6,9 @@
  * Shows only information relevant to the buyer:
  *   - Invoice header (number, order ref, dates, terms, status)
  *   - Parties: Bennu (seller) and buyer contact block
- *   - Line items: lot #, grain type, quantity, unit price, amount
- *   - Bank payment instructions + payment progress bar
+ *   - Line items: lot #, product type, quantity, unit price, amount
+ *   - Bank payment instructions (both UGX and USD accounts)
+ *   - Credit / debit notes section
  *   - Payment summary: invoice amount, amount paid, balance due
  *
  * Internal cost data (COGS, selling expenses, gross profit, margin %)
@@ -21,10 +22,39 @@ import { Button, CircularProgress, IconButton, Tooltip } from "@mui/material";
 import PictureAsPdfIcon from "@mui/icons-material/PictureAsPdf";
 import { IBuyerInvoice, IBuyerInvoiceOrderLine } from "./Sourcing.interface";
 
+// ─── Bennu bank accounts ──────────────────────────────────────────────────────
+const BENNU_UGX_BANK = {
+  bankName:    "STANBIC BANK",
+  accountNum:  "9030026824892",
+  accountName: "BENNU AGFIN SERVICES LIMITED",
+  branch:      "NAKASERO",
+  currency:    "UGX",
+  swift:       "",
+};
+
+const BENNU_USD_BANK = {
+  bankName:    "STANBIC BANK",
+  accountNum:  "9030026820951",
+  accountName: "BENNU AGFIN SERVICES LIMITED",
+  branch:      "NAKASERO",
+  currency:    "USD",
+  swift:       "SBICUGKX",
+};
+
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
-const ugx = (val: number | string | null | undefined): string =>
-  `UGX ${Number(val || 0).toLocaleString("en-UG", { minimumFractionDigits: 0 })}`;
+/** Format a monetary value with the given currency prefix. */
+const fmtMoney = (
+  val: number | string | null | undefined,
+  currency = "UGX",
+): string => {
+  const n = Number(val || 0);
+  const formatted = n.toLocaleString("en-UG", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  });
+  return `${currency} ${formatted}`;
+};
 
 const fmtDate = (d?: string | null): string => {
   if (!d) return "—";
@@ -35,8 +65,11 @@ const fmtDate = (d?: string | null): string => {
   } catch { return d; }
 };
 
-const fmtNum = (v: number | string | null | undefined): string =>
-  Number(v || 0).toLocaleString("en-UG", { minimumFractionDigits: 0 });
+const fmtNum = (v: number | string | null | undefined, dp = 2): string =>
+  Number(v || 0).toLocaleString("en-UG", {
+    minimumFractionDigits: dp,
+    maximumFractionDigits: dp,
+  });
 
 const fetchLogoAsDataUrl = (): Promise<string | undefined> =>
   fetch("/favicon.png")
@@ -55,6 +88,10 @@ export const generateBuyerInvoiceHTML = (
   invoice: IBuyerInvoice,
   logoDataUrl?: string
 ): string => {
+  // ── Currency & formatting ────────────────────────────────────────────────
+  const currency = invoice.currency || "UGX";
+  const fmt = (val: number | string | null | undefined) => fmtMoney(val, currency);
+
   // ── Values ────────────────────────────────────────────────────────────────
   const buyer        = invoice.buyer_detail;
   const buyerName    = buyer?.business_name     || invoice.buyer_profile_name || invoice.buyer_name || "—";
@@ -95,35 +132,91 @@ export const generateBuyerInvoiceHTML = (
     : `<div style="height:38px;width:38px;background:#2371B9;border-radius:6px;display:flex;align-items:center;justify-content:center;">
          <span style="color:#fff;font-weight:900;font-size:15px;">B</span></div>`;
 
-  // ── Grain sale lines HTML (buyer-facing: no COGS columns) ─────────────────
+  // ── Line items HTML (buyer-facing: no COGS columns) ───────────────────────
   const lines: IBuyerInvoiceOrderLine[] = invoice.order_lines || [];
   const linesHtml = lines.length > 0
     ? lines.map(l => `
       <tr>
         <td style="padding:5px 8px;border-bottom:1px solid #f0f4fa;font-weight:600;color:#1565c0;">${l.lot_number}</td>
         <td style="padding:5px 8px;border-bottom:1px solid #f0f4fa;">${l.grain_type}</td>
-        <td style="padding:5px 8px;border-bottom:1px solid #f0f4fa;text-align:right;">${fmtNum(l.quantity_kg)} kg</td>
-        <td style="padding:5px 8px;border-bottom:1px solid #f0f4fa;text-align:right;">${ugx(l.sale_price_per_kg)}</td>
-        <td style="padding:5px 8px;border-bottom:1px solid #f0f4fa;text-align:right;font-weight:700;">${ugx(l.line_total)}</td>
+        <td style="padding:5px 8px;border-bottom:1px solid #f0f4fa;text-align:right;">${fmtNum(l.quantity_kg)}</td>
+        <td style="padding:5px 8px;border-bottom:1px solid #f0f4fa;text-align:right;">${fmt(l.sale_price_per_kg)}</td>
+        <td style="padding:5px 8px;border-bottom:1px solid #f0f4fa;text-align:right;font-weight:700;">${fmt(l.line_total)}</td>
       </tr>`).join("")
     : `<tr><td colspan="5" style="padding:12px 10px;text-align:center;color:#999;">No line items</td></tr>`;
 
-  // ── Selling expenses HTML (buyer-facing: shown as "Additional Charges") ────
+  // ── Selling expenses HTML ─────────────────────────────────────────────────
   const expenses: Array<{ category_display?: string; description?: string; amount?: string | number }> =
     (invoice as any).sale_expenses || [];
   const totalExpenses = expenses.reduce(
     (sum: number, e: any) => sum + Number(e.amount || 0), 0
-  );
-  const grainSubtotal = lines.reduce(
-    (sum: number, l: any) => sum + Number(l.line_total || 0), 0
   );
   const expensesHtml = expenses.length > 0
     ? expenses.map(e => `
       <tr>
         <td style="padding:5px 8px;border-bottom:1px solid #f0f4fa;">${e.category_display || "—"}</td>
         <td style="padding:5px 8px;border-bottom:1px solid #f0f4fa;">${e.description || "—"}</td>
-        <td style="padding:5px 8px;border-bottom:1px solid #f0f4fa;text-align:right;font-weight:600;">${ugx(e.amount)}</td>
+        <td style="padding:5px 8px;border-bottom:1px solid #f0f4fa;text-align:right;font-weight:600;">${fmt(e.amount)}</td>
       </tr>`).join("")
+    : "";
+
+  // ── Credit / debit notes HTML ─────────────────────────────────────────────
+  const cdNotes = invoice.credit_debit_notes || [];
+  const issuedNotes = cdNotes.filter(n => n.status !== "cancelled");
+  const creditTotal = issuedNotes
+    .filter(n => n.note_type === "credit")
+    .reduce((s, n) => s + Number(n.amount || 0), 0);
+  const debitTotal = issuedNotes
+    .filter(n => n.note_type === "debit")
+    .reduce((s, n) => s + Number(n.amount || 0), 0);
+
+  const cdNotesHtml = issuedNotes.length > 0
+    ? `
+  <!-- Credit & Debit Notes -->
+  <div class="section-heading">Credit &amp; Debit Notes</div>
+  <table class="data-table">
+    <thead>
+      <tr>
+        <th>Note #</th>
+        <th>Type</th>
+        <th>Reason</th>
+        <th>Reference</th>
+        <th>Issued</th>
+        <th class="r">Amount</th>
+        <th>Status</th>
+      </tr>
+    </thead>
+    <tbody>
+      ${issuedNotes.map(n => {
+        const isCredit = n.note_type === "credit";
+        const color = isCredit ? "#15803d" : "#dc2626";
+        return `
+      <tr>
+        <td style="padding:5px 8px;border-bottom:1px solid #f0f4fa;font-weight:600;">${n.note_number}</td>
+        <td style="padding:5px 8px;border-bottom:1px solid #f0f4fa;">
+          <span style="display:inline-block;padding:2px 7px;border-radius:3px;font-size:9px;font-weight:700;background:${isCredit ? "#dcfce7" : "#fee2e2"};color:${color};">${n.note_type_display}</span>
+        </td>
+        <td style="padding:5px 8px;border-bottom:1px solid #f0f4fa;">${n.reason || "—"}</td>
+        <td style="padding:5px 8px;border-bottom:1px solid #f0f4fa;font-size:10px;color:#666;">${n.reference || "—"}</td>
+        <td style="padding:5px 8px;border-bottom:1px solid #f0f4fa;font-size:10px;">${fmtDate(n.issued_at)}</td>
+        <td style="padding:5px 8px;border-bottom:1px solid #f0f4fa;text-align:right;font-weight:700;color:${color};">${fmt(n.amount)}</td>
+        <td style="padding:5px 8px;border-bottom:1px solid #f0f4fa;font-size:10px;">${n.status_display}</td>
+      </tr>`;
+      }).join("")}
+    </tbody>
+    <tfoot>
+      <tr>
+        <td colspan="5" style="padding:5px 8px;text-align:right;font-size:10px;color:#5c8abf;">Credit Notes Total</td>
+        <td style="padding:5px 8px;text-align:right;font-weight:700;color:#15803d;">${fmt(creditTotal)}</td>
+        <td></td>
+      </tr>
+      ${debitTotal > 0 ? `<tr>
+        <td colspan="5" style="padding:5px 8px;text-align:right;font-size:10px;color:#5c8abf;">Debit Notes Total</td>
+        <td style="padding:5px 8px;text-align:right;font-weight:700;color:#dc2626;">${fmt(debitTotal)}</td>
+        <td></td>
+      </tr>` : ""}
+    </tfoot>
+  </table>`
     : "";
 
   // ── Progress bar fill ─────────────────────────────────────────────────────
@@ -182,12 +275,15 @@ export const generateBuyerInvoiceHTML = (
   .data-table tbody tr:last-child td { border-bottom:none; }
   .data-table tfoot td { padding:5px 8px;font-size:12px;font-weight:600;background:#f6f9fd;border-top:2px solid #d0dff0; }
 
-  /* Bottom grid — bank instructions full width + payment summary side by side */
+  /* Bottom grid */
   .bottom-grid { display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:10px; }
 
-  /* Bank table */
+  /* Bank section — two accounts side by side */
+  .bank-grid { display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:0; }
+  .bank-card { border:1px solid #e0e8f4;border-radius:6px;padding:7px 10px; }
+  .bank-card-title { font-size:8px;font-weight:700;text-transform:uppercase;letter-spacing:0.8px;color:#5c8abf;margin-bottom:5px; }
   .bank-table { width:100%;border-collapse:collapse; }
-  .bank-table td { font-size:10px;padding:3px 0;border-bottom:1px dotted #e0e8f4; }
+  .bank-table td { font-size:10px;padding:2px 0;border-bottom:1px dotted #e0e8f4; }
   .bank-table tr:last-child td { border-bottom:none; }
   .bank-label { color:#666;width:50%; }
   .bank-value { font-weight:700;text-align:right; }
@@ -206,7 +302,7 @@ export const generateBuyerInvoiceHTML = (
   .progress-wrap { margin-top:8px; }
   .progress-header { display:flex;justify-content:space-between;font-size:10px;color:#666;margin-bottom:4px; }
   .progress-track { height:6px;background:#e0e8f4;border-radius:3px;overflow:hidden; }
-  .progress-fill  { height:100%;width:${paidPct.toFixed(1)}%;background:${progressColor};border-radius:3px;transition:width 0.3s; }
+  .progress-fill  { height:100%;width:${paidPct.toFixed(1)}%;background:${progressColor};border-radius:3px; }
 
   /* Notes / footer */
   .notes-box { background:#fffbeb;border:1px solid #fde68a;border-radius:6px;padding:6px 10px;margin-top:8px;font-size:10px; }
@@ -268,10 +364,14 @@ export const generateBuyerInvoiceHTML = (
       <div class="meta-value">${invoice.hub_name || "—"}</div>
     </div>
     <div class="meta-cell">
+      <div class="meta-label">Currency</div>
+      <div class="meta-value">${invoice.currency_display || currency}</div>
+    </div>
+    <div class="meta-cell">
       <div class="meta-label">Paid On</div>
       <div class="meta-value">${fmtDate(invoice.paid_at)}</div>
     </div>
-    <div class="meta-cell" style="grid-column:span 2;">
+    <div class="meta-cell">
       <div class="meta-label">Customer PO / Reference</div>
       <div class="meta-value">${invoice.notes || invoice.order_number || "—"}</div>
     </div>
@@ -309,16 +409,16 @@ export const generateBuyerInvoiceHTML = (
     </div>
   </div>
 
-  <!-- Grain Sale Lines -->
+  <!-- Invoice Line Items -->
   <div class="section-heading">Invoice Line Items</div>
   <table class="data-table">
     <thead>
       <tr>
         <th>Lot #</th>
-        <th>Grain Type</th>
-        <th class="r">Quantity (kg)</th>
-        <th class="r">Unit Price</th>
-        <th class="r">Amount</th>
+        <th>Product Type</th>
+        <th class="r">Quantity</th>
+        <th class="r">Unit Price (${currency})</th>
+        <th class="r">Amount (${currency})</th>
       </tr>
     </thead>
     <tbody>
@@ -334,7 +434,7 @@ export const generateBuyerInvoiceHTML = (
       <tr>
         <th>Category</th>
         <th>Description</th>
-        <th class="r">Amount</th>
+        <th class="r">Amount (${currency})</th>
       </tr>
     </thead>
     <tbody>
@@ -343,7 +443,7 @@ export const generateBuyerInvoiceHTML = (
     <tfoot>
       <tr>
         <td colspan="2" style="text-align:right;font-size:11px;color:#5c8abf;">Total Additional Charges</td>
-        <td style="text-align:right;font-size:13px;font-weight:700;">${ugx(totalExpenses)}</td>
+        <td style="text-align:right;font-size:13px;font-weight:700;">${fmt(totalExpenses)}</td>
       </tr>
     </tfoot>
   </table>
@@ -352,51 +452,82 @@ export const generateBuyerInvoiceHTML = (
   <!-- Grand Total -->
   <div style="text-align:right;margin-top:4px;padding:5px 0;border-top:2px solid #2371B9;">
     <span style="font-size:11px;color:#5c8abf;margin-right:20px;">Total</span>
-    <span style="font-size:14px;font-weight:800;color:#1a1a1a;">${ugx(amountDue)}</span>
+    <span style="font-size:14px;font-weight:800;color:#1a1a1a;">${fmt(amountDue)}</span>
   </div>
 
+  ${cdNotesHtml}
+
   <!-- Bank instructions + Payment Summary -->
-  <div class="bottom-grid">
-
-    <!-- Bank instructions -->
-    <div>
-      <div class="section-heading" style="margin-top:0;">Bank Payment Instructions</div>
-      <table class="bank-table">
-        <tr><td class="bank-label">Bank Name</td><td class="bank-value">STANBIC BANK</td></tr>
-        <tr><td class="bank-label">Account Number</td><td class="bank-value">9030026820951</td></tr>
-        <tr><td class="bank-label">Account Holder</td><td class="bank-value">BENNU AGFIN SERVICES LIMITED</td></tr>
-        <tr><td class="bank-label">Branch</td><td class="bank-value">NAKASERO</td></tr>
-        <tr><td class="bank-label">Currency</td><td class="bank-value">UGX</td></tr>
-        <tr><td class="bank-label">Reference</td><td class="bank-value">${invoice.invoice_number}</td></tr>
-      </table>
-
-      <div class="progress-wrap">
-        <div class="progress-header">
-          <span>Payment Progress</span>
-          <span>${paidPct.toFixed(0)}% paid</span>
-        </div>
-        <div class="progress-track">
-          <div class="progress-fill"></div>
-        </div>
+  <div style="margin-top:10px;">
+    <div class="section-heading" style="margin-top:0;">Bank Payment Instructions</div>
+    <div class="bank-grid">
+      <!-- UGX Account -->
+      <div class="bank-card">
+        <div class="bank-card-title">🇺🇬 UGX Account</div>
+        <table class="bank-table">
+          <tr><td class="bank-label">Bank Name</td><td class="bank-value">${BENNU_UGX_BANK.bankName}</td></tr>
+          <tr><td class="bank-label">Account Number</td><td class="bank-value">${BENNU_UGX_BANK.accountNum}</td></tr>
+          <tr><td class="bank-label">Account Holder</td><td class="bank-value">${BENNU_UGX_BANK.accountName}</td></tr>
+          <tr><td class="bank-label">Branch</td><td class="bank-value">${BENNU_UGX_BANK.branch}</td></tr>
+          <tr><td class="bank-label">Currency</td><td class="bank-value">UGX</td></tr>
+          <tr><td class="bank-label">Reference</td><td class="bank-value">${invoice.invoice_number}</td></tr>
+        </table>
+      </div>
+      <!-- USD Account -->
+      <div class="bank-card">
+        <div class="bank-card-title">🇺🇸 USD Account</div>
+        <table class="bank-table">
+          <tr><td class="bank-label">Bank Name</td><td class="bank-value">${BENNU_USD_BANK.bankName}</td></tr>
+          <tr><td class="bank-label">Account Number</td><td class="bank-value">${BENNU_USD_BANK.accountNum}</td></tr>
+          <tr><td class="bank-label">Account Holder</td><td class="bank-value">${BENNU_USD_BANK.accountName}</td></tr>
+          <tr><td class="bank-label">Branch</td><td class="bank-value">${BENNU_USD_BANK.branch}</td></tr>
+          <tr><td class="bank-label">SWIFT</td><td class="bank-value">${BENNU_USD_BANK.swift}</td></tr>
+          <tr><td class="bank-label">Currency</td><td class="bank-value">USD</td></tr>
+        </table>
       </div>
     </div>
 
-    <!-- Payment Summary (buyer-facing — no internal P&L) -->
-    <div>
-      <div class="section-heading" style="margin-top:0;">Payment Summary</div>
-      <div class="summary-box">
-        <div class="summary-row">
-          <span class="s-label">Invoice Amount</span>
-          <span class="s-value">${ugx(amountDue)}</span>
+    <!-- Payment progress + summary -->
+    <div class="bottom-grid" style="margin-top:10px;">
+      <div>
+        <div class="progress-wrap" style="margin-top:0;">
+          <div class="progress-header">
+            <span>Payment Progress</span>
+            <span>${paidPct.toFixed(0)}% paid</span>
+          </div>
+          <div class="progress-track">
+            <div class="progress-fill"></div>
+          </div>
         </div>
-        ${amountPaid > 0 ? `
-        <div class="summary-row" style="color:#15803d;">
-          <span class="s-label">Amount Paid</span>
-          <span class="s-value" style="color:#15803d;">− ${ugx(amountPaid)}</span>
-        </div>` : ""}
-        <div class="summary-row balance">
-          <span class="s-label">Balance Due</span>
-          <span class="s-value">${ugx(balanceDue)}</span>
+      </div>
+
+      <!-- Payment Summary (buyer-facing — no internal P&L) -->
+      <div>
+        <div class="section-heading" style="margin-top:0;">Payment Summary</div>
+        <div class="summary-box">
+          <div class="summary-row">
+            <span class="s-label">Invoice Amount</span>
+            <span class="s-value">${fmt(amountDue)}</span>
+          </div>
+          ${issuedNotes.length > 0 ? `
+          <div class="summary-row" style="color:#15803d;">
+            <span class="s-label">Credit Notes Applied</span>
+            <span class="s-value" style="color:#15803d;">− ${fmt(creditTotal)}</span>
+          </div>
+          ${debitTotal > 0 ? `
+          <div class="summary-row" style="color:#dc2626;">
+            <span class="s-label">Debit Notes Added</span>
+            <span class="s-value" style="color:#dc2626;">+ ${fmt(debitTotal)}</span>
+          </div>` : ""}` : ""}
+          ${amountPaid > 0 ? `
+          <div class="summary-row" style="color:#15803d;">
+            <span class="s-label">Amount Paid</span>
+            <span class="s-value" style="color:#15803d;">− ${fmt(amountPaid)}</span>
+          </div>` : ""}
+          <div class="summary-row balance">
+            <span class="s-label">Balance Due</span>
+            <span class="s-value">${fmt(balanceDue)}</span>
+          </div>
         </div>
       </div>
     </div>

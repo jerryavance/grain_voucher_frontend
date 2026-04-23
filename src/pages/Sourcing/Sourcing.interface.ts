@@ -69,6 +69,8 @@ export interface ISourceOrder {
   /** Currency for all monetary amounts on this source order */
   currency: TCurrency;
   currency_display: string;
+  /** Exchange rate to UGX. Null for UGX orders. */
+  exchange_rate_to_ugx: number | null;
   /** Unit of measure inherited from the product type (kg, litre, …) */
   unit_of_measure: TUnitOfMeasure;
   unit_label: string;
@@ -333,9 +335,15 @@ export interface IProformaInvoice {
   // Grain / pricing
   grain_type: string;
   grain_type_name: string;
+  /** Unit of measure from the product type (kg, litre, tonne, …) */
+  unit_of_measure: TUnitOfMeasure;
+  unit_label: string;
   quantity_kg: string;
   unit_price: string;
   sub_total: string;
+  // Currency
+  currency: TCurrency;
+  currency_display: string;
   // Deposit
   required_deposit: string;
   paid_deposit: string;
@@ -406,6 +414,8 @@ export interface IBuyerOrder {
   /** Currency for all sale amounts on this order */
   currency: TCurrency;
   currency_display: string;
+  /** Exchange rate to UGX. Null for UGX orders. */
+  exchange_rate_to_ugx: number | null;
   // Pre-sourcing demand fields (set when status = quotation)
   grain_type: string | null;
   grain_type_name: string | null;
@@ -533,6 +543,9 @@ export interface IBuyerInvoice {
   created_at: string;
   updated_at: string;
   credit_debit_notes: ICreditDebitNote[];
+  /** Currency of the underlying buyer order (UGX, USD, EUR, GBP) */
+  currency: TCurrency;
+  currency_display: string;
 }
 export interface IBuyerInvoicesResults { results: IBuyerInvoice[]; count: number; }
 

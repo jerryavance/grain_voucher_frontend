@@ -21,10 +21,36 @@ import { Button, CircularProgress, IconButton, Tooltip } from "@mui/material";
 import PictureAsPdfIcon from "@mui/icons-material/PictureAsPdf";
 import { IProformaInvoice } from "./Sourcing.interface";
 
+// ─── Bennu bank accounts ──────────────────────────────────────────────────────
+const BENNU_UGX_BANK = {
+  bankName:    "STANBIC BANK",
+  accountNum:  "9030026824892",
+  accountName: "BENNU AGFIN SERVICES LIMITED",
+  branch:      "NAKASERO",
+};
+
+const BENNU_USD_BANK = {
+  bankName:    "STANBIC BANK",
+  accountNum:  "9030026820951",
+  accountName: "BENNU AGFIN SERVICES LIMITED",
+  branch:      "NAKASERO",
+  swift:       "SBICUGKX",
+};
+
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
-const ugx = (val: number | string | null | undefined): string =>
-  `UGX ${Number(val || 0).toLocaleString("en-UG", { minimumFractionDigits: 0 })}`;
+/** Format a monetary value with the given currency prefix. */
+const fmtMoney = (
+  val: number | string | null | undefined,
+  currency = "UGX",
+): string => {
+  const n = Number(val || 0);
+  const formatted = n.toLocaleString("en-UG", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  });
+  return `${currency} ${formatted}`;
+};
 
 const fmtDate = (d?: string | null): string => {
   if (!d) return "—";
@@ -36,7 +62,7 @@ const fmtDate = (d?: string | null): string => {
 };
 
 const fmtNum = (v: number | string | null | undefined): string =>
-  Number(v || 0).toLocaleString("en-UG", { minimumFractionDigits: 0 });
+  Number(v || 0).toLocaleString("en-UG", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
 const fetchLogoAsDataUrl = (): Promise<string | undefined> =>
   fetch("/favicon.png")
@@ -62,6 +88,13 @@ export const generatePFIHTML = (
   const qty           = Number(pfi.quantity_kg || 0);
   const unitPrice     = Number(pfi.unit_price || 0);
 
+  // Currency — read from pfi or fallback to UGX
+  const currency  = (pfi as any).currency || "UGX";
+  const fmt = (val: number | string | null | undefined) => fmtMoney(val, currency);
+
+  // Unit label — from pfi's grain type if available, otherwise from buyer order unit
+  const unitLabel = (pfi as any).unit_label || (pfi as any).unit_of_measure || "kg";
+
   // Status badge colours
   const statusMap: Record<string, { bg: string; color: string; label: string }> = {
     draft:    { bg: "#6b7280", color: "#fff", label: "DRAFT"    },
@@ -77,12 +110,19 @@ export const generatePFIHTML = (
     : `<div style="height:40px;width:40px;background:#2371B9;border-radius:6px;display:flex;align-items:center;justify-content:center;">
          <span style="color:#fff;font-weight:900;font-size:16px;">B</span></div>`;
 
-  // Bank — prefer PFI-level fields, fallback to Bennu defaults
-  const bankName    = pfi.bank_name    || "STANBIC BANK";
-  const accountNum  = pfi.account_number || "9030026820951";
-  const accountName = pfi.account_name || "BENNU AGFIN SERVICES LIMITED";
-  const swift       = pfi.swift_code   || "—";
-  const sortCode    = pfi.sort_code    || "—";
+  // Bank — prefer PFI-level fields (used for the primary/UGX account), fallback to Bennu defaults
+  const ugxBankName    = BENNU_UGX_BANK.bankName;
+  const ugxAccountNum  = "9030026824892";   // Bennu UGX Stanbic account
+  const ugxAccountName = BENNU_UGX_BANK.accountName;
+  const ugxBranch      = BENNU_UGX_BANK.branch;
+
+  // PFI-level bank override (if the user entered custom bank details, use those for USD section)
+  const hasPfiBankDetails = !!(pfi.bank_name && pfi.account_number);
+  const usdBankName    = hasPfiBankDetails ? pfi.bank_name    : BENNU_USD_BANK.bankName;
+  const usdAccountNum  = hasPfiBankDetails ? pfi.account_number : BENNU_USD_BANK.accountNum;
+  const usdAccountName = hasPfiBankDetails ? pfi.account_name  : BENNU_USD_BANK.accountName;
+  const usdSwift       = pfi.swift_code   || BENNU_USD_BANK.swift || "SBICUGKX";
+  const usdSortCode    = pfi.sort_code    || "—";
 
   return `<!DOCTYPE html>
 <html lang="en">
@@ -141,11 +181,16 @@ export const generatePFIHTML = (
   /* Bottom grid */
   .bottom-grid { display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:8px; }
 
+  /* Bank section — two accounts side by side */
+  .bank-grid { display:grid;grid-template-columns:1fr 1fr;gap:10px; }
+  .bank-card { border:1px solid #e0e8f4;border-radius:6px;padding:7px 10px; }
+  .bank-card-title { font-size:8px;font-weight:700;text-transform:uppercase;letter-spacing:0.8px;color:#5c8abf;margin-bottom:5px; }
   /* Bank table */
   .bank-table { width:100%;border-collapse:collapse; }
-  .bank-table td { font-size:10px;padding:3px 0;border-bottom:1px dotted #e0e8f4; }
-  .bank-label { color:#888;width:130px; }
-  .bank-value { font-weight:600;color:#1a1a1a; }
+  .bank-table td { font-size:10px;padding:2px 0;border-bottom:1px dotted #e0e8f4; }
+  .bank-table tr:last-child td { border-bottom:none; }
+  .bank-label { color:#888;width:50%; }
+  .bank-value { font-weight:600;color:#1a1a1a;text-align:right; }
 
   /* Summary box */
   .summary-box { border:1px solid #e0e8f4;border-radius:6px;overflow:hidden; }
@@ -271,61 +316,74 @@ export const generatePFIHTML = (
     <table class="data-table">
       <thead>
         <tr>
-          <th>Grain Type</th>
-          <th class="r">Quantity (kg)</th>
-          <th class="r">Unit Price (UGX/kg)</th>
-          <th class="r">Amount</th>
+          <th>Product Type</th>
+          <th class="r">Quantity (${unitLabel})</th>
+          <th class="r">Unit Price (${currency}/${unitLabel})</th>
+          <th class="r">Amount (${currency})</th>
         </tr>
       </thead>
       <tbody>
         <tr>
           <td style="font-weight:600;">${pfi.grain_type_name || "—"}</td>
-          <td style="text-align:right;">${fmtNum(qty)} kg</td>
-          <td style="text-align:right;">${ugx(unitPrice)}</td>
-          <td style="text-align:right;font-weight:700;">${ugx(subTotal)}</td>
+          <td style="text-align:right;">${fmtNum(qty)} ${unitLabel}</td>
+          <td style="text-align:right;">${fmt(unitPrice)}</td>
+          <td style="text-align:right;font-weight:700;">${fmt(subTotal)}</td>
         </tr>
       </tbody>
       <tfoot>
       </tfoot>
     </table>
 
-    <!-- Bank + Summary -->
-    <div class="bottom-grid">
-
-      <div>
-        <div class="section-heading" style="margin-top:0;">Bank Payment Instructions</div>
+    <!-- Bank Payment Instructions — both accounts -->
+    <div class="section-heading">Bank Payment Instructions</div>
+    <div class="bank-grid">
+      <!-- UGX Account -->
+      <div class="bank-card">
+        <div class="bank-card-title">🇺🇬 UGX Account</div>
         <table class="bank-table">
-          <tr><td class="bank-label">Bank Name</td><td class="bank-value">${bankName}</td></tr>
-          <tr><td class="bank-label">Account Number</td><td class="bank-value">${accountNum}</td></tr>
-          <tr><td class="bank-label">Account Holder</td><td class="bank-value">${accountName}</td></tr>
-          ${swift !== "—" ? `<tr><td class="bank-label">SWIFT Code</td><td class="bank-value">${swift}</td></tr>` : ""}
-          ${sortCode !== "—" ? `<tr><td class="bank-label">Sort Code</td><td class="bank-value">${sortCode}</td></tr>` : ""}
+          <tr><td class="bank-label">Bank Name</td><td class="bank-value">${ugxBankName}</td></tr>
+          <tr><td class="bank-label">Account Number</td><td class="bank-value">${ugxAccountNum}</td></tr>
+          <tr><td class="bank-label">Account Holder</td><td class="bank-value">${ugxAccountName}</td></tr>
+          <tr><td class="bank-label">Branch</td><td class="bank-value">${ugxBranch}</td></tr>
           <tr><td class="bank-label">Currency</td><td class="bank-value">UGX</td></tr>
           <tr><td class="bank-label">Reference</td><td class="bank-value">${pfi.pfi_number}</td></tr>
         </table>
       </div>
+      <!-- USD Account -->
+      <div class="bank-card">
+        <div class="bank-card-title">🇺🇸 USD Account</div>
+        <table class="bank-table">
+          <tr><td class="bank-label">Bank Name</td><td class="bank-value">${usdBankName}</td></tr>
+          <tr><td class="bank-label">Account Number</td><td class="bank-value">${usdAccountNum}</td></tr>
+          <tr><td class="bank-label">Account Holder</td><td class="bank-value">${usdAccountName}</td></tr>
+          <tr><td class="bank-label">SWIFT</td><td class="bank-value">${usdSwift}</td></tr>
+          ${usdSortCode !== "—" ? `<tr><td class="bank-label">Sort Code</td><td class="bank-value">${usdSortCode}</td></tr>` : ""}
+          <tr><td class="bank-label">Currency</td><td class="bank-value">USD</td></tr>
+        </table>
+      </div>
+    </div>
 
-      <div>
-        <div class="section-heading" style="margin-top:0;">Payment Summary</div>
-        <div class="summary-box">
-          <div class="summary-row">
-            <span class="s-label">Sub-Total</span>
-            <span class="s-value">${ugx(subTotal)}</span>
-          </div>
-          ${deposit > 0 ? `
-          <div class="summary-row">
-            <span class="s-label">Required Deposit</span>
-            <span class="s-value">${ugx(deposit)}</span>
-          </div>` : ""}
-          ${paidDeposit > 0 ? `
-          <div class="summary-row" style="color:#15803d;">
-            <span class="s-label">Deposit Received</span>
-            <span class="s-value" style="color:#15803d;">− ${ugx(paidDeposit)}</span>
-          </div>` : ""}
-          <div class="summary-row balance">
-            <span class="s-label">Total Due</span>
-            <span class="s-value">${ugx(totalDue > 0 ? totalDue : subTotal)}</span>
-          </div>
+    <!-- Payment Summary -->
+    <div style="margin-top:10px;max-width:340px;margin-left:auto;">
+      <div class="section-heading" style="margin-top:0;">Payment Summary</div>
+      <div class="summary-box">
+        <div class="summary-row">
+          <span class="s-label">Sub-Total</span>
+          <span class="s-value">${fmt(subTotal)}</span>
+        </div>
+        ${deposit > 0 ? `
+        <div class="summary-row">
+          <span class="s-label">Required Deposit</span>
+          <span class="s-value">${fmt(deposit)}</span>
+        </div>` : ""}
+        ${paidDeposit > 0 ? `
+        <div class="summary-row" style="color:#15803d;">
+          <span class="s-label">Deposit Received</span>
+          <span class="s-value" style="color:#15803d;">− ${fmt(paidDeposit)}</span>
+        </div>` : ""}
+        <div class="summary-row balance">
+          <span class="s-label">Total Due</span>
+          <span class="s-value">${fmt(totalDue > 0 ? totalDue : subTotal)}</span>
         </div>
       </div>
     </div>

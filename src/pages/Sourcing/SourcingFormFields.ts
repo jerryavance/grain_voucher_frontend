@@ -169,6 +169,17 @@ export const SourceOrderFormFields = (
     uiBreakpoints: { xs: 12, sm: 12, md: 6 },
     required: true,
   },
+  // Exchange rate — required for non-UGX trades so revenue/COGS can be computed in UGX
+  {
+    name: 'exchange_rate_to_ugx',
+    initailValue: '',
+    label: 'Exchange Rate to UGX',
+    helperText: 'e.g. 3750 means 1 USD = UGX 3,750. Leave blank for UGX trades.',
+    type: 'number',
+    uiType: 'text',
+    uiBreakpoints: { xs: 12, sm: 12, md: 6 },
+    decimalPlaces: 4,
+  },
   {
     name: 'quantity_kg',
     initailValue: '',
@@ -188,6 +199,7 @@ export const SourceOrderFormFields = (
     uiType: 'text',
     uiBreakpoints: { xs: 12, sm: 12, md: 6 },
     required: true,
+    decimalPlaces: 4,
   },
   {
     name: 'weighbridge_cost',
