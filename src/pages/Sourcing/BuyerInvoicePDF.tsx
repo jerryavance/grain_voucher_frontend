@@ -404,7 +404,7 @@ export const generateBuyerInvoiceHTML = (
         ${buyerAddress || buyerDistrict
           ? `${[buyerAddress, buyerDistrict].filter(Boolean).join(", ")}<br/>`
           : ""}
-        ${buyer?.country || "Uganda"}
+        ${buyer?.country || ""}
       </div>
     </div>
   </div>
