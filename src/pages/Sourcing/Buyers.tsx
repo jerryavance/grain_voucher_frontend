@@ -66,7 +66,7 @@ const BuyerForm: FC<{
       registration_number: initialValues?.registration_number || "", contact_name: initialValues?.contact_name || "",
       phone: initialValues?.phone || "", email: initialValues?.email || "",
       physical_address: initialValues?.physical_address || "", district: initialValues?.district || "",
-      country: initialValues?.country || "Uganda", default_credit_terms_days: initialValues?.default_credit_terms_days ?? 0,
+      country: initialValues?.country || "", default_credit_terms_days: initialValues?.default_credit_terms_days ?? 0,
       credit_limit: initialValues?.credit_limit ?? 0, notes: initialValues?.notes || "",
     },
     validationSchema: Yup.object({

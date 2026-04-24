@@ -289,8 +289,7 @@ export const generatePFIHTML = (
         <div class="party-role">Buyer / Quotation For</div>
         <div class="party-name">${pfi.buyer_name || "—"}</div>
         <div class="party-detail">
-          Ref: ${pfi.order_number || "—"}<br/>
-          Uganda
+          Ref: ${pfi.order_number || "—"}
         </div>
       </div>
     </div>
