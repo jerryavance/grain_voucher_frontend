@@ -50,8 +50,10 @@ const CreatePFIForm: FC<{
   callBack?: () => void;
 }> = ({ open, prefillBuyerOrderId, handleClose, callBack }) => {
   const [loading, setLoading] = useState(false);
-  const [buyerOrders, setBuyerOrders] = useState<{ value: string; label: string }[]>([]);
-  const [grainTypes, setGrainTypes] = useState<{ value: string; label: string }[]>([]);
+  // Store full buyer order data so we can read currency when one is selected
+  const [buyerOrders, setBuyerOrders] = useState<{ value: string; label: string; currency: string }[]>([]);
+  // Store grain types with unit labels so quantity/price labels can be dynamic
+  const [grainTypes, setGrainTypes] = useState<{ value: string; label: string; unit_label: string; unit_of_measure: string }[]>([]);
 
   useEffect(() => {
     if (!open) return;
@@ -60,11 +62,17 @@ const CreatePFIForm: FC<{
         (r.results || []).map((o: any) => ({
           value: o.id,
           label: `${o.order_number} — ${o.buyer_detail?.business_name || o.buyer_name}`,
+          currency: o.currency || "UGX",
         }))
       ))
       .catch(() => {});
     SourcingService.getGrainTypes()
-      .then(r => setGrainTypes((r.results || r).map((g: any) => ({ value: g.id, label: g.name }))))
+      .then(r => setGrainTypes((r.results || r).map((g: any) => ({
+        value: g.id,
+        label: g.name,
+        unit_label: g.unit_label || "kg",
+        unit_of_measure: g.unit_of_measure || "kg",
+      }))))
       .catch(() => {});
   }, [open]);
 
@@ -142,6 +150,12 @@ const CreatePFIForm: FC<{
     },
   });
 
+  // Derive currency from selected buyer order, unit label from selected grain type
+  const selectedOrder = buyerOrders.find(o => o.value === form.values.buyer_order);
+  const selectedGrain = grainTypes.find(g => g.value === form.values.grain_type);
+  const pfiCurrency  = selectedOrder?.currency  || "UGX";
+  const pfiUnitLabel = selectedGrain?.unit_label || "kg";
+
   return (
     <Dialog open={open} onClose={() => !loading && handleClose()} maxWidth="md" fullWidth>
       <DialogTitle>New Proforma Invoice (PFI)</DialogTitle>
@@ -167,13 +181,22 @@ const CreatePFIForm: FC<{
             </FormControl>
           </Grid>
 
+          {/* Show inherited currency from buyer order */}
+          {selectedOrder && pfiCurrency !== "UGX" && (
+            <Grid item xs={12}>
+              <Alert severity="info" sx={{ py: 0.5 }}>
+                This order is in <strong>{pfiCurrency}</strong>. The unit price below should be entered in {pfiCurrency}.
+              </Alert>
+            </Grid>
+          )}
+
           {/* Grain & pricing */}
           <Grid item xs={12} md={4}>
             <FormControl fullWidth error={Boolean(form.touched.grain_type && form.errors.grain_type)}>
-              <InputLabel>Grain Type *</InputLabel>
+              <InputLabel>Product Type *</InputLabel>
               <Select
                 value={form.values.grain_type}
-                label="Grain Type *"
+                label="Product Type *"
                 onChange={e => form.setFieldValue("grain_type", e.target.value)}
               >
                 {grainTypes.map(g => <MenuItem key={g.value} value={g.value}>{g.label}</MenuItem>)}
@@ -184,18 +207,19 @@ const CreatePFIForm: FC<{
             </FormControl>
           </Grid>
           <Grid item xs={12} md={4}>
-            <TextField fullWidth label="Quantity (kg) *" type="number"
+            <TextField fullWidth label={`Quantity (${pfiUnitLabel}) *`} type="number"
               value={form.values.quantity_kg}
               onChange={e => form.setFieldValue("quantity_kg", e.target.value)}
               error={Boolean(form.touched.quantity_kg && form.errors.quantity_kg)}
               helperText={form.touched.quantity_kg && form.errors.quantity_kg as string} />
           </Grid>
           <Grid item xs={12} md={4}>
-            <TextField fullWidth label="Unit Price (UGX/kg) *" type="number"
+            <TextField fullWidth label={`Unit Price (${pfiCurrency}/${pfiUnitLabel}) *`} type="number"
               value={form.values.unit_price}
               onChange={e => form.setFieldValue("unit_price", e.target.value)}
               error={Boolean(form.touched.unit_price && form.errors.unit_price)}
-              helperText={form.touched.unit_price && form.errors.unit_price as string} />
+              helperText={(form.touched.unit_price && form.errors.unit_price as string) || `Price per ${pfiUnitLabel} in ${pfiCurrency}`}
+              inputProps={{ step: "0.0001" }} />
           </Grid>
 
           {/* Live sub-total preview */}
@@ -203,7 +227,7 @@ const CreatePFIForm: FC<{
             <Grid item xs={12}>
               <Alert severity="info">
                 Sub-total: <strong>
-                  {formatCurrency(Number(form.values.quantity_kg) * Number(form.values.unit_price))}
+                  {pfiCurrency} {(Number(form.values.quantity_kg) * Number(form.values.unit_price)).toLocaleString("en-UG", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                 </strong>
               </Alert>
             </Grid>
