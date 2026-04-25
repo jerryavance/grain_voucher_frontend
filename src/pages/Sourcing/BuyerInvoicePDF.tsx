@@ -88,9 +88,33 @@ export const generateBuyerInvoiceHTML = (
   invoice: IBuyerInvoice,
   logoDataUrl?: string
 ): string => {
-  // ── Currency & formatting ────────────────────────────────────────────────
-  const currency = invoice.currency || "UGX";
+  // ── Currency, trade unit & formatting ───────────────────────────────────
+  const currency  = invoice.currency   || "UGX";
+  const tradeUnit = invoice.trade_unit || "kg";
+  const isMT      = tradeUnit === "tonne";
+  const unitLabel = isMT ? "MT" : "kg";
   const fmt = (val: number | string | null | undefined) => fmtMoney(val, currency);
+
+  /** Convert a kg-stored quantity to the display unit. */
+  const fmtQty = (qtyKg: number | string | null | undefined): string => {
+    const kg = Number(qtyKg || 0);
+    const display = isMT ? kg / 1000 : kg;
+    return fmtNum(display, isMT ? 4 : 2);
+  };
+
+  /** Convert a per-kg price to per-display-unit price. */
+  const fmtPrice = (pricePerKg: number | string | null | undefined): string => {
+    const pkkg = Number(pricePerKg || 0);
+    const display = isMT ? pkkg * 1000 : pkkg;
+    return fmtMoney(display, currency);
+  };
+
+  /**
+   * line_total is stored in trade currency (USD, UGX…) and is quantity_kg × price_per_kg.
+   * That value is correct regardless of the display unit — showing 100 MT or 100,000 kg at
+   * price/MT or price/kg both give the same total, so we just format as-is.
+   */
+  const fmtLineTotal = fmt;
 
   // ── Values ────────────────────────────────────────────────────────────────
   const buyer        = invoice.buyer_detail;
@@ -139,9 +163,9 @@ export const generateBuyerInvoiceHTML = (
       <tr>
         <td style="padding:5px 8px;border-bottom:1px solid #f0f4fa;font-weight:600;color:#1565c0;">${l.lot_number}</td>
         <td style="padding:5px 8px;border-bottom:1px solid #f0f4fa;">${l.grain_type}</td>
-        <td style="padding:5px 8px;border-bottom:1px solid #f0f4fa;text-align:right;">${fmtNum(l.quantity_kg)}</td>
-        <td style="padding:5px 8px;border-bottom:1px solid #f0f4fa;text-align:right;">${fmt(l.sale_price_per_kg)}</td>
-        <td style="padding:5px 8px;border-bottom:1px solid #f0f4fa;text-align:right;font-weight:700;">${fmt(l.line_total)}</td>
+        <td style="padding:5px 8px;border-bottom:1px solid #f0f4fa;text-align:right;">${fmtQty(l.quantity_kg)}</td>
+        <td style="padding:5px 8px;border-bottom:1px solid #f0f4fa;text-align:right;">${fmtPrice(l.sale_price_per_kg)}</td>
+        <td style="padding:5px 8px;border-bottom:1px solid #f0f4fa;text-align:right;font-weight:700;">${fmtLineTotal(l.line_total)}</td>
       </tr>`).join("")
     : `<tr><td colspan="5" style="padding:12px 10px;text-align:center;color:#999;">No line items</td></tr>`;
 
@@ -416,8 +440,8 @@ export const generateBuyerInvoiceHTML = (
       <tr>
         <th>Lot #</th>
         <th>Product Type</th>
-        <th class="r">Quantity</th>
-        <th class="r">Unit Price (${currency})</th>
+        <th class="r">Quantity (${unitLabel})</th>
+        <th class="r">Unit Price (${currency}/${unitLabel})</th>
         <th class="r">Amount (${currency})</th>
       </tr>
     </thead>

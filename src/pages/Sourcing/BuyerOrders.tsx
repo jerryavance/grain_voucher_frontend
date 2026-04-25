@@ -70,7 +70,7 @@ const CreateBuyerOrderForm: FC<{
   }, [buyerSearch]);
 
   const form = useFormik({
-    initialValues: { buyer: "", buyer_name: "", buyer_contact_name: "", buyer_phone: "", buyer_email: "", buyer_address: "", hub: "", credit_terms_days: 0, payment_type: "financed", currency: "UGX", exchange_rate_to_ugx: "", grain_type: "", quantity_requested_kg: "", notes: "" },
+    initialValues: { buyer: "", buyer_name: "", buyer_contact_name: "", buyer_phone: "", buyer_email: "", buyer_address: "", hub: "", credit_terms_days: 0, payment_type: "financed", currency: "UGX", exchange_rate_to_ugx: "", trade_unit: "kg", grain_type: "", quantity_requested_kg: "", notes: "" },
     validationSchema: Yup.object({
       hub: Yup.string().required("Hub is required"),
       buyer: Yup.string(),
@@ -83,7 +83,7 @@ const CreateBuyerOrderForm: FC<{
     onSubmit: async (values) => {
       setLoading(true);
       try {
-        const payload: any = { hub: values.hub, notes: values.notes, credit_terms_days: values.credit_terms_days, payment_type: values.payment_type, currency: values.currency, ...(values.exchange_rate_to_ugx ? { exchange_rate_to_ugx: Number(values.exchange_rate_to_ugx) } : {}) };
+        const payload: any = { hub: values.hub, notes: values.notes, credit_terms_days: values.credit_terms_days, payment_type: values.payment_type, currency: values.currency, trade_unit: values.trade_unit, ...(values.exchange_rate_to_ugx ? { exchange_rate_to_ugx: Number(values.exchange_rate_to_ugx) } : {}) };
         if (values.grain_type) payload.grain_type = values.grain_type;
         if (values.quantity_requested_kg) payload.quantity_requested_kg = Number(values.quantity_requested_kg);
         if (buyerMode === "profile" && values.buyer) { payload.buyer = values.buyer; }
@@ -151,6 +151,16 @@ const CreateBuyerOrderForm: FC<{
             <TextField fullWidth label={`Exchange Rate (1 ${form.values.currency} = ? UGX) *`} type="number" value={form.values.exchange_rate_to_ugx} onChange={e => form.setFieldValue("exchange_rate_to_ugx", e.target.value)} helperText={`e.g. 3750 means 1 ${form.values.currency} = UGX 3,750`} inputProps={{ step: "0.0001" }} />
           </Grid>
         )}
+        {/* Document unit — kg or MT. Controls display on all PDFs only; data always in kg. */}
+        <Grid item xs={12} md={6}>
+          <FormControl fullWidth>
+            <InputLabel>Document Unit</InputLabel>
+            <Select value={form.values.trade_unit} label="Document Unit" onChange={e => form.setFieldValue("trade_unit", e.target.value)}>
+              <MenuItem value="kg">Kilograms (kg)</MenuItem>
+              <MenuItem value="tonne">Metric Tonnes (MT)</MenuItem>
+            </Select>
+          </FormControl>
+        </Grid>
         {/* Pre-sourcing demand — optional grain type + quantity for quotation */}
         <Grid item xs={12} md={6}>
           <FormControl fullWidth><InputLabel>Product Type (optional)</InputLabel>

@@ -71,6 +71,8 @@ export interface ISourceOrder {
   currency_display: string;
   /** Exchange rate to UGX. Null for UGX orders. */
   exchange_rate_to_ugx: number | null;
+  /** Display unit for documents: 'kg' or 'tonne'. Internal data always stored in kg. */
+  trade_unit: 'kg' | 'tonne';
   /** Unit of measure inherited from the product type (kg, litre, …) */
   unit_of_measure: TUnitOfMeasure;
   unit_label: string;
@@ -341,9 +343,11 @@ export interface IProformaInvoice {
   quantity_kg: string;
   unit_price: string;
   sub_total: string;
-  // Currency
+  // Currency & trade unit (from linked buyer order)
   currency: TCurrency;
   currency_display: string;
+  trade_unit: 'kg' | 'tonne';
+  exchange_rate_to_ugx: number | null;
   // Deposit
   required_deposit: string;
   paid_deposit: string;
@@ -416,6 +420,8 @@ export interface IBuyerOrder {
   currency_display: string;
   /** Exchange rate to UGX. Null for UGX orders. */
   exchange_rate_to_ugx: number | null;
+  /** Display unit for documents: 'kg' or 'tonne'. Internal data always stored in kg. */
+  trade_unit: 'kg' | 'tonne';
   // Pre-sourcing demand fields (set when status = quotation)
   grain_type: string | null;
   grain_type_name: string | null;
@@ -546,6 +552,9 @@ export interface IBuyerInvoice {
   /** Currency of the underlying buyer order (UGX, USD, EUR, GBP) */
   currency: TCurrency;
   currency_display: string;
+  /** Display unit for documents: 'kg' or 'tonne'. Internal data always in kg. */
+  trade_unit: 'kg' | 'tonne';
+  exchange_rate_to_ugx: number | null;
 }
 export interface IBuyerInvoicesResults { results: IBuyerInvoice[]; count: number; }
 

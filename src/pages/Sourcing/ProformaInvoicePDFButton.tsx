@@ -61,8 +61,8 @@ const fmtDate = (d?: string | null): string => {
   } catch { return d; }
 };
 
-const fmtNum = (v: number | string | null | undefined): string =>
-  Number(v || 0).toLocaleString("en-UG", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+const fmtNum = (v: number | string | null | undefined, dp = 2): string =>
+  Number(v || 0).toLocaleString("en-UG", { minimumFractionDigits: dp, maximumFractionDigits: dp });
 
 const fetchLogoAsDataUrl = (): Promise<string | undefined> =>
   fetch("/favicon.png")
@@ -85,15 +85,23 @@ export const generatePFIHTML = (
   const deposit       = Number(pfi.required_deposit || 0);
   const paidDeposit   = Number(pfi.paid_deposit || 0);
   const totalDue      = Number(pfi.total_due || 0);
-  const qty           = Number(pfi.quantity_kg || 0);
-  const unitPrice     = Number(pfi.unit_price || 0);
+  const qtyKg         = Number(pfi.quantity_kg || 0);
+  const unitPriceRaw  = Number(pfi.unit_price || 0);  // stored as per-kg
 
-  // Currency — read from pfi or fallback to UGX
+  // Currency — read from pfi (sourced from buyer_order) or fallback to UGX
   const currency  = (pfi as any).currency || "UGX";
   const fmt = (val: number | string | null | undefined) => fmtMoney(val, currency);
 
-  // Unit label — from pfi's grain type if available, otherwise from buyer order unit
-  const unitLabel = (pfi as any).unit_label || (pfi as any).unit_of_measure || "kg";
+  // Trade unit — 'kg' or 'tonne'. Controls display only; internal data always in kg.
+  const tradeUnit: 'kg' | 'tonne' = (pfi as any).trade_unit || "kg";
+  const isMT = tradeUnit === "tonne";
+
+  // Display quantity and unit price converted for the selected trade unit
+  const qtyDisplay       = isMT ? qtyKg / 1000 : qtyKg;
+  const unitPriceDisplay = isMT ? unitPriceRaw * 1000 : unitPriceRaw;
+
+  // Unit label — for the column headers (MT or kg)
+  const unitLabel = isMT ? "MT" : ((pfi as any).unit_label || (pfi as any).unit_of_measure || "kg");
 
   // Status badge colours
   const statusMap: Record<string, { bg: string; color: string; label: string }> = {
@@ -324,8 +332,8 @@ export const generatePFIHTML = (
       <tbody>
         <tr>
           <td style="font-weight:600;">${pfi.grain_type_name || "—"}</td>
-          <td style="text-align:right;">${fmtNum(qty)} ${unitLabel}</td>
-          <td style="text-align:right;">${fmt(unitPrice)}</td>
+          <td style="text-align:right;">${fmtNum(qtyDisplay, isMT ? 4 : 2)} ${unitLabel}</td>
+          <td style="text-align:right;">${fmt(unitPriceDisplay)}</td>
           <td style="text-align:right;font-weight:700;">${fmt(subTotal)}</td>
         </tr>
       </tbody>

@@ -180,6 +180,20 @@ export const SourceOrderFormFields = (
     uiBreakpoints: { xs: 12, sm: 12, md: 6 },
     decimalPlaces: 4,
   },
+  // Trade unit — controls display unit on documents (kg vs MT)
+  {
+    name: 'trade_unit',
+    initailValue: 'kg',
+    label: 'Document Unit',
+    helperText: 'Unit shown on all documents. Internal data always stored in kg.',
+    type: 'select',
+    uiType: 'select',
+    options: [
+      { value: 'kg', label: 'Kilograms (kg)' },
+      { value: 'tonne', label: 'Metric Tonnes (MT)' },
+    ],
+    uiBreakpoints: { xs: 12, sm: 12, md: 6 },
+  },
   {
     name: 'quantity_kg',
     initailValue: '',

@@ -50,8 +50,8 @@ const CreatePFIForm: FC<{
   callBack?: () => void;
 }> = ({ open, prefillBuyerOrderId, handleClose, callBack }) => {
   const [loading, setLoading] = useState(false);
-  // Store full buyer order data so we can read currency when one is selected
-  const [buyerOrders, setBuyerOrders] = useState<{ value: string; label: string; currency: string }[]>([]);
+  // Store full buyer order data so we can read currency + trade_unit when one is selected
+  const [buyerOrders, setBuyerOrders] = useState<{ value: string; label: string; currency: string; trade_unit: string }[]>([]);
   // Store grain types with unit labels so quantity/price labels can be dynamic
   const [grainTypes, setGrainTypes] = useState<{ value: string; label: string; unit_label: string; unit_of_measure: string }[]>([]);
 
@@ -63,6 +63,7 @@ const CreatePFIForm: FC<{
           value: o.id,
           label: `${o.order_number} — ${o.buyer_detail?.business_name || o.buyer_name}`,
           currency: o.currency || "UGX",
+          trade_unit: o.trade_unit || "kg",
         }))
       ))
       .catch(() => {});
@@ -109,11 +110,18 @@ const CreatePFIForm: FC<{
         // NOTE: created_by is intentionally NOT sent — the backend sets it
         // from request.user in perform_create. Sending it causes a 400 error
         // because it's a read-only field on the serializer.
+        // If trade_unit is 'tonne', the user entered qty in MT and price in currency/MT.
+        // Convert both back to kg-based values for storage (backend always stores per kg).
+        const enteredQty   = Number(values.quantity_kg);
+        const enteredPrice = Number(values.unit_price);
+        const storedQtyKg    = pfiIsMT ? enteredQty * 1000 : enteredQty;
+        const storedPriceKg  = pfiIsMT ? enteredPrice / 1000 : enteredPrice;
+
         const payload: Record<string, any> = {
           buyer_order:                  values.buyer_order,
           grain_type:                   values.grain_type,
-          quantity_kg:                  Number(values.quantity_kg),
-          unit_price:                   Number(values.unit_price),
+          quantity_kg:                  storedQtyKg,
+          unit_price:                   storedPriceKg,
           required_deposit:             Number(values.required_deposit),
           ship_date:                    values.ship_date,
           shipped_via:                  values.shipped_via,
@@ -150,11 +158,14 @@ const CreatePFIForm: FC<{
     },
   });
 
-  // Derive currency from selected buyer order, unit label from selected grain type
+  // Derive currency and trade_unit from selected buyer order; unit label from selected grain type
   const selectedOrder = buyerOrders.find(o => o.value === form.values.buyer_order);
   const selectedGrain = grainTypes.find(g => g.value === form.values.grain_type);
-  const pfiCurrency  = selectedOrder?.currency  || "UGX";
-  const pfiUnitLabel = selectedGrain?.unit_label || "kg";
+  const pfiCurrency  = selectedOrder?.currency   || "UGX";
+  const pfiTradeUnit = selectedOrder?.trade_unit  || "kg";
+  const pfiIsMT      = pfiTradeUnit === "tonne";
+  // When buyer order is set to MT, show "MT" as the unit label; otherwise use grain type's unit
+  const pfiUnitLabel = pfiIsMT ? "MT" : (selectedGrain?.unit_label || "kg");
 
   return (
     <Dialog open={open} onClose={() => !loading && handleClose()} maxWidth="md" fullWidth>
@@ -181,11 +192,12 @@ const CreatePFIForm: FC<{
             </FormControl>
           </Grid>
 
-          {/* Show inherited currency from buyer order */}
-          {selectedOrder && pfiCurrency !== "UGX" && (
+          {/* Show inherited currency and/or trade unit from buyer order */}
+          {selectedOrder && (pfiCurrency !== "UGX" || pfiIsMT) && (
             <Grid item xs={12}>
               <Alert severity="info" sx={{ py: 0.5 }}>
-                This order is in <strong>{pfiCurrency}</strong>. The unit price below should be entered in {pfiCurrency}.
+                {pfiCurrency !== "UGX" && <>This order is in <strong>{pfiCurrency}</strong>. Enter the unit price in {pfiCurrency}. </>}
+                {pfiIsMT && <>Documents will show quantities in <strong>Metric Tonnes (MT)</strong>. Enter the quantity in MT and price per MT below.</>}
               </Alert>
             </Grid>
           )}
@@ -222,13 +234,14 @@ const CreatePFIForm: FC<{
               inputProps={{ step: "0.0001" }} />
           </Grid>
 
-          {/* Live sub-total preview */}
+          {/* Live sub-total preview — correctly handles MT (qty × price gives same total regardless of unit) */}
           {form.values.quantity_kg && form.values.unit_price && (
             <Grid item xs={12}>
               <Alert severity="info">
                 Sub-total: <strong>
                   {pfiCurrency} {(Number(form.values.quantity_kg) * Number(form.values.unit_price)).toLocaleString("en-UG", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                 </strong>
+                {pfiIsMT && <span style={{ marginLeft: 8, fontSize: "0.85em", opacity: 0.7 }}>({form.values.quantity_kg} MT × {pfiCurrency} {form.values.unit_price}/MT)</span>}
               </Alert>
             </Grid>
           )}
