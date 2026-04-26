@@ -49,15 +49,31 @@ const InfoRow: FC<{ label: string; value: React.ReactNode }> = ({ label, value }
   </Box>
 );
 
+// ─── Currency helper (trade-currency-aware) ──────────────────────────────────
+const fmtTrade = (val: number | string | null | undefined, currency = "UGX"): string => {
+  const n = Number(val || 0);
+  if (currency === "UGX") return formatCurrency(n);
+  return `${currency} ${n.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+};
+const fmtUGX = (val: number | string | null | undefined): string => formatCurrency(val);
+
 // ─── Add Line Form ──────────────────────────────────────────────────────────
 const AddLineForm: FC<{
   open: boolean;
   orderId: string;
+  order: IBuyerOrder | null;
   availableLots: ISaleLot[];
   handleClose: () => void;
   callBack?: () => void;
-}> = ({ open, orderId, availableLots, handleClose, callBack }) => {
+}> = ({ open, orderId, order, availableLots, handleClose, callBack }) => {
   const [loading, setLoading] = useState(false);
+
+  // ── Trade context from the buyer order ──────────────────────────────────
+  const currency     = order?.currency           || "UGX";
+  const exchangeRate = order?.exchange_rate_to_ugx || null;
+  const isMT         = (order?.trade_unit        || "kg") === "tonne";
+  const unitLabel    = isMT ? "MT" : "kg";
+  const isNonUGX     = currency !== "UGX";
 
   const form = useFormik({
     initialValues: { sale_lot: "", quantity_kg: "", sale_price_per_kg: "", notes: "" },
@@ -68,8 +84,16 @@ const AddLineForm: FC<{
     }),
     onSubmit: async (values) => {
       setLoading(true);
+      // If trade_unit is MT, user entered qty in MT and price per MT — convert to kg-based for API
+      const enteredQty   = Number(values.quantity_kg);
+      const enteredPrice = Number(values.sale_price_per_kg);
+      const payload = {
+        ...values,
+        quantity_kg:       isMT ? enteredQty * 1000   : enteredQty,
+        sale_price_per_kg: isMT ? enteredPrice / 1000 : enteredPrice,
+      };
       try {
-        await SourcingService.addBuyerOrderLine(orderId, values as any);
+        await SourcingService.addBuyerOrderLine(orderId, payload as any);
         toast.success("Line added");
         form.resetForm();
         callBack?.();
@@ -85,11 +109,24 @@ const AddLineForm: FC<{
   });
 
   const selectedLot = availableLots.find(l => l.id === form.values.sale_lot);
-  const qty = Number(form.values.quantity_kg);
-  const price = Number(form.values.sale_price_per_kg);
-  const estRevenue = qty * price;
-  const estCOGS = selectedLot ? qty * selectedLot.cost_per_kg : 0;
-  const estProfit = estRevenue - estCOGS;
+
+  // Live estimation — always compute in base units (kg) then convert for display
+  const enteredQty   = Number(form.values.quantity_kg   || 0);
+  const enteredPrice = Number(form.values.sale_price_per_kg || 0);
+  // Convert entered values to kg-based for calculation
+  const qtyKg      = isMT ? enteredQty * 1000   : enteredQty;
+  const pricePerKg = isMT ? enteredPrice / 1000 : enteredPrice;
+
+  // Revenue in trade currency (qty_kg × price_per_kg)
+  const estRevenueTrade = qtyKg * pricePerKg;
+  // Revenue converted to UGX for profit comparison
+  const estRevenueUGX   = isNonUGX && exchangeRate
+    ? estRevenueTrade * exchangeRate
+    : estRevenueTrade;
+  // COGS always in UGX
+  const estCOGS   = selectedLot ? qtyKg * Number(selectedLot.cost_per_kg) : 0;
+  // Gross profit always in UGX
+  const estProfit = estRevenueUGX - estCOGS;
 
   const onClose = () => {
     form.resetForm();
@@ -124,53 +161,77 @@ const AddLineForm: FC<{
 
           {selectedLot && (
             <Alert severity="info">
-              Available: <strong>{formatWeight(selectedLot.available_quantity_kg)}</strong>
-              {" | "}COGS basis: <strong>{formatCurrency(selectedLot.cost_per_kg)}/kg</strong>
+              Available: <strong>{isMT
+                ? `${(Number(selectedLot.available_quantity_kg) / 1000).toFixed(4)} MT`
+                : formatWeight(selectedLot.available_quantity_kg)
+              }</strong>
+              {" | "}COGS basis: <strong>{fmtUGX(selectedLot.cost_per_kg)}/kg (UGX)</strong>
+            </Alert>
+          )}
+
+          {isNonUGX && !exchangeRate && (
+            <Alert severity="warning">
+              No exchange rate set on this order — profit estimate will be inaccurate. Edit the buyer order to add the exchange rate.
             </Alert>
           )}
 
           <TextField
-            fullWidth label="Quantity (kg) *" type="number"
+            fullWidth label={`Quantity (${unitLabel}) *`} type="number"
             value={form.values.quantity_kg}
             onChange={e => form.setFieldValue("quantity_kg", e.target.value)}
             error={Boolean(form.touched.quantity_kg && form.errors.quantity_kg)}
-            helperText={form.touched.quantity_kg && form.errors.quantity_kg as string}
+            helperText={(form.touched.quantity_kg && form.errors.quantity_kg as string) ||
+              (isMT ? "Enter quantity in Metric Tonnes" : "Enter quantity in kg")}
           />
 
           <TextField
-            fullWidth label="Selling Price per kg (UGX) *" type="number"
+            fullWidth label={`Selling Price per ${unitLabel} (${currency}) *`} type="number"
             value={form.values.sale_price_per_kg}
             onChange={e => form.setFieldValue("sale_price_per_kg", e.target.value)}
             error={Boolean(form.touched.sale_price_per_kg && form.errors.sale_price_per_kg)}
-            helperText={form.touched.sale_price_per_kg && form.errors.sale_price_per_kg as string}
+            helperText={(form.touched.sale_price_per_kg && form.errors.sale_price_per_kg as string) ||
+              `Price per ${unitLabel} in ${currency}`}
+            inputProps={{ step: "0.0001" }}
           />
 
-          {estRevenue > 0 && (
+          {estRevenueTrade > 0 && (
             <Card variant="outlined">
               <CardContent sx={{ p: 1.5, "&:last-child": { pb: 1.5 } }}>
                 <Typography variant="caption" color="text.primary" display="block" gutterBottom>
                   Live Estimate
                 </Typography>
-                <Box sx={{ display: "flex", gap: 3 }}>
+                <Box sx={{ display: "flex", gap: 3, flexWrap: "wrap" }}>
                   <Box>
-                    <Typography variant="caption">Revenue</Typography>
+                    <Typography variant="caption">
+                      Revenue ({currency})
+                    </Typography>
                     <Typography variant="body2" sx={{ fontWeight: 700, color: "primary.main" }}>
-                      {formatCurrency(estRevenue)}
+                      {fmtTrade(estRevenueTrade, currency)}
                     </Typography>
+                    {isNonUGX && exchangeRate && (
+                      <Typography variant="caption" color="text.secondary" display="block">
+                        ≈ {fmtUGX(estRevenueUGX)} UGX
+                      </Typography>
+                    )}
                   </Box>
                   <Box>
-                    <Typography variant="caption">COGS</Typography>
+                    <Typography variant="caption">COGS (UGX)</Typography>
                     <Typography variant="body2" sx={{ color: "text.primary" }}>
-                      {formatCurrency(estCOGS)}
+                      {fmtUGX(estCOGS)}
                     </Typography>
                   </Box>
                   <Box>
-                    <Typography variant="caption">Gross Profit</Typography>
+                    <Typography variant="caption">Gross Profit (UGX)</Typography>
                     <Typography variant="body2" sx={{ fontWeight: 700, color: estProfit >= 0 ? "success.main" : "error.main" }}>
-                      {formatCurrency(estProfit)}
+                      {fmtUGX(estProfit)}
                     </Typography>
                   </Box>
                 </Box>
+                {isNonUGX && (
+                  <Typography variant="caption" color="text.secondary" display="block" sx={{ mt: 0.5, opacity: 0.7 }}>
+                    Revenue converted to UGX using rate {exchangeRate ? `1 ${currency} = UGX ${Number(exchangeRate).toLocaleString()}` : "(no rate set)"} for profit calculation.
+                  </Typography>
+                )}
               </CardContent>
             </Card>
           )}
@@ -571,12 +632,12 @@ const BuyerOrderDetails: FC = () => {
       {/* P&L Summary Cards */}
       <Grid container spacing={2} sx={{ mb: 3 }}>
         {[
-          { label: "Revenue", value: formatCurrency(order.subtotal), color: "primary.main" },
-          { label: "COGS", value: formatCurrency(order.total_cogs), color: "text.primary" },
-          { label: "Selling Expenses", value: formatCurrency(order.total_selling_expenses), color: "warning.main" },
+          { label: `Revenue (${order.currency || "UGX"})`, value: fmtTrade(order.subtotal, order.currency || "UGX"), color: "primary.main" },
+          { label: "COGS (UGX)", value: fmtUGX(order.total_cogs), color: "text.primary" },
+          { label: "Selling Expenses (UGX)", value: fmtUGX(order.total_selling_expenses), color: "warning.main" },
           {
-            label: "Gross Profit",
-            value: formatCurrency(order.gross_profit),
+            label: "Gross Profit (UGX)",
+            value: fmtUGX(order.gross_profit),
             color: order.gross_profit >= 0 ? "success.main" : "error.main",
           },
           {
@@ -605,12 +666,36 @@ const BuyerOrderDetails: FC = () => {
       </Tabs>
 
       {/* Lines Tab */}
-      {tab === 0 && (
+      {tab === 0 && (() => {
+        // Trade context for the lines table
+        const orderCurrency = order.currency || "UGX";
+        const orderIsMT     = (order.trade_unit || "kg") === "tonne";
+        const orderUnitLbl  = orderIsMT ? "MT" : "kg";
+        // Display quantity in the order's trade unit
+        const fmtQtyDisplay = (kgVal: number | string) => {
+          const kg = Number(kgVal || 0);
+          return orderIsMT
+            ? `${(kg / 1000).toLocaleString("en-UG", { minimumFractionDigits: 4, maximumFractionDigits: 4 })} MT`
+            : formatWeight(kg);
+        };
+        // Display per-unit price in trade currency (convert per-kg → per-MT if needed)
+        const fmtPricePerUnit = (pricePerKg: number | string) => {
+          const p = Number(pricePerKg || 0);
+          const display = orderIsMT ? p * 1000 : p;
+          return fmtTrade(display, orderCurrency);
+        };
+        return (
         <Paper variant="outlined">
           <Table size="small">
             <TableHead>
               <TableRow sx={{ bgcolor: "action.hover" }}>
-                {["Lot #", "Grain", "Qty (kg)", "Price/kg", "Revenue", "COGS/kg", "COGS", "Profit", ""].map(h => (
+                {[
+                  "Lot #", "Grain",
+                  `Qty (${orderUnitLbl})`,
+                  `Price/${orderUnitLbl} (${orderCurrency})`,
+                  `Revenue (${orderCurrency})`,
+                  "COGS/kg (UGX)", "COGS (UGX)", "Profit (UGX)", ""
+                ].map(h => (
                   <TableCell key={h} sx={{ fontWeight: 700 }}>{h}</TableCell>
                 ))}
               </TableRow>
@@ -628,13 +713,13 @@ const BuyerOrderDetails: FC = () => {
                     <Typography variant="body2" sx={{ fontFamily: "monospace" }}>{line.lot_number}</Typography>
                   </TableCell>
                   <TableCell>{line.grain_type}</TableCell>
-                  <TableCell>{formatWeight(line.quantity_kg)}</TableCell>
-                  <TableCell>{formatCurrency(line.sale_price_per_kg)}</TableCell>
-                  <TableCell sx={{ fontWeight: 600 }}>{formatCurrency(line.line_total)}</TableCell>
-                  <TableCell sx={{ color: "text.primary" }}>{formatCurrency(line.cogs_per_kg)}</TableCell>
-                  <TableCell sx={{ color: "text.primary" }}>{formatCurrency(line.cogs_total)}</TableCell>
+                  <TableCell>{fmtQtyDisplay(line.quantity_kg)}</TableCell>
+                  <TableCell>{fmtPricePerUnit(line.sale_price_per_kg)}</TableCell>
+                  <TableCell sx={{ fontWeight: 600 }}>{fmtTrade(line.line_total, orderCurrency)}</TableCell>
+                  <TableCell sx={{ color: "text.primary" }}>{fmtUGX(line.cogs_per_kg)}</TableCell>
+                  <TableCell sx={{ color: "text.primary" }}>{fmtUGX(line.cogs_total)}</TableCell>
                   <TableCell sx={{ fontWeight: 600, color: line.line_gross_profit >= 0 ? "success.main" : "error.main" }}>
-                    {formatCurrency(line.line_gross_profit)}
+                    {fmtUGX(line.line_gross_profit)}
                   </TableCell>
                   <TableCell>
                     {order.status === "draft" && (
@@ -648,7 +733,8 @@ const BuyerOrderDetails: FC = () => {
             </TableBody>
           </Table>
         </Paper>
-      )}
+        );
+      })()}
 
       {/* Expenses Tab */}
       {tab === 1 && (
@@ -845,6 +931,7 @@ const BuyerOrderDetails: FC = () => {
       <AddLineForm
         open={showAddLine}
         orderId={id!}
+        order={order}
         availableLots={availableLots}
         handleClose={() => setShowAddLine(false)}
         callBack={fetchOrder}
