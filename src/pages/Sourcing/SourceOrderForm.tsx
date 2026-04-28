@@ -12,7 +12,7 @@ import uniqueId from "../../utils/generateId";
 import { SourceOrderFormFields } from "./SourcingFormFields";
 import { SourceOrderFormValidations } from "./SourcingFormValidations";
 import { SourcingService } from "./Sourcing.service";
-import { calculateTotalCost, formatCurrency } from "./SourcingConstants";
+import { formatCurrency } from "./SourcingConstants";
 
 interface ISourceOrderFormProps {
   handleClose: () => void;
@@ -46,7 +46,6 @@ const SourceOrderForm: FC<ISourceOrderFormProps> = ({
 }) => {
   const formRef = useRef<HTMLFormElement | null>(null);
   const [loading, setLoading] = useState<boolean>(false);
-  const [totalCost, setTotalCost] = useState<number>(0);
 
   const formFields = SourceOrderFormFields(
     formData.suppliers,
@@ -67,21 +66,6 @@ const SourceOrderForm: FC<ISourceOrderFormProps> = ({
     enableReinitialize: true,
     onSubmit: (values: any) => handleSubmit(values),
   });
-
-  // UPDATED: watches all 7 cost fields including loading_cost and offloading_cost
-  useEffect(() => {
-    const cost = calculateTotalCost(orderForm.values);
-    setTotalCost(cost);
-  }, [
-    orderForm.values.quantity_kg,
-    orderForm.values.offered_price_per_kg,
-    orderForm.values.weighbridge_cost,
-    orderForm.values.logistics_cost,
-    orderForm.values.loading_cost,
-    orderForm.values.offloading_cost,
-    orderForm.values.handling_cost,
-    orderForm.values.other_costs,
-  ]);
 
   useEffect(() => {
     if (orderForm.values.supplier_id) {
@@ -109,11 +93,26 @@ const SourceOrderForm: FC<ISourceOrderFormProps> = ({
   const handleSubmit = async (values: any) => {
     setLoading(true);
     try {
+      const currency    = values.currency    || "UGX";
+      const tradeUnit   = values.trade_unit  || "kg";
+      const isMT        = tradeUnit === "tonne";
+
+      // When document unit is MT, the user entered qty in MT and price per MT.
+      // Convert to kg-based values before sending to the API.
+      // Round to 6dp to eliminate JS floating point errors (e.g. 733.31/1000 = 0.7333099999...)
+      let processedValues = { ...values };
+      if (isMT) {
+        const enteredQty   = Number(values.quantity_kg)          || 0;
+        const enteredPrice = Number(values.offered_price_per_kg) || 0;
+        processedValues.quantity_kg         = Math.round(enteredQty   * 1000 * 1e6) / 1e6;
+        processedValues.offered_price_per_kg = Math.round(enteredPrice / 1000 * 1e6) / 1e6;
+      }
+
       if (formType === "Update") {
-        await SourcingService.updateSourceOrder(initialValues.id, values);
+        await SourcingService.updateSourceOrder(initialValues.id, processedValues);
         toast.success("Source order updated successfully");
       } else {
-        await SourcingService.createSourceOrder(values);
+        await SourcingService.createSourceOrder(processedValues);
         toast.success("Source order created successfully");
       }
       orderForm.resetForm();
@@ -171,10 +170,43 @@ const SourceOrderForm: FC<ISourceOrderFormProps> = ({
     );
   }
 
-  const isAggregator = orderForm.values.trade_type === "aggregator";
-  const grainCost =
-    (parseFloat(orderForm.values.quantity_kg) || 0) *
-    (parseFloat(orderForm.values.offered_price_per_kg) || 0);
+  const isAggregator   = orderForm.values.trade_type     === "aggregator";
+  const soTradeUnit    = orderForm.values.trade_unit      || "kg";
+  const soCurrency     = orderForm.values.currency        || "UGX";
+  const soExchangeRate = parseFloat(orderForm.values.exchange_rate_to_ugx) || 0;
+  const soIsMT         = soTradeUnit === "tonne";
+  const soUnitLabel    = soIsMT ? "MT" : "kg";
+
+  // Grain cost preview — user enters qty in display unit and price in display-unit/trade-currency
+  const enteredQtyDisplay   = parseFloat(orderForm.values.quantity_kg)          || 0;
+  const enteredPriceDisplay = parseFloat(orderForm.values.offered_price_per_kg) || 0;
+  // Total in trade currency (qty × price regardless of kg or MT — both give the same total)
+  const grainCostTrade = enteredQtyDisplay * enteredPriceDisplay;
+  // UGX equivalent — used for all-UGX cost comparison
+  const grainCostUGX = soCurrency !== "UGX" && soExchangeRate > 0
+    ? grainCostTrade * soExchangeRate
+    : grainCostTrade;
+
+  // Format grain cost: for non-UGX show trade currency + UGX equivalent
+  const fmtGrainCost = (): string => {
+    if (soCurrency === "UGX") return formatCurrency(grainCostTrade);
+    const tradePart = `${soCurrency} ${grainCostTrade.toLocaleString("en-US", {
+      minimumFractionDigits: 2, maximumFractionDigits: 2,
+    })}`;
+    return soExchangeRate > 0
+      ? `${tradePart} ≈ ${formatCurrency(grainCostUGX)}`
+      : tradePart;
+  };
+
+  // Total cost in UGX (grain UGX equiv + all other UGX costs)
+  const otherCosts =
+    (parseFloat(orderForm.values.weighbridge_cost) || 0) +
+    (parseFloat(orderForm.values.logistics_cost)   || 0) +
+    (parseFloat(orderForm.values.loading_cost)     || 0) +
+    (parseFloat(orderForm.values.offloading_cost)  || 0) +
+    (parseFloat(orderForm.values.handling_cost)    || 0) +
+    (parseFloat(orderForm.values.other_costs)      || 0);
+  const totalCostUGX = grainCostUGX + otherCosts;
 
   return (
     <ModalDialog
@@ -211,6 +243,13 @@ const SourceOrderForm: FC<ISourceOrderFormProps> = ({
 
           <Divider sx={{ my: 2 }} />
 
+          {/* MT trade info banner */}
+          {soIsMT && (
+            <Alert severity="info" sx={{ mt: 1, mb: 0 }}>
+              <strong>Document Unit: MT</strong> — Enter <strong>Quantity in Metric Tonnes</strong> and <strong>Price per MT</strong> in {soCurrency}. The system converts to kg on save.
+            </Alert>
+          )}
+
           {/* Cost Summary */}
           <Box sx={{
             p: 2, bgcolor: "background.paper", borderRadius: 1,
@@ -221,17 +260,22 @@ const SourceOrderForm: FC<ISourceOrderFormProps> = ({
               {isAggregator && (
                 <Chip label="Aggregator Trade" size="small" color="info" variant="outlined" />
               )}
+              {soCurrency !== "UGX" && (
+                <Chip
+                  label={`${soCurrency} trade — costs shown as UGX equivalent`}
+                  size="small" color="warning" variant="outlined"
+                />
+              )}
             </Box>
 
             {[
-              ["Grain Cost", formatCurrency(grainCost)],
+              [`Grain Cost (${enteredQtyDisplay.toLocaleString()} ${soUnitLabel} × ${soCurrency} ${enteredPriceDisplay.toLocaleString("en-US", { minimumFractionDigits: 2 })})`, fmtGrainCost()],
               ["Weighbridge Cost", formatCurrency(orderForm.values.weighbridge_cost || 0)],
-              ["Logistics Cost", formatCurrency(orderForm.values.logistics_cost || 0)],
-              // NEW: loading/offloading
-              ["Loading Cost", formatCurrency(orderForm.values.loading_cost || 0)],
-              ["Offloading Cost", formatCurrency(orderForm.values.offloading_cost || 0)],
-              ["Handling Cost", formatCurrency(orderForm.values.handling_cost || 0)],
-              ["Other Costs", formatCurrency(orderForm.values.other_costs || 0)],
+              ["Logistics Cost",   formatCurrency(orderForm.values.logistics_cost   || 0)],
+              ["Loading Cost",     formatCurrency(orderForm.values.loading_cost     || 0)],
+              ["Offloading Cost",  formatCurrency(orderForm.values.offloading_cost  || 0)],
+              ["Handling Cost",    formatCurrency(orderForm.values.handling_cost    || 0)],
+              ["Other Costs",      formatCurrency(orderForm.values.other_costs      || 0)],
             ].map(([label, value]) => (
               <Box key={label} sx={{ display: "flex", justifyContent: "space-between", mb: 0.75 }}>
                 <Span sx={{ color: "text.primary" }}>{label}:</Span>
@@ -241,8 +285,8 @@ const SourceOrderForm: FC<ISourceOrderFormProps> = ({
 
             <Divider sx={{ my: 1.5 }} />
             <Box sx={{ display: "flex", justifyContent: "space-between" }}>
-              <Typography variant="h6">Total Cost:</Typography>
-              <Typography variant="h6" color="primary">{formatCurrency(totalCost)}</Typography>
+              <Typography variant="h6">Total Cost (UGX):</Typography>
+              <Typography variant="h6" color="primary">{formatCurrency(totalCostUGX)}</Typography>
             </Box>
           </Box>
         </Box>

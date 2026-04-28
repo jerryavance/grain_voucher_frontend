@@ -84,13 +84,14 @@ const AddLineForm: FC<{
     }),
     onSubmit: async (values) => {
       setLoading(true);
-      // If trade_unit is MT, user entered qty in MT and price per MT — convert to kg-based for API
+      // If trade_unit is MT, user entered qty in MT and price per MT — convert to kg-based for API.
+      // Round to 6dp to eliminate JavaScript floating point errors (e.g. 1370/1000*1000=1369.9998...)
       const enteredQty   = Number(values.quantity_kg);
       const enteredPrice = Number(values.sale_price_per_kg);
       const payload = {
         ...values,
-        quantity_kg:       isMT ? enteredQty * 1000   : enteredQty,
-        sale_price_per_kg: isMT ? enteredPrice / 1000 : enteredPrice,
+        quantity_kg:       isMT ? Math.round(enteredQty * 1000 * 1e6) / 1e6 : enteredQty,
+        sale_price_per_kg: isMT ? Math.round(enteredPrice / 1000 * 1e6) / 1e6 : enteredPrice,
       };
       try {
         await SourcingService.addBuyerOrderLine(orderId, payload as any);

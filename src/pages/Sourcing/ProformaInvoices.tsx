@@ -114,8 +114,10 @@ const CreatePFIForm: FC<{
         // Convert both back to kg-based values for storage (backend always stores per kg).
         const enteredQty   = Number(values.quantity_kg);
         const enteredPrice = Number(values.unit_price);
-        const storedQtyKg    = pfiIsMT ? enteredQty * 1000 : enteredQty;
-        const storedPriceKg  = pfiIsMT ? enteredPrice / 1000 : enteredPrice;
+        // Round to 6dp after MT conversion to avoid JavaScript floating point errors
+        // e.g. 733.31 / 1000 = 0.7333099999999999 which exceeds backend max_digits
+        const storedQtyKg   = pfiIsMT ? Math.round(enteredQty * 1000 * 1e6) / 1e6 : enteredQty;
+        const storedPriceKg = pfiIsMT ? Math.round(enteredPrice / 1000 * 1e6) / 1e6 : enteredPrice;
 
         const payload: Record<string, any> = {
           buyer_order:                  values.buyer_order,
