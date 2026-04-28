@@ -341,10 +341,11 @@ export const generatePFIHTML = (
       </tfoot>
     </table>
 
-    <!-- Bank Payment Instructions — both accounts -->
+    <!-- Bank Payment Instructions — show only the account matching invoice currency -->
     <div class="section-heading">Bank Payment Instructions</div>
-    <div class="bank-grid">
-      <!-- UGX Account -->
+    <div style="display:grid;grid-template-columns:1fr;gap:10px;">
+      ${currency === "UGX" ? `
+      <!-- UGX Account (full width — this is a UGX invoice) -->
       <div class="bank-card">
         <div class="bank-card-title">🇺🇬 UGX Account</div>
         <table class="bank-table">
@@ -355,19 +356,20 @@ export const generatePFIHTML = (
           <tr><td class="bank-label">Currency</td><td class="bank-value">UGX</td></tr>
           <tr><td class="bank-label">Reference</td><td class="bank-value">${pfi.pfi_number}</td></tr>
         </table>
-      </div>
-      <!-- USD Account -->
+      </div>` : `
+      <!-- USD Account (full width — this is a non-UGX invoice) -->
       <div class="bank-card">
-        <div class="bank-card-title">🇺🇸 USD Account</div>
+        <div class="bank-card-title">🇺🇸 ${currency} Account</div>
         <table class="bank-table">
           <tr><td class="bank-label">Bank Name</td><td class="bank-value">${usdBankName}</td></tr>
           <tr><td class="bank-label">Account Number</td><td class="bank-value">${usdAccountNum}</td></tr>
           <tr><td class="bank-label">Account Holder</td><td class="bank-value">${usdAccountName}</td></tr>
           <tr><td class="bank-label">SWIFT</td><td class="bank-value">${usdSwift}</td></tr>
           ${usdSortCode !== "—" ? `<tr><td class="bank-label">Sort Code</td><td class="bank-value">${usdSortCode}</td></tr>` : ""}
-          <tr><td class="bank-label">Currency</td><td class="bank-value">USD</td></tr>
+          <tr><td class="bank-label">Currency</td><td class="bank-value">${currency}</td></tr>
+          <tr><td class="bank-label">Reference</td><td class="bank-value">${pfi.pfi_number}</td></tr>
         </table>
-      </div>
+      </div>`}
     </div>
 
     <!-- Payment Summary -->

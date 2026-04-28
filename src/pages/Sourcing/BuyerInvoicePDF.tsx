@@ -484,8 +484,9 @@ export const generateBuyerInvoiceHTML = (
   <!-- Bank instructions + Payment Summary -->
   <div style="margin-top:10px;">
     <div class="section-heading" style="margin-top:0;">Bank Payment Instructions</div>
-    <div class="bank-grid">
-      <!-- UGX Account -->
+    <div style="display:grid;grid-template-columns:1fr;gap:10px;">
+      ${currency === "UGX" ? `
+      <!-- UGX Account (full width — this is a UGX invoice) -->
       <div class="bank-card">
         <div class="bank-card-title">🇺🇬 UGX Account</div>
         <table class="bank-table">
@@ -496,19 +497,20 @@ export const generateBuyerInvoiceHTML = (
           <tr><td class="bank-label">Currency</td><td class="bank-value">UGX</td></tr>
           <tr><td class="bank-label">Reference</td><td class="bank-value">${invoice.invoice_number}</td></tr>
         </table>
-      </div>
-      <!-- USD Account -->
+      </div>` : `
+      <!-- USD Account (full width — this is a non-UGX invoice) -->
       <div class="bank-card">
-        <div class="bank-card-title">🇺🇸 USD Account</div>
+        <div class="bank-card-title">🇺🇸 ${currency} Account</div>
         <table class="bank-table">
           <tr><td class="bank-label">Bank Name</td><td class="bank-value">${BENNU_USD_BANK.bankName}</td></tr>
           <tr><td class="bank-label">Account Number</td><td class="bank-value">${BENNU_USD_BANK.accountNum}</td></tr>
           <tr><td class="bank-label">Account Holder</td><td class="bank-value">${BENNU_USD_BANK.accountName}</td></tr>
           <tr><td class="bank-label">Branch</td><td class="bank-value">${BENNU_USD_BANK.branch}</td></tr>
           <tr><td class="bank-label">SWIFT</td><td class="bank-value">${BENNU_USD_BANK.swift}</td></tr>
-          <tr><td class="bank-label">Currency</td><td class="bank-value">USD</td></tr>
+          <tr><td class="bank-label">Currency</td><td class="bank-value">${currency}</td></tr>
+          <tr><td class="bank-label">Reference</td><td class="bank-value">${invoice.invoice_number}</td></tr>
         </table>
-      </div>
+      </div>`}
     </div>
 
     <!-- Payment progress + summary -->

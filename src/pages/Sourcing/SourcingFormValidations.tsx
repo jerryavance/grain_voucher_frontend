@@ -51,13 +51,13 @@ export const SourceOrderFormValidations = Yup.object().shape({
   
   quantity_kg: Yup.number()
     .required("Quantity is required")
-    .min(1, "Quantity must be at least 1kg")
-    .max(1000000, "Quantity cannot exceed 1,000,000kg"),
-  
+    .min(0.0001, "Quantity must be greater than 0"),
+    // No upper limit — when Document Unit = MT, large kg values are expected after conversion
+
   offered_price_per_kg: Yup.number()
-    .required("Price per kg is required")
-    .min(0.01, "Price must be greater than 0")
-    .max(100000, "Price per kg seems unusually high"),
+    .required("Price is required")
+    .min(0.000001, "Price must be greater than 0"),
+    // No upper limit — when Document Unit = MT or Currency = USD, prices differ greatly from UGX/kg
   
   weighbridge_cost: Yup.number()
     .min(0, "Cost cannot be negative")

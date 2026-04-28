@@ -424,7 +424,7 @@ const ProformaInvoices: FC = () => {
           <Table size="small">
             <TableHead>
               <TableRow sx={{ bgcolor: "action.hover" }}>
-                {["PFI #", "Order #", "Buyer", "Grain", "Qty (kg)", "Unit Price", "Sub-total", "Status", "Sent At", "Actions"].map(h => (
+                {["PFI #", "Order #", "Buyer", "Grain", "Qty", "Unit Price", "Sub-total", "Status", "Sent At", "Actions"].map(h => (
                   <TableCell key={h} sx={{ fontWeight: 700, whiteSpace: "nowrap" }}>{h}</TableCell>
                 ))}
               </TableRow>
@@ -454,9 +454,20 @@ const ProformaInvoices: FC = () => {
                   </TableCell>
                   <TableCell>{pfi.buyer_name}</TableCell>
                   <TableCell>{pfi.grain_type_name}</TableCell>
-                  <TableCell>{Number(pfi.quantity_kg).toLocaleString()}</TableCell>
-                  <TableCell>{formatCurrency(pfi.unit_price)}</TableCell>
-                  <TableCell sx={{ fontWeight: 600 }}>{formatCurrency(pfi.sub_total)}</TableCell>
+                  <TableCell>
+                    {pfi.trade_unit === "tonne"
+                      ? `${(Number(pfi.quantity_kg) / 1000).toLocaleString("en-UG", { minimumFractionDigits: 2, maximumFractionDigits: 4 })} MT`
+                      : `${Number(pfi.quantity_kg).toLocaleString()} kg`}
+                  </TableCell>
+                  <TableCell>
+                    {`${pfi.currency} ${(pfi.trade_unit === "tonne"
+                      ? Number(pfi.unit_price) * 1000
+                      : Number(pfi.unit_price)
+                    ).toLocaleString("en-UG", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
+                  </TableCell>
+                  <TableCell sx={{ fontWeight: 600 }}>
+                    {`${pfi.currency} ${Number(pfi.sub_total).toLocaleString("en-UG", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
+                  </TableCell>
                   <TableCell>
                     <Chip label={pfi.status_display} color={PFI_STATUS_COLORS[pfi.status]} size="small" />
                   </TableCell>
