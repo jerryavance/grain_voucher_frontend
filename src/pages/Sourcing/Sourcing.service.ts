@@ -577,7 +577,7 @@ export const SourcingService = {
 
   async downloadTALsReport(params?: any): Promise<Blob> {
     return instance.get("sourcing/reports/tals/", {
-      params: { ...params, format: "csv" },
+      params: { ...params, export: "csv" },
       responseType: "blob",
     }).then(r => r.data);
   },
@@ -588,7 +588,7 @@ export const SourcingService = {
 
   async downloadTonnageReport(params?: any): Promise<Blob> {
     return instance.get("sourcing/reports/tonnage/", {
-      params: { ...params, format: "csv" },
+      params: { ...params, export: "csv" },
       responseType: "blob",
     }).then(r => r.data);
   },
