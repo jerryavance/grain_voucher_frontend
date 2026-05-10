@@ -208,6 +208,12 @@ export const MenuList = (
               visible: isSuperUser,
             },
             {
+              title: "Purchase Orders / LPOs",
+              Icon: Icons.AssignmentIcon,
+              path: "/admin/sourcing/purchase-orders",
+              visible: isSuperUser || isHubAdmin,
+            },
+            {
               title: "Buyer Invoices",
               Icon: Icons.ReceiptIcon,
               path: "/admin/sourcing/buyer-invoices",

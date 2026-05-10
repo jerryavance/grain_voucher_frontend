@@ -213,6 +213,9 @@ const routes = [
       { path: "proforma-invoices", element: <LazyLoader.ProformaInvoices /> },
       { path: "proforma-invoices/:id", element: <LazyLoader.ProformaInvoiceDetails /> },
 
+      { path: "purchase-orders", element: <LazyLoader.PurchaseOrders /> },
+      { path: "purchase-orders/:id", element: <LazyLoader.PurchaseOrderDetails /> },
+
       { path: "orders/:id/tree", element: <LazyLoader.TransactionTree /> }, 
       { path: "payments/:id", element: <LazyLoader.SupplierPaymentDetails /> },
       { path: "buyer-invoices/:id", element: <LazyLoader.BuyerInvoiceDetails /> },

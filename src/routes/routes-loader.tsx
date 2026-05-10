@@ -108,6 +108,8 @@ const RouteLazyLoader = {
   RejectedLots: Loadable(lazy(() => import("../pages/Sourcing/RejectedLots"))),
   ProformaInvoices: Loadable(lazy(() => import("../pages/Sourcing/ProformaInvoices"))),
   ProformaInvoiceDetails: Loadable(lazy(() => import("../pages/Sourcing/ProformaInvoiceDetails"))),
+  PurchaseOrders: Loadable(lazy(() => import("../pages/Sourcing/PurchaseOrders"))),
+  PurchaseOrderDetails: Loadable(lazy(() => import("../pages/Sourcing/PurchaseOrderDetails"))),
   
   // 🆕 ADD SUPPLIER PORTAL LOADERS HERE
   SupplierDashboard: Loadable(lazy(() => import("../pages/Sourcing/SupplierDashboard"))),

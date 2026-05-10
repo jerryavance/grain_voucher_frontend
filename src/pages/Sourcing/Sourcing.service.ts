@@ -17,6 +17,7 @@ import {
   IInvestorReceivable,
   IEmdOverview,
   IProformaInvoice, IProformaInvoicesResults,
+  IPurchaseOrder, IPurchaseOrdersResults,
 } from "./Sourcing.interface";
 
 export const SourcingService = {
@@ -589,6 +590,35 @@ export const SourcingService = {
       params: { ...params, format: "csv" },
       responseType: "blob",
     }).then(r => r.data);
+  },
+
+  // ── Purchase Orders / LPOs ────────────────────────────────────────────────
+  async getPurchaseOrders(filters?: Record<string, any>): Promise<IPurchaseOrdersResults> {
+    return instance.get("sourcing/purchase-orders/", { params: filters }).then(r => r.data);
+  },
+  async getPurchaseOrderDetails(id: string): Promise<IPurchaseOrder> {
+    return instance.get(`sourcing/purchase-orders/${id}/`).then(r => r.data);
+  },
+  async createPurchaseOrder(payload: Partial<IPurchaseOrder>): Promise<IPurchaseOrder> {
+    return instance.post("sourcing/purchase-orders/", payload).then(r => r.data);
+  },
+  async updatePurchaseOrder(id: string, payload: Partial<IPurchaseOrder>): Promise<IPurchaseOrder> {
+    return instance.patch(`sourcing/purchase-orders/${id}/`, payload).then(r => r.data);
+  },
+  async updatePurchaseOrderStatus(id: string, newStatus: string): Promise<IPurchaseOrder> {
+    return instance.post(`sourcing/purchase-orders/${id}/update_status/`, { status: newStatus }).then(r => r.data);
+  },
+  async generateLPO(sourceOrderId: string, payload: Record<string, any>): Promise<IPurchaseOrder> {
+    return instance.post(`sourcing/source-orders/${sourceOrderId}/generate-lpo/`, payload).then(r => r.data);
+  },
+  async recordBuyerLPO(buyerOrderId: string, payload: Record<string, any>): Promise<IPurchaseOrder> {
+    return instance.post(`sourcing/buyer-orders/${buyerOrderId}/record-buyer-lpo/`, payload).then(r => r.data);
+  },
+  async getSourceOrderPurchaseOrders(sourceOrderId: string): Promise<IPurchaseOrder[]> {
+    return instance.get(`sourcing/source-orders/${sourceOrderId}/purchase-orders/`).then(r => r.data);
+  },
+  async getBuyerOrderPurchaseOrders(buyerOrderId: string): Promise<IPurchaseOrder[]> {
+    return instance.get(`sourcing/buyer-orders/${buyerOrderId}/purchase-orders/`).then(r => r.data);
   },
 };
 

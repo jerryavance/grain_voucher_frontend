@@ -46,6 +46,9 @@ import { StandaloneDeliveryRecordForm, StandaloneWeighbridgeRecordForm, Aggregat
 import TradeReassignmentModal from "./TradeReassignmentModal";
 import SwapHorizIcon from "@mui/icons-material/SwapHoriz";
 import HistoryIcon from "@mui/icons-material/History";
+import AssignmentIcon from "@mui/icons-material/Assignment";
+import PurchaseOrderPDFButton from "./PurchaseOrderPDFButton";
+import { IPurchaseOrder } from "./Sourcing.interface";
 
 interface TabPanelProps { children?: React.ReactNode; index: number; value: number; }
 function TabPanel({ children, value, index }: TabPanelProps) {
@@ -191,6 +194,128 @@ const InvestorAllocationForm: FC<{
   );
 };
 
+// ─── Generate LPO Dialog ─────────────────────────────────────────────────────
+const GenerateLPODialog: FC<{
+  open: boolean;
+  order: ISourceOrder;
+  onClose: () => void;
+  onSuccess: () => void;
+}> = ({ open, order, onClose, onSuccess }) => {
+  const [submitting, setSubmitting] = useState(false);
+  const [unitPrice, setUnitPrice]   = useState("");
+  const [notes,     setNotes]       = useState("");
+  const [payTerms,  setPayTerms]    = useState("");
+  const [delivLoc,  setDelivLoc]    = useState("");
+  const [delivDate, setDelivDate]   = useState("");
+  const [qualSpec,  setQualSpec]    = useState("");
+
+  useEffect(() => {
+    if (!open) return;
+    setUnitPrice(order.offered_price_per_kg?.toString() ?? "");
+    setNotes(""); setPayTerms(""); setDelivLoc(""); setDelivDate(""); setQualSpec("");
+  }, [open, order]);
+
+  const handleSubmit = async () => {
+    if (!unitPrice) { toast.error("Unit price is required."); return; }
+    setSubmitting(true);
+    try {
+      await SourcingService.generateLPO(order.id, {
+        quantity_kg:       order.quantity_kg,
+        unit_price:        unitPrice,
+        delivery_location: delivLoc,
+        delivery_date:     delivDate,
+        payment_terms:     payTerms,
+        quality_spec:      qualSpec,
+        notes,
+        status:            "draft",
+      });
+      toast.success("LPO generated successfully!");
+      onSuccess();
+    } catch (err: any) {
+      toast.error(err.response?.data?.error || "Failed to generate LPO.");
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  return (
+    <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth>
+      <DialogTitle sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+        <AssignmentIcon color="primary" />
+        Generate LPO — {order.order_number}
+      </DialogTitle>
+      <DialogContent dividers>
+        <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
+          <Alert severity="info" sx={{ mb: 1 }}>
+            This will create an outbound Local Purchase Order (LPO) from Bennu to the supplier
+            confirming the grain purchase. The LPO can be printed and handed to the supplier.
+          </Alert>
+          <Grid container spacing={2}>
+            <Grid item xs={6}>
+              <TextField
+                fullWidth size="small" label="Quantity (kg)"
+                value={order.quantity_kg ?? ""} disabled
+              />
+            </Grid>
+            <Grid item xs={6}>
+              <TextField
+                fullWidth size="small" label="Unit Price (UGX/kg) *"
+                value={unitPrice} onChange={e => setUnitPrice(e.target.value)}
+                type="number" placeholder={order.offered_price_per_kg?.toString()}
+              />
+            </Grid>
+            <Grid item xs={12}>
+              <TextField
+                fullWidth size="small" label="Delivery Location"
+                value={delivLoc} onChange={e => setDelivLoc(e.target.value)}
+                placeholder="e.g. Kampala Warehouse, Plot 16 Mackinnon Road"
+              />
+            </Grid>
+            <Grid item xs={6}>
+              <TextField
+                fullWidth size="small" label="Delivery Date"
+                value={delivDate} onChange={e => setDelivDate(e.target.value)}
+                placeholder="e.g. Within 14 days, 2026-06-01"
+              />
+            </Grid>
+            <Grid item xs={6}>
+              <TextField
+                fullWidth size="small" label="Payment Terms"
+                value={payTerms} onChange={e => setPayTerms(e.target.value)}
+                placeholder="e.g. 50% upfront, balance on delivery"
+              />
+            </Grid>
+            <Grid item xs={12}>
+              <TextField
+                fullWidth size="small" label="Quality Specification"
+                value={qualSpec} onChange={e => setQualSpec(e.target.value)}
+                placeholder="e.g. Moisture ≤ 14%, clean, free from adulteration"
+              />
+            </Grid>
+            <Grid item xs={12}>
+              <TextField
+                fullWidth size="small" multiline rows={2} label="Notes"
+                value={notes} onChange={e => setNotes(e.target.value)}
+              />
+            </Grid>
+          </Grid>
+        </Box>
+      </DialogContent>
+      <DialogActions>
+        <Button onClick={onClose} disabled={submitting}>Cancel</Button>
+        <Button
+          variant="contained" color="primary"
+          onClick={handleSubmit}
+          disabled={submitting || !unitPrice}
+          startIcon={submitting ? undefined : <AssignmentIcon />}
+        >
+          {submitting ? "Generating…" : "Generate LPO"}
+        </Button>
+      </DialogActions>
+    </Dialog>
+  );
+};
+
 // ─── Main Component ───────────────────────────────────────────────────────
 const SourceOrderDetails = () => {
   const { id } = useParams<{ id: string }>();
@@ -207,6 +332,9 @@ const SourceOrderDetails = () => {
   const [showReassignModal, setShowReassignModal] = useState(false);
   const [reassignments, setReassignments] = useState<any[]>([]);
   const [reassignmentsLoading, setReassignmentsLoading] = useState(false);
+  const [purchaseOrders, setPurchaseOrders] = useState<IPurchaseOrder[]>([]);
+  const [purchaseOrdersLoading, setPurchaseOrdersLoading] = useState(false);
+  const [showGenerateLPO, setShowGenerateLPO] = useState(false);
 
   // ✅ NEW: full trade tree data for invoice/payments/deliveries tabs
   const [tradeTree, setTradeTree] = useState<any>(null);
@@ -218,6 +346,7 @@ const SourceOrderDetails = () => {
   useEffect(() => { if (order?.trade_type === "aggregator") fetchAggregatorCost(); }, [order?.id, order?.trade_type]);
   useEffect(() => { if (id) fetchTradeTree(); }, [id]);
   useEffect(() => { if (id) fetchReassignments(); }, [id]);
+  useEffect(() => { if (id) fetchPurchaseOrders(); }, [id]);
 
   const fetchOrderDetails = async () => {
     try {
@@ -253,6 +382,14 @@ const SourceOrderDetails = () => {
     finally { setReassignmentsLoading(false); }
   };
 
+  const fetchPurchaseOrders = async () => {
+    if (!id) return;
+    setPurchaseOrdersLoading(true);
+    try { setPurchaseOrders(await SourcingService.getSourceOrderPurchaseOrders(id)); }
+    catch { setPurchaseOrders([]); }
+    finally { setPurchaseOrdersLoading(false); }
+  };
+
   const handleAction = async (action: () => Promise<any>, successMsg: string) => {
     try { await action(); toast.success(successMsg); fetchOrderDetails(); fetchTradeTree(); }
     catch (e: any) { toast.error(e?.response?.data?.error || "Action failed"); }
@@ -286,6 +423,7 @@ const SourceOrderDetails = () => {
     `Deliveries (${treeDeliveries.length})`,
     "Weighbridge",
     `Re-assignments (${reassignments.length})`,
+    `LPOs (${purchaseOrders.length})`,
   ];
   if (isAggregator) tabLabels.push("Aggregator Costs");
 
@@ -327,6 +465,14 @@ const SourceOrderDetails = () => {
             Re-assign Investor
           </Button>
         )}
+        <Button
+          variant="outlined"
+          color="primary"
+          startIcon={<AssignmentIcon />}
+          onClick={() => setShowGenerateLPO(true)}
+        >
+          Generate LPO
+        </Button>
         {["accepted", "in_transit", "sent"].includes(order.status) && <Button variant="contained" startIcon={<LocalShippingIcon />} onClick={() => setShowDeliveryForm(true)}>Record Delivery</Button>}
         {["delivered", "accepted", "in_transit"].includes(order.status) && (
           <>
@@ -587,9 +733,9 @@ const SourceOrderDetails = () => {
         )}
       </TabPanel>
 
-      {/* ── Tab 5: Aggregator Costs (conditional) ──────────────────────── */}
+      {/* ── Tab 7: Aggregator Costs (conditional) ──────────────────────── */}
       {isAggregator && (
-        <TabPanel value={tabValue} index={5}>
+        <TabPanel value={tabValue} index={7}>
           {aggregatorCostLoading ? <Box sx={{ display: "flex", justifyContent: "center", py: 4 }}><ProgressIndicator /></Box>
           : aggregatorCost ? (
             <Grid container spacing={3}>
@@ -691,6 +837,68 @@ const SourceOrderDetails = () => {
           </Typography>
         )}
       </TabPanel>
+
+      {/* ── Tab 6: Purchase Orders / LPOs ──────────────────────────────── */}
+      <TabPanel value={tabValue} index={6}>
+        <Box sx={{ mb: 2, display: "flex", alignItems: "center", gap: 1 }}>
+          <AssignmentIcon color="primary" />
+          <Typography variant="h6">Purchase Orders / LPOs</Typography>
+          <Button size="small" variant="contained" color="primary" startIcon={<AssignmentIcon />}
+            onClick={() => setShowGenerateLPO(true)} sx={{ ml: "auto" }}>
+            Generate LPO
+          </Button>
+        </Box>
+        {purchaseOrdersLoading ? (
+          <LinearProgress />
+        ) : purchaseOrders.length === 0 ? (
+          <Alert severity="info">
+            No LPOs generated for this order yet.{" "}
+            <Button size="small" onClick={() => setShowGenerateLPO(true)}>Generate one now</Button>
+          </Alert>
+        ) : (
+          <Paper variant="outlined">
+            <Table size="small">
+              <TableHead>
+                <TableRow sx={{ bgcolor: "action.hover" }}>
+                  {["LPO Number", "Status", "Grain Type", "Qty (kg)", "Unit Price", "Total", "Issued", ""].map(h => (
+                    <TableCell key={h} sx={{ fontWeight: 700, fontSize: "0.75rem" }}>{h}</TableCell>
+                  ))}
+                </TableRow>
+              </TableHead>
+              <TableBody>
+                {purchaseOrders.map((po: IPurchaseOrder) => (
+                  <TableRow key={po.id} hover>
+                    <TableCell sx={{ fontWeight: 600, color: "primary.main", fontFamily: "monospace" }}>
+                      {po.po_number}
+                    </TableCell>
+                    <TableCell>
+                      <Chip label={po.status_display} size="small"
+                        color={po.status === "fulfilled" ? "success" : po.status === "cancelled" ? "error" : "default"}
+                      />
+                    </TableCell>
+                    <TableCell>{po.grain_type_name}</TableCell>
+                    <TableCell>{Number(po.quantity_kg).toLocaleString("en-UG")}</TableCell>
+                    <TableCell>{formatCurrency(po.unit_price)}</TableCell>
+                    <TableCell sx={{ fontWeight: 700 }}>{formatCurrency(po.total_amount)}</TableCell>
+                    <TableCell>{formatDateToDDMMYYYY(po.issued_at)}</TableCell>
+                    <TableCell>
+                      <PurchaseOrderPDFButton po={po} compact />
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </Paper>
+        )}
+      </TabPanel>
+
+      {/* ── Generate LPO Dialog ─────────────────────────────────────────── */}
+      <GenerateLPODialog
+        open={showGenerateLPO}
+        order={order}
+        onClose={() => setShowGenerateLPO(false)}
+        onSuccess={() => { setShowGenerateLPO(false); fetchPurchaseOrders(); }}
+      />
 
       {/* Modals */}
       <InvestorAllocationForm open={showAllocationForm} order={order} handleClose={() => setShowAllocationForm(false)} callBack={() => { fetchOrderDetails(); fetchTradeTree(); }} />

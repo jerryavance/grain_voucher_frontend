@@ -67,6 +67,7 @@ import AutoStoriesIcon from '@mui/icons-material/AutoStories';
 import AssessmentIcon from "@mui/icons-material/Assessment";
 import TableChartIcon from "@mui/icons-material/TableChart";
 import Inventory2Icon from "@mui/icons-material/Inventory2";
+import AssignmentIcon from "@mui/icons-material/Assignment";
 
 import LocalShippingIcon from '@mui/icons-material/LocalShipping';
 import PeopleIcon from '@mui/icons-material/People';
@@ -137,6 +138,7 @@ export default {
   AssessmentIcon,
   TableChartIcon,
   Inventory2Icon,
+  AssignmentIcon,
   LocalShippingIcon,
   PeopleIcon,
   ShoppingCartIcon,

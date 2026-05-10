@@ -720,3 +720,48 @@ export interface IEmdOverview {
   investor_count: number;
   investors: IEmdInvestorBalance[];
 }
+
+// ============ Purchase Order / LPO ============
+export type TPurchaseOrderDirection = 'outbound' | 'inbound';
+export type TPurchaseOrderStatus   = 'draft' | 'sent' | 'acknowledged' | 'fulfilled' | 'cancelled';
+export type TTradeUnit             = 'kg' | 'tonne';
+
+export interface IPurchaseOrder {
+  id: string;
+  po_number: string;
+  direction: TPurchaseOrderDirection;
+  direction_display: string;
+  status: TPurchaseOrderStatus;
+  status_display: string;
+  // Outbound (AMSAF → Supplier)
+  source_order: string | null;
+  source_order_number: string | null;
+  supplier_name: string | null;
+  // Inbound (Buyer → AMSAF)
+  buyer: string | null;
+  buyer_name: string | null;
+  buyer_order: string | null;
+  buyer_order_number: string | null;
+  buyer_reference: string;
+  // Product
+  grain_type: number;
+  grain_type_name: string;
+  quantity_kg: string;
+  unit_price: string;
+  currency: string;
+  trade_unit: TTradeUnit;
+  trade_unit_display: string;
+  total_amount: string;
+  // Terms
+  delivery_location: string;
+  delivery_date: string;
+  payment_terms: string;
+  quality_spec: string;
+  notes: string;
+  // Audit
+  issued_by: number;
+  issued_by_name: string;
+  issued_at: string;
+  updated_at: string;
+}
+export interface IPurchaseOrdersResults { results: IPurchaseOrder[]; count: number; }
