@@ -557,6 +557,17 @@ export const SourcingService = {
   async getSupplierPayablesReport(params?: any): Promise<any> {
     return instance.get("sourcing/reports/supplier_payables/", { params }).then(r => r.data);
   },
+
+  async getTALsReport(params?: any): Promise<any> {
+    return instance.get("sourcing/reports/tals/", { params }).then(r => r.data);
+  },
+
+  async downloadTALsReport(params?: any): Promise<Blob> {
+    return instance.get("sourcing/reports/tals/", {
+      params: { ...params, format: "csv" },
+      responseType: "blob",
+    }).then(r => r.data);
+  },
 };
 
 export default SourcingService;

@@ -65,6 +65,7 @@ import LibraryBooksIcon from '@mui/icons-material/LibraryBooks';
 import AutoStoriesIcon from '@mui/icons-material/AutoStories';
 
 import AssessmentIcon from "@mui/icons-material/Assessment";
+import TableChartIcon from "@mui/icons-material/TableChart";
 
 import LocalShippingIcon from '@mui/icons-material/LocalShipping';
 import PeopleIcon from '@mui/icons-material/People';
@@ -133,6 +134,7 @@ export default {
   AutoStoriesIcon,
 
   AssessmentIcon,
+  TableChartIcon,
   LocalShippingIcon,
   PeopleIcon,
   ShoppingCartIcon,

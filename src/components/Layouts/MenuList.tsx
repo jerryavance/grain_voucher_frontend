@@ -247,6 +247,7 @@ export const MenuList = (
           isHeader: true,
           subMenu: [
             { title: "Reports & Analytics", Icon: Icons.AssessmentIcon, path: "/admin/sourcing/reports", visible: isSuperUser || isHubAdmin },
+            { title: "TALs Finance Report", Icon: Icons.TableChartIcon, path: "/admin/sourcing/tals-report", visible: isSuperUser || isHubAdmin },
           ],
         },
       ],
