@@ -43,6 +43,9 @@ import LoadingScreen from "../../components/LoadingScreen";
 import ProgressIndicator from "../../components/UI/ProgressIndicator";
 import { SupplierInvoicePDFButton } from "./SupplierInvoicePDF";
 import { StandaloneDeliveryRecordForm, StandaloneWeighbridgeRecordForm, AggregatorTradeCostForm } from "./SourcingForms";
+import TradeReassignmentModal from "./TradeReassignmentModal";
+import SwapHorizIcon from "@mui/icons-material/SwapHoriz";
+import HistoryIcon from "@mui/icons-material/History";
 
 interface TabPanelProps { children?: React.ReactNode; index: number; value: number; }
 function TabPanel({ children, value, index }: TabPanelProps) {
@@ -201,6 +204,9 @@ const SourceOrderDetails = () => {
   const [showAggregatorCostForm, setShowAggregatorCostForm] = useState(false);
   const [aggregatorCost, setAggregatorCost] = useState<IAggregatorTradeCost | null>(null);
   const [aggregatorCostLoading, setAggregatorCostLoading] = useState(false);
+  const [showReassignModal, setShowReassignModal] = useState(false);
+  const [reassignments, setReassignments] = useState<any[]>([]);
+  const [reassignmentsLoading, setReassignmentsLoading] = useState(false);
 
   // ✅ NEW: full trade tree data for invoice/payments/deliveries tabs
   const [tradeTree, setTradeTree] = useState<any>(null);
@@ -210,8 +216,8 @@ const SourceOrderDetails = () => {
 
   useEffect(() => { if (id) fetchOrderDetails(); }, [id]);
   useEffect(() => { if (order?.trade_type === "aggregator") fetchAggregatorCost(); }, [order?.id, order?.trade_type]);
-  // ✅ NEW: fetch trade tree for invoice/payments/deliveries data
   useEffect(() => { if (id) fetchTradeTree(); }, [id]);
+  useEffect(() => { if (id) fetchReassignments(); }, [id]);
 
   const fetchOrderDetails = async () => {
     try {
@@ -239,6 +245,14 @@ const SourceOrderDetails = () => {
     finally { setAggregatorCostLoading(false); }
   };
 
+  const fetchReassignments = async () => {
+    if (!id) return;
+    setReassignmentsLoading(true);
+    try { setReassignments(await SourcingService.getTradeReassignments(id)); }
+    catch { setReassignments([]); }
+    finally { setReassignmentsLoading(false); }
+  };
+
   const handleAction = async (action: () => Promise<any>, successMsg: string) => {
     try { await action(); toast.success(successMsg); fetchOrderDetails(); fetchTradeTree(); }
     catch (e: any) { toast.error(e?.response?.data?.error || "Action failed"); }
@@ -260,12 +274,18 @@ const SourceOrderDetails = () => {
   const treeInvoice = tradeTree?.supplier_invoice;
   const treePayments = tradeTree?.supplier_payments || [];
 
+  const treeAllocation = tradeTree?.investor_allocation;
+  const canReassign =
+    order.has_investor_allocation &&
+    !["cancelled", "completed"].includes(order.status);
+
   const tabLabels = [
     "Order Details",
     "Supplier Info",
     `Invoice & Payments`,
     `Deliveries (${treeDeliveries.length})`,
     "Weighbridge",
+    `Re-assignments (${reassignments.length})`,
   ];
   if (isAggregator) tabLabels.push("Aggregator Costs");
 
@@ -301,6 +321,11 @@ const SourceOrderDetails = () => {
             {!order.has_investor_allocation && <Button variant="contained" color="primary" startIcon={<AccountBalanceIcon />} onClick={() => setShowAllocationForm(true)}>Assign Investor</Button>}
             <Button variant="outlined" startIcon={<LocalShippingIcon />} onClick={() => handleAction(() => SourcingService.markInTransit(id!), "Marked in transit")}>Mark In Transit</Button>
           </>
+        )}
+        {canReassign && (
+          <Button variant="outlined" color="warning" startIcon={<SwapHorizIcon />} onClick={() => setShowReassignModal(true)}>
+            Re-assign Investor
+          </Button>
         )}
         {["accepted", "in_transit", "sent"].includes(order.status) && <Button variant="contained" startIcon={<LocalShippingIcon />} onClick={() => setShowDeliveryForm(true)}>Record Delivery</Button>}
         {["delivered", "accepted", "in_transit"].includes(order.status) && (
@@ -612,11 +637,76 @@ const SourceOrderDetails = () => {
         </TabPanel>
       )}
 
+      {/* ── Re-assignments History Tab ─────────────────────────────────── */}
+      <TabPanel value={tabValue} index={5}>
+        <Box sx={{ mb: 2, display: "flex", alignItems: "center", gap: 1 }}>
+          <HistoryIcon color="action" />
+          <Typography variant="h6">Investor Re-assignment History</Typography>
+          {canReassign && (
+            <Button size="small" variant="outlined" color="warning" startIcon={<SwapHorizIcon />}
+              onClick={() => setShowReassignModal(true)} sx={{ ml: "auto" }}>
+              Re-assign Investor
+            </Button>
+          )}
+        </Box>
+        {reassignmentsLoading ? (
+          <LinearProgress />
+        ) : reassignments.length === 0 ? (
+          <Alert severity="info">No investor re-assignments have been made on this trade.</Alert>
+        ) : (
+          <Paper variant="outlined">
+            <Table size="small">
+              <TableHead>
+                <TableRow sx={{ bgcolor: "action.hover" }}>
+                  {["#", "Ref", "From Investor", "To Investor", "Amount", "Reason", "By", "Date"].map(h => (
+                    <TableCell key={h} sx={{ fontWeight: 700, fontSize: "0.75rem" }}>{h}</TableCell>
+                  ))}
+                </TableRow>
+              </TableHead>
+              <TableBody>
+                {reassignments.map((r: any, i: number) => (
+                  <TableRow key={r.id} hover>
+                    <TableCell>{i + 1}</TableCell>
+                    <TableCell sx={{ fontWeight: 600, color: "primary.main", fontFamily: "monospace" }}>
+                      {r.reassignment_number}
+                    </TableCell>
+                    <TableCell>{r.from_investor_name ?? "—"}</TableCell>
+                    <TableCell sx={{ fontWeight: 600 }}>{r.to_investor_name}</TableCell>
+                    <TableCell>{formatCurrency(r.amount_transferred)}</TableCell>
+                    <TableCell>
+                      <Chip label={r.reason_display ?? r.reason} size="small" variant="outlined" />
+                    </TableCell>
+                    <TableCell>{r.reassigned_by_name}</TableCell>
+                    <TableCell>{formatDateToDDMMYYYY(r.reassigned_at)}</TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </Paper>
+        )}
+        {reassignments.length > 0 && (
+          <Typography variant="caption" color="text.secondary" sx={{ mt: 1, display: "block" }}>
+            {reassignments.length} re-assignment{reassignments.length !== 1 ? "s" : ""} recorded.
+            Each transfer restored EMD to the outgoing investor and locked it from the incoming investor.
+          </Typography>
+        )}
+      </TabPanel>
+
       {/* Modals */}
       <InvestorAllocationForm open={showAllocationForm} order={order} handleClose={() => setShowAllocationForm(false)} callBack={() => { fetchOrderDetails(); fetchTradeTree(); }} />
       {showDeliveryForm && <StandaloneDeliveryRecordForm sourceOrderId={order.id} callBack={() => { setShowDeliveryForm(false); fetchOrderDetails(); fetchTradeTree(); }} handleClose={() => setShowDeliveryForm(false)} />}
       {showWeighbridgeForm && <StandaloneWeighbridgeRecordForm sourceOrderId={order.id} callBack={() => { setShowWeighbridgeForm(false); fetchOrderDetails(); fetchTradeTree(); }} handleClose={() => setShowWeighbridgeForm(false)} />}
       <AggregatorTradeCostForm open={showAggregatorCostForm} sourceOrderId={order.id} sourceOrderNumber={order.order_number} existingRecord={aggregatorCost} handleClose={() => setShowAggregatorCostForm(false)} callBack={() => { setShowAggregatorCostForm(false); fetchAggregatorCost(); fetchOrderDetails(); }} />
+      <TradeReassignmentModal
+        open={showReassignModal}
+        sourceOrderId={order.id}
+        orderNumber={order.order_number}
+        currentInvestorName={treeAllocation?.investor_account_name ?? treeAllocation?.investor_account ?? undefined}
+        allocationId={treeAllocation?.id ?? ""}
+        allocationAmount={parseFloat(treeAllocation?.amount_allocated ?? "0")}
+        onClose={() => setShowReassignModal(false)}
+        onSuccess={() => { fetchOrderDetails(); fetchTradeTree(); fetchReassignments(); }}
+      />
     </Box>
   );
 };

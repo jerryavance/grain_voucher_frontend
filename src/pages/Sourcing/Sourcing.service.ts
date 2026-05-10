@@ -438,10 +438,21 @@ export const SourcingService = {
 
   // ── NEW: Backend integration endpoints ────────────────────────────────────
 
-  async reassignInvestor(allocationId: string, newInvestorAccountId: string): Promise<any> {
+  async reassignInvestor(
+    allocationId: string,
+    newInvestorAccountId: string,
+    reason?: string,
+    notes?: string,
+  ): Promise<any> {
     return instance.post(`sourcing/investor-allocations/${allocationId}/reassign_investor/`, {
       new_investor_account_id: newInvestorAccountId,
+      reason: reason ?? "mutual_agreement",
+      notes:  notes  ?? "",
     }).then(r => r.data);
+  },
+
+  async getTradeReassignments(sourceOrderId: string): Promise<any[]> {
+    return instance.get(`sourcing/source-orders/${sourceOrderId}/reassignments/`).then(r => r.data);
   },
 
   async exportBuyerInvoicesCsv(params?: any): Promise<Blob> {
