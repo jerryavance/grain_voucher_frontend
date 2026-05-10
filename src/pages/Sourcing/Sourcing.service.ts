@@ -568,6 +568,17 @@ export const SourcingService = {
       responseType: "blob",
     }).then(r => r.data);
   },
+
+  async getTonnageReport(params?: any): Promise<any> {
+    return instance.get("sourcing/reports/tonnage/", { params }).then(r => r.data);
+  },
+
+  async downloadTonnageReport(params?: any): Promise<Blob> {
+    return instance.get("sourcing/reports/tonnage/", {
+      params: { ...params, format: "csv" },
+      responseType: "blob",
+    }).then(r => r.data);
+  },
 };
 
 export default SourcingService;

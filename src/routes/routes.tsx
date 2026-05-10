@@ -201,6 +201,7 @@ const routes = [
       // Reports & Analytics
       { path: "reports", element: <LazyLoader.SourcingReports /> },
       { path: "tals-report", element: <LazyLoader.TALsReport /> },
+      { path: "tonnage-report", element: <LazyLoader.TonnageReport /> },
 
       // Aggregator Trade Costs
       { path: "aggregator-costs", element: <LazyLoader.AggregatorTradeCosts /> },
