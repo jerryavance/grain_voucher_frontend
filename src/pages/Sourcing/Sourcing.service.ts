@@ -18,6 +18,7 @@ import {
   IEmdOverview,
   IProformaInvoice, IProformaInvoicesResults,
   IPurchaseOrder, IPurchaseOrdersResults,
+  IBuyerOrderFulfillment,
 } from "./Sourcing.interface";
 
 export const SourcingService = {
@@ -619,6 +620,16 @@ export const SourcingService = {
   },
   async getBuyerOrderPurchaseOrders(buyerOrderId: string): Promise<IPurchaseOrder[]> {
     return instance.get(`sourcing/buyer-orders/${buyerOrderId}/purchase-orders/`).then(r => r.data);
+  },
+
+  // ── Bulk order fulfillment tracking ──────────────────────────────────────
+  async getBuyerOrderFulfillment(buyerOrderId: string): Promise<IBuyerOrderFulfillment> {
+    return instance.get(`sourcing/buyer-orders/${buyerOrderId}/fulfillment/`).then(r => r.data);
+  },
+  async linkSourceOrderToBuyerOrder(sourceOrderId: string, buyerOrderId: string | null): Promise<ISourceOrder> {
+    return instance.post(`sourcing/source-orders/${sourceOrderId}/link-buyer-order/`, {
+      buyer_order_id: buyerOrderId,
+    }).then(r => r.data);
   },
 };
 

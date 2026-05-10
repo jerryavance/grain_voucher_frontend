@@ -1,10 +1,11 @@
-import { FC, useEffect, useState } from "react";
+import { FC, useEffect, useState, useCallback } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import {
-  Alert, Box, Button, Card, CardContent, Chip, Dialog, DialogActions,
-  DialogContent, DialogTitle, Divider, FormControl, FormHelperText,
-  Grid, IconButton, InputLabel, MenuItem, Paper, Select, Tab, Tabs,
-  Table, TableBody, TableCell, TableHead, TableRow, TextField, Typography,
+  Alert, Box, Button, Card, CardContent, Chip, CircularProgress,
+  Dialog, DialogActions, DialogContent, DialogTitle, Divider,
+  FormControl, FormHelperText, Grid, IconButton, InputLabel,
+  LinearProgress, MenuItem, Paper, Select, Tab, Tabs,
+  Table, TableBody, TableCell, TableHead, TableRow, TextField, Tooltip, Typography,
 } from "@mui/material";
 import { useFormik } from "formik";
 import * as Yup from "yup";
@@ -16,6 +17,8 @@ import DeleteIcon from "@mui/icons-material/Delete";
 import LaunchIcon from "@mui/icons-material/Launch";
 import LocalShippingIcon from "@mui/icons-material/LocalShipping";
 import ReceiptIcon from "@mui/icons-material/Receipt";
+import TrackChangesIcon from "@mui/icons-material/TrackChanges";
+import LinkOffIcon from "@mui/icons-material/LinkOff";
 import LoadingScreen from "../../components/LoadingScreen";
 import ProgressIndicator from "../../components/UI/ProgressIndicator";
 import { Span } from "../../components/Typography";
@@ -23,7 +26,7 @@ import useTitle from "../../hooks/useTitle";
 import { formatDateToDDMMYYYY } from "../../utils/date_formatter";
 import { SourcingService } from "./Sourcing.service";
 import { formatCurrency, formatWeight } from "./SourcingConstants";
-import { IBuyerOrder, IBuyerOrderLine, ISaleLot, ISaleExpense, IProformaInvoice } from "./Sourcing.interface";
+import { IBuyerOrder, IBuyerOrderLine, IBuyerOrderFulfillment, ISaleLot, ISaleExpense, IProformaInvoice } from "./Sourcing.interface";
 
 const BUYER_ORDER_STATUS_COLORS: Record<string, any> = {
   quotation: "info", draft: "default", confirmed: "primary", dispatched: "warning",
@@ -425,8 +428,18 @@ const BuyerOrderDetails: FC = () => {
   const [linkedSourceOrders, setLinkedSourceOrders] = useState<string[]>([]);
   const [pfis, setPfis] = useState<IProformaInvoice[]>([]);
   const [pfiActionLoading, setPfiActionLoading] = useState(false);
+  const [fulfillment, setFulfillment] = useState<IBuyerOrderFulfillment | null>(null);
+  const [fulfillmentLoading, setFulfillmentLoading] = useState(false);
 
   useTitle(order ? `Order ${order.order_number}` : "Buyer Order");
+
+  const fetchFulfillment = useCallback(async () => {
+    if (!id) return;
+    setFulfillmentLoading(true);
+    try { setFulfillment(await SourcingService.getBuyerOrderFulfillment(id)); }
+    catch { setFulfillment(null); }
+    finally { setFulfillmentLoading(false); }
+  }, [id]);
 
   useEffect(() => {
     fetchOrder();
@@ -438,6 +451,7 @@ const BuyerOrderDetails: FC = () => {
       SourcingService.getProformaInvoices({ buyer_order: id, page_size: 50 })
         .then(r => setPfis(r.results || []))
         .catch(() => {});
+      fetchFulfillment();
     }
   }, [id]);
 
@@ -664,6 +678,7 @@ const BuyerOrderDetails: FC = () => {
         <Tab label={`Expenses (${order.sale_expenses.length})`} />
         <Tab label="Order Info" />
         <Tab label={`PFIs (${pfis.length})`} />
+        <Tab icon={<TrackChangesIcon sx={{ fontSize: 16 }} />} iconPosition="start" label="Fulfillment" />
       </Tabs>
 
       {/* Lines Tab */}
@@ -925,6 +940,211 @@ const BuyerOrderDetails: FC = () => {
               </Table>
             </Paper>
           )}
+        </Box>
+      )}
+
+      {/* Fulfillment Tab */}
+      {tab === 4 && (
+        <Box>
+          {fulfillmentLoading && <LinearProgress sx={{ mb: 2 }} />}
+
+          {!fulfillment && !fulfillmentLoading && (
+            <Alert severity="info">Fulfillment data unavailable.</Alert>
+          )}
+
+          {fulfillment && (() => {
+            const s = fulfillment.summary;
+            const pct = s.fulfillment_pct ?? 0;
+            const requested = Number(s.quantity_requested_kg || 0);
+            const filled    = Number(s.quantity_filled_kg   || 0);
+            const planned   = Number(s.quantity_planned_kg  || 0);
+            const remaining = Number(s.quantity_remaining_kg || 0);
+
+            const fmtKg = (kg: number) =>
+              kg >= 1000
+                ? `${(kg / 1000).toLocaleString("en-UG", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} MT`
+                : `${kg.toLocaleString("en-UG", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} kg`;
+
+            return (
+              <>
+                {/* ── Progress bar ── */}
+                {requested > 0 && (
+                  <Box sx={{ mb: 3 }}>
+                    <Box sx={{ display: "flex", justifyContent: "space-between", mb: 0.5 }}>
+                      <Typography variant="body2" fontWeight={600}>
+                        Order Fulfillment Progress
+                      </Typography>
+                      <Typography variant="body2" color={pct >= 100 ? "success.main" : "text.primary"} fontWeight={700}>
+                        {pct.toFixed(1)}%
+                      </Typography>
+                    </Box>
+                    <Tooltip title={`${fmtKg(filled)} filled of ${fmtKg(requested)} requested`}>
+                      <LinearProgress
+                        variant="determinate"
+                        value={Math.min(pct, 100)}
+                        sx={{ height: 10, borderRadius: 5, bgcolor: "action.hover",
+                          "& .MuiLinearProgress-bar": {
+                            bgcolor: pct >= 100 ? "success.main" : pct >= 60 ? "primary.main" : "warning.main",
+                          },
+                        }}
+                      />
+                    </Tooltip>
+                  </Box>
+                )}
+
+                {/* ── Summary cards ── */}
+                <Grid container spacing={2} sx={{ mb: 3 }}>
+                  {[
+                    { label: "Requested", value: requested > 0 ? fmtKg(requested) : "—", color: "text.primary" },
+                    { label: "Planned Supply", value: fmtKg(planned), color: "info.main",
+                      sub: `${s.planned_count} source order${s.planned_count !== 1 ? "s" : ""}` },
+                    { label: "Filled", value: fmtKg(filled), color: filled > 0 ? "success.main" : "text.disabled",
+                      sub: `${s.filled_lines_count} line${s.filled_lines_count !== 1 ? "s" : ""}` },
+                    { label: "Remaining", value: remaining > 0 ? fmtKg(remaining) : "✓ Complete",
+                      color: remaining > 0 ? "warning.main" : "success.main" },
+                  ].map(card => (
+                    <Grid item xs={6} sm={3} key={card.label}>
+                      <Card variant="outlined">
+                        <CardContent sx={{ p: 1.5, "&:last-child": { pb: 1.5 } }}>
+                          <Typography variant="caption" color="text.primary">{card.label}</Typography>
+                          <Typography variant="h6" sx={{ color: card.color, fontWeight: 700, fontSize: "1rem" }}>
+                            {card.value}
+                          </Typography>
+                          {card.sub && (
+                            <Typography variant="caption" color="text.secondary">{card.sub}</Typography>
+                          )}
+                        </CardContent>
+                      </Card>
+                    </Grid>
+                  ))}
+                </Grid>
+
+                {/* ── Planned deliveries ── */}
+                <Typography variant="subtitle1" fontWeight={700} sx={{ mb: 1 }}>
+                  Planned Supply Runs ({fulfillment.planned.length})
+                </Typography>
+                {fulfillment.planned.length === 0 ? (
+                  <Alert severity="info" sx={{ mb: 3 }}>
+                    No source orders linked to this buyer order yet.
+                    Go to a source order and use the "Link to Buyer Order" action to plan supply for this order.
+                  </Alert>
+                ) : (
+                  <Paper variant="outlined" sx={{ mb: 3 }}>
+                    <Table size="small">
+                      <TableHead>
+                        <TableRow sx={{ bgcolor: "action.hover" }}>
+                          {["Source Order", "Status", "Supplier", "Grain", "Qty (kg)", "Total Cost", "Expected Delivery", "Lot Created", ""].map(h => (
+                            <TableCell key={h} sx={{ fontWeight: 700 }}>{h}</TableCell>
+                          ))}
+                        </TableRow>
+                      </TableHead>
+                      <TableBody>
+                        {fulfillment.planned.map(so => (
+                          <TableRow key={so.id} hover>
+                            <TableCell>
+                              <Button
+                                size="small" variant="text" sx={{ fontFamily: "monospace", fontWeight: 700, p: 0 }}
+                                onClick={() => navigate(`/admin/sourcing/orders/${so.id}`)}
+                                endIcon={<LaunchIcon sx={{ fontSize: 12 }} />}
+                              >
+                                {so.order_number}
+                              </Button>
+                            </TableCell>
+                            <TableCell>
+                              <Chip label={so.status_display} size="small"
+                                color={so.status === "completed" ? "success" : so.status === "cancelled" ? "error" : so.status === "in_progress" ? "warning" : "default"}
+                              />
+                            </TableCell>
+                            <TableCell sx={{ maxWidth: 140 }}>
+                              <Typography variant="body2" noWrap title={so.supplier_name}>{so.supplier_name}</Typography>
+                            </TableCell>
+                            <TableCell>{so.grain_type}</TableCell>
+                            <TableCell>{Number(so.quantity_kg).toLocaleString()}</TableCell>
+                            <TableCell sx={{ fontWeight: 600 }}>{formatCurrency(so.total_cost)}</TableCell>
+                            <TableCell sx={{ fontSize: 12 }}>
+                              {so.expected_delivery_date ? formatDateToDDMMYYYY(so.expected_delivery_date) : "—"}
+                            </TableCell>
+                            <TableCell>
+                              {so.has_sale_lot
+                                ? <Chip label="Lot Created" size="small" color="success" variant="outlined" />
+                                : <Chip label="No Lot Yet" size="small" color="default" variant="outlined" />
+                              }
+                            </TableCell>
+                            <TableCell>
+                              <Tooltip title="Unlink this source order from the buyer order">
+                                <IconButton
+                                  size="small" color="warning"
+                                  onClick={async () => {
+                                    if (!window.confirm(`Unlink ${so.order_number} from this buyer order?`)) return;
+                                    try {
+                                      await SourcingService.linkSourceOrderToBuyerOrder(so.id, null);
+                                      toast.success("Source order unlinked");
+                                      fetchFulfillment();
+                                    } catch { toast.error("Failed to unlink"); }
+                                  }}
+                                >
+                                  <LinkOffIcon fontSize="small" />
+                                </IconButton>
+                              </Tooltip>
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </Paper>
+                )}
+
+                {/* ── Actual fills ── */}
+                <Typography variant="subtitle1" fontWeight={700} sx={{ mb: 1 }}>
+                  Actual Filled Lines ({fulfillment.filled.length})
+                </Typography>
+                {fulfillment.filled.length === 0 ? (
+                  <Alert severity="info">
+                    No sale lines have been recorded yet. Add lines from the Lines tab once grain arrives.
+                  </Alert>
+                ) : (
+                  <Paper variant="outlined">
+                    <Table size="small">
+                      <TableHead>
+                        <TableRow sx={{ bgcolor: "action.hover" }}>
+                          {["Lot #", "Source Order", "Supplier", "Grain", "Qty (kg)", "Price/kg", "Revenue", "COGS", "Gross Profit"].map(h => (
+                            <TableCell key={h} sx={{ fontWeight: 700 }}>{h}</TableCell>
+                          ))}
+                        </TableRow>
+                      </TableHead>
+                      <TableBody>
+                        {fulfillment.filled.map((line, i) => (
+                          <TableRow key={line.id || i} hover>
+                            <TableCell sx={{ fontFamily: "monospace", fontSize: 12 }}>{line.lot_number || "—"}</TableCell>
+                            <TableCell>
+                              {line.source_order_id ? (
+                                <Button
+                                  size="small" variant="text" sx={{ fontFamily: "monospace", fontWeight: 600, p: 0, fontSize: 12 }}
+                                  onClick={() => navigate(`/admin/sourcing/orders/${line.source_order_id}`)}
+                                  endIcon={<LaunchIcon sx={{ fontSize: 11 }} />}
+                                >
+                                  {line.source_order_number}
+                                </Button>
+                              ) : "—"}
+                            </TableCell>
+                            <TableCell sx={{ fontSize: 12 }}>{line.supplier_name || "—"}</TableCell>
+                            <TableCell sx={{ fontSize: 12 }}>{line.grain_type || "—"}</TableCell>
+                            <TableCell>{Number(line.quantity_kg).toLocaleString()}</TableCell>
+                            <TableCell sx={{ fontSize: 12 }}>{formatCurrency(line.sale_price_per_kg)}</TableCell>
+                            <TableCell sx={{ fontWeight: 600 }}>{formatCurrency(line.line_total)}</TableCell>
+                            <TableCell sx={{ color: "text.primary" }}>{formatCurrency(line.cogs_total)}</TableCell>
+                            <TableCell sx={{ fontWeight: 700, color: Number(line.line_gross_profit) >= 0 ? "success.main" : "error.main" }}>
+                              {formatCurrency(line.line_gross_profit)}
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </Paper>
+                )}
+              </>
+            );
+          })()}
         </Box>
       )}
 

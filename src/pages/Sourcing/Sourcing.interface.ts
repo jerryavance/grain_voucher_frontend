@@ -439,6 +439,52 @@ export interface IBuyerOrder {
   delivered_at: string | null; completed_at: string | null;
   created_at: string; updated_at: string;
   linked_source_order_numbers?: string[];
+  // Fulfillment tracking (bulk orders)
+  quantity_filled_kg: string | null;
+  quantity_planned_kg: string | null;
+  quantity_remaining_kg: string | null;
+  fulfillment_pct: string | null;
+  planned_source_orders_count: number;
+  status_display?: string;
+}
+
+export interface IBuyerOrderFulfillment {
+  summary: {
+    quantity_requested_kg: string;
+    quantity_filled_kg: string;
+    quantity_planned_kg: string;
+    quantity_remaining_kg: string;
+    fulfillment_pct: number | null;
+    planned_count: number;
+    filled_lines_count: number;
+  };
+  planned: Array<{
+    id: string;
+    order_number: string;
+    status: string;
+    status_display: string;
+    supplier_name: string;
+    grain_type: string;
+    quantity_kg: string;
+    total_cost: string;
+    expected_delivery_date: string | null;
+    created_at: string;
+    has_sale_lot: boolean;
+  }>;
+  filled: Array<{
+    id: string;
+    lot_number: string | null;
+    source_order_id: string | null;
+    source_order_number: string | null;
+    supplier_name: string | null;
+    grain_type: string | null;
+    quantity_kg: string;
+    sale_price_per_kg: string;
+    line_total: string;
+    cogs_total: string;
+    line_gross_profit: string;
+    created_at: string;
+  }>;
 }
 
 export interface IBuyerOrderList {
