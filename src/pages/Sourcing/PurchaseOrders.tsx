@@ -8,7 +8,8 @@
 
 import React, { useCallback, useEffect, useState } from "react";
 import {
-  Alert, Box, Button, Chip, CircularProgress, Divider,
+  Alert, Box, Button, Chip, CircularProgress, Dialog, DialogActions,
+  DialogContent, DialogTitle, Divider,
   FormControl, InputLabel, MenuItem, Paper, Select,
   Table, TableBody, TableCell, TableContainer, TableHead, TableRow,
   TextField, Typography,
@@ -20,6 +21,133 @@ import { useNavigate } from "react-router-dom";
 import { toast } from "react-hot-toast";
 import SourcingService from "./Sourcing.service";
 import { IPurchaseOrder, TPurchaseOrderDirection, TPurchaseOrderStatus } from "./Sourcing.interface";
+
+// ─── Create PO Dialog ─────────────────────────────────────────────────────────
+
+const EMPTY_FORM = {
+  direction: "outbound" as TPurchaseOrderDirection,
+  grain_type: "",
+  quantity_kg: "",
+  unit_price: "",
+  currency: "UGX",
+  trade_unit: "kg",
+  delivery_location: "",
+  delivery_date: "",
+  payment_terms: "",
+  notes: "",
+};
+
+const CreatePODialog: React.FC<{ open: boolean; onClose: () => void; onCreated: (po: IPurchaseOrder) => void }> = ({
+  open, onClose, onCreated,
+}) => {
+  const [form, setForm] = useState(EMPTY_FORM);
+  const [grainTypes, setGrainTypes] = useState<any[]>([]);
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    if (open) {
+      setForm(EMPTY_FORM);
+      SourcingService.getGrainTypes().then(r => setGrainTypes(r.results || r)).catch(() => {});
+    }
+  }, [open]);
+
+  const set = (field: string) => (e: React.ChangeEvent<HTMLInputElement | { value: unknown }>) =>
+    setForm(f => ({ ...f, [field]: (e.target as any).value }));
+
+  const handleSubmit = async () => {
+    if (!form.grain_type || !form.quantity_kg || !form.unit_price) {
+      toast.error("Grain type, quantity and unit price are required");
+      return;
+    }
+    setSaving(true);
+    try {
+      const payload: any = {
+        direction:         form.direction,
+        grain_type:        form.grain_type,
+        quantity_kg:       form.quantity_kg,
+        unit_price:        form.unit_price,
+        currency:          form.currency,
+        trade_unit:        form.trade_unit,
+        delivery_location: form.delivery_location || undefined,
+        delivery_date:     form.delivery_date || undefined,
+        payment_terms:     form.payment_terms || undefined,
+        notes:             form.notes || undefined,
+      };
+      const created = await SourcingService.createPurchaseOrder(payload);
+      toast.success(`Purchase Order ${created.po_number} created`);
+      onCreated(created);
+      onClose();
+    } catch (err: any) {
+      const msg = err?.response?.data ? JSON.stringify(err.response.data) : "Failed to create";
+      toast.error(msg);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth>
+      <DialogTitle>New Purchase Order</DialogTitle>
+      <DialogContent sx={{ display: "flex", flexDirection: "column", gap: 2, pt: "12px !important" }}>
+        <FormControl size="small" fullWidth>
+          <InputLabel>Direction</InputLabel>
+          <Select value={form.direction} label="Direction" onChange={set("direction") as any}>
+            <MenuItem value="outbound">Outbound LPO (to Supplier)</MenuItem>
+            <MenuItem value="inbound">Inbound BPO (from Buyer)</MenuItem>
+          </Select>
+        </FormControl>
+
+        <FormControl size="small" fullWidth>
+          <InputLabel>Grain Type *</InputLabel>
+          <Select value={form.grain_type} label="Grain Type *" onChange={set("grain_type") as any}>
+            {grainTypes.map((g: any) => (
+              <MenuItem key={g.id} value={g.id}>{g.name}</MenuItem>
+            ))}
+          </Select>
+        </FormControl>
+
+        <Box sx={{ display: "flex", gap: 1.5 }}>
+          <TextField size="small" label="Quantity *" type="number" value={form.quantity_kg}
+            onChange={set("quantity_kg")} fullWidth inputProps={{ min: 0 }} />
+          <FormControl size="small" sx={{ minWidth: 90 }}>
+            <InputLabel>Unit</InputLabel>
+            <Select value={form.trade_unit} label="Unit" onChange={set("trade_unit") as any}>
+              <MenuItem value="kg">kg</MenuItem>
+              <MenuItem value="mt">MT</MenuItem>
+            </Select>
+          </FormControl>
+        </Box>
+
+        <Box sx={{ display: "flex", gap: 1.5 }}>
+          <TextField size="small" label="Unit Price *" type="number" value={form.unit_price}
+            onChange={set("unit_price")} fullWidth inputProps={{ min: 0 }} />
+          <FormControl size="small" sx={{ minWidth: 90 }}>
+            <InputLabel>Currency</InputLabel>
+            <Select value={form.currency} label="Currency" onChange={set("currency") as any}>
+              <MenuItem value="UGX">UGX</MenuItem>
+              <MenuItem value="USD">USD</MenuItem>
+            </Select>
+          </FormControl>
+        </Box>
+
+        <TextField size="small" label="Delivery Location" value={form.delivery_location}
+          onChange={set("delivery_location")} fullWidth />
+        <TextField size="small" label="Delivery Date" type="date" value={form.delivery_date}
+          onChange={set("delivery_date")} fullWidth InputLabelProps={{ shrink: true }} />
+        <TextField size="small" label="Payment Terms" value={form.payment_terms}
+          onChange={set("payment_terms")} fullWidth placeholder="e.g. Net 30 days, Cash on delivery" />
+        <TextField size="small" label="Notes" value={form.notes}
+          onChange={set("notes")} fullWidth multiline rows={2} />
+      </DialogContent>
+      <DialogActions>
+        <Button onClick={onClose} disabled={saving}>Cancel</Button>
+        <Button variant="contained" onClick={handleSubmit} disabled={saving}>
+          {saving ? "Creating…" : "Create Purchase Order"}
+        </Button>
+      </DialogActions>
+    </Dialog>
+  );
+};
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -59,6 +187,7 @@ const PurchaseOrders: React.FC = () => {
   const [orders, setOrders]   = useState<IPurchaseOrder[]>([]);
   const [loading, setLoading] = useState(false);
   const [error,   setError]   = useState<string | null>(null);
+  const [showCreate, setShowCreate] = useState(false);
 
   // Filters
   const [direction, setDirection] = useState<TPurchaseOrderDirection | "">("");
@@ -105,7 +234,7 @@ const PurchaseOrders: React.FC = () => {
         <Button
           variant="contained"
           startIcon={<Add />}
-          onClick={() => navigate("new")}
+          onClick={() => setShowCreate(true)}
           size="small"
         >
           New Purchase Order
@@ -280,6 +409,15 @@ const PurchaseOrders: React.FC = () => {
           </>
         )}
       </Paper>
+
+      <CreatePODialog
+        open={showCreate}
+        onClose={() => setShowCreate(false)}
+        onCreated={(po) => {
+          setOrders(prev => [po, ...prev]);
+          navigate(po.id);
+        }}
+      />
     </Box>
   );
 };

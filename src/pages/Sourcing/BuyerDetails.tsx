@@ -296,15 +296,20 @@ const BuyerDetails: FC = () => {
           <Table size="small">
             <TableHead>
               <TableRow sx={{ bgcolor: "action.hover" }}>
-                {["Order #", "Revenue", "Gross Profit", "Status", "Invoice", "Date"].map(h => <TableCell key={h} sx={{ fontWeight: 700 }}>{h}</TableCell>)}
+                {["Order #", "Tonnage (kg)", "Revenue", "Gross Profit", "Status", "Invoice", "Date"].map(h => <TableCell key={h} sx={{ fontWeight: 700 }}>{h}</TableCell>)}
               </TableRow>
             </TableHead>
             <TableBody>
               {orders.length === 0 ? (
-                <TableRow><TableCell colSpan={6} align="center" sx={{ py: 4, color: "text.primary" }}>No orders yet</TableCell></TableRow>
+                <TableRow><TableCell colSpan={7} align="center" sx={{ py: 4, color: "text.primary" }}>No orders yet</TableCell></TableRow>
               ) : orders.map((o: any) => (
                 <TableRow key={o.id} hover sx={{ cursor: "pointer" }} onClick={() => navigate(`/admin/sourcing/buyer-orders/${o.id}`)}>
                   <TableCell><Typography variant="body2" color="primary" sx={{ fontWeight: 600 }}>{o.order_number}</Typography></TableCell>
+                  <TableCell sx={{ fontSize: 12 }}>
+                    {o.quantity_requested_kg
+                      ? Number(o.quantity_requested_kg).toLocaleString("en-UG", { maximumFractionDigits: 0 })
+                      : "—"}
+                  </TableCell>
                   <TableCell>{formatCurrency(o.subtotal)}</TableCell>
                   <TableCell sx={{ color: (o.gross_profit ?? 0) >= 0 ? "success.main" : "error.main", fontWeight: 600 }}>{formatCurrency(o.gross_profit)}</TableCell>
                   <TableCell><Chip label={(o.status || "").toUpperCase()} color={ORDER_STATUS_COLORS[o.status] || "default"} size="small" /></TableCell>

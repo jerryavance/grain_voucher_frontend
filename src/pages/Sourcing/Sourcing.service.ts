@@ -464,7 +464,7 @@ export const SourcingService = {
   },
 
   async downloadCustomerStatement(buyerId: string): Promise<Blob> {
-    return instance.get(`sourcing/buyer-profiles/${buyerId}/customer-statement/`, {
+    return instance.get(`sourcing/buyers/${buyerId}/customer-statement/`, {
       responseType: "blob",
     }).then(r => r.data);
   },
