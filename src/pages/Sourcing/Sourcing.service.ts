@@ -450,6 +450,12 @@ export const SourcingService = {
     }).then(r => r.data);
   },
 
+  async downloadCustomerStatement(buyerId: string): Promise<Blob> {
+    return instance.get(`sourcing/buyer-profiles/${buyerId}/customer-statement/`, {
+      responseType: "blob",
+    }).then(r => r.data);
+  },
+
   async exportSupplierPaymentsCsv(params?: any): Promise<Blob> {
     return instance.get("sourcing/supplier-payments/export_csv/", {
       params, responseType: "blob",

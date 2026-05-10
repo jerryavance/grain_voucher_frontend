@@ -63,6 +63,7 @@ const BuyerInvoices: React.FC = () => {
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
+  const [buyerSearch, setBuyerSearch] = useState("");
 
   const fetchInvoices = useCallback(async () => {
     setLoading(true);
@@ -74,6 +75,7 @@ const BuyerInvoices: React.FC = () => {
       if (dateFrom) params.date_from = dateFrom;
       if (dateTo) params.date_to = dateTo;
       if (statusFilter) params.status = statusFilter;
+      if (buyerSearch) params.search = buyerSearch;
 
       const res = await SourcingService.getBuyerInvoices(params);
       setInvoices(res.results || res || []);
@@ -83,7 +85,7 @@ const BuyerInvoices: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  }, [page, rowsPerPage, dateFrom, dateTo, statusFilter]);
+  }, [page, rowsPerPage, dateFrom, dateTo, statusFilter, buyerSearch]);
 
   useEffect(() => {
     fetchInvoices();
@@ -101,7 +103,15 @@ const BuyerInvoices: React.FC = () => {
       </Typography>
 
       {/* ── Filters ────────────────────────────────────────────────────── */}
-      <Box display="flex" gap={2} alignItems="center" mb={3}>
+      <Box display="flex" gap={2} alignItems="center" mb={3} flexWrap="wrap">
+        <TextField
+          label="Search Buyer / Invoice #"
+          size="small"
+          sx={{ minWidth: 220 }}
+          value={buyerSearch}
+          onChange={(e) => { setBuyerSearch(e.target.value); setPage(0); }}
+          onKeyDown={(e) => { if (e.key === "Enter") handleFilter(); }}
+        />
         <TextField
           label="From"
           type="date"
@@ -118,9 +128,6 @@ const BuyerInvoices: React.FC = () => {
           value={dateTo}
           onChange={(e) => setDateTo(e.target.value)}
         />
-        <Button variant="contained" onClick={handleFilter}>
-          Filter
-        </Button>
         <FormControl size="small" sx={{ minWidth: 150 }}>
           <InputLabel>Status</InputLabel>
           <Select
@@ -138,6 +145,9 @@ const BuyerInvoices: React.FC = () => {
             ))}
           </Select>
         </FormControl>
+        <Button variant="contained" onClick={handleFilter}>
+          Filter
+        </Button>
         <Box flex={1} />
         <Button variant="outlined" startIcon={<DownloadIcon />} onClick={async () => {
           try {
@@ -145,6 +155,7 @@ const BuyerInvoices: React.FC = () => {
               ...(dateFrom && { date_from: dateFrom }),
               ...(dateTo && { date_to: dateTo }),
               ...(statusFilter && { status: statusFilter }),
+              ...(buyerSearch && { search: buyerSearch }),
             });
             const url = window.URL.createObjectURL(new Blob([blob]));
             const a = document.createElement("a");

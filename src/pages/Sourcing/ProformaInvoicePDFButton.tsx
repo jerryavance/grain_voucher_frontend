@@ -309,11 +309,11 @@ export const generatePFIHTML = (
         <div style="font-size:11px;font-weight:600;">${pfi.ship_date || "To be confirmed"}</div>
       </div>
       <div style="background:#f6f9fd;border:1px solid #e0e8f4;border-radius:6px;padding:6px 8px;">
-        <div style="font-size:8px;font-weight:700;text-transform:uppercase;letter-spacing:0.8px;color:#5c8abf;margin-bottom:1px;">Shipped Via</div>
+        <div style="font-size:8px;font-weight:700;text-transform:uppercase;letter-spacing:0.8px;color:#5c8abf;margin-bottom:1px;">Trade Terms</div>
         <div style="font-size:11px;font-weight:600;">${pfi.shipped_via || "—"}</div>
       </div>
       <div style="background:#f6f9fd;border:1px solid #e0e8f4;border-radius:6px;padding:6px 8px;">
-        <div style="font-size:8px;font-weight:700;text-transform:uppercase;letter-spacing:0.8px;color:#5c8abf;margin-bottom:1px;">Pick From</div>
+        <div style="font-size:8px;font-weight:700;text-transform:uppercase;letter-spacing:0.8px;color:#5c8abf;margin-bottom:1px;">Location</div>
         <div style="font-size:11px;font-weight:600;">${pfi.pick_from || "Ex-Warehouse"}</div>
       </div>
     </div>

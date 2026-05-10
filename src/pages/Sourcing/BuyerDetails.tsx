@@ -23,6 +23,7 @@ import { useFormik } from "formik";
 import { toast } from "react-hot-toast";
 import ArrowBackIcon from "@mui/icons-material/ArrowBack";
 import AddIcon from "@mui/icons-material/Add";
+import DownloadIcon from "@mui/icons-material/Download";
 import DeleteIcon from "@mui/icons-material/Delete";
 import EditIcon from "@mui/icons-material/Edit";
 import EmailIcon from "@mui/icons-material/Email";
@@ -199,6 +200,17 @@ const BuyerDetails: FC = () => {
         <Box sx={{ display: "flex", gap: 1, flexWrap: "wrap" }}>
           {!buyer.is_verified && <Button variant="outlined" color="success" size="small" startIcon={<VerifiedIcon />} onClick={handleVerify}>Verify</Button>}
           <Button variant="outlined" color={buyer.is_active ? "error" : "success"} size="small" onClick={handleToggleActive}>{buyer.is_active ? "Deactivate" : "Reactivate"}</Button>
+          <Button variant="outlined" size="small" startIcon={<DownloadIcon />} onClick={async () => {
+            try {
+              const blob = await SourcingService.downloadCustomerStatement(id!);
+              const url = window.URL.createObjectURL(new Blob([blob]));
+              const a = document.createElement("a");
+              a.href = url;
+              a.download = `customer_statement_${buyer.business_name.replace(/\s+/g, "_")}.csv`;
+              a.click();
+              window.URL.revokeObjectURL(url);
+            } catch { toast.error("Failed to download statement"); }
+          }}>Statement</Button>
           <Button variant="contained" size="small" startIcon={<AddIcon />} onClick={() => navigate(`/admin/sourcing/buyer-orders?buyer=${id}`)}>New Order</Button>
         </Box>
       </Box>
