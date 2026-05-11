@@ -84,6 +84,8 @@ export interface ISourceOrder {
   has_delivery: boolean; has_weighbridge: boolean; has_invoice: boolean;
   // NEW: link to rejected lot if one exists
   rejected_lot: string | null;
+  /** UUID of the planned buyer order this source order fulfils (null if not linked) */
+  planned_buyer_order: string | null;
   sent_at: string | null; accepted_at: string | null; shipped_at: string | null;
   delivered_at: string | null; completed_at: string | null; created_at: string; updated_at: string;
 }

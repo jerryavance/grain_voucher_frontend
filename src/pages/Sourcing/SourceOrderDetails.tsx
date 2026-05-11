@@ -47,6 +47,7 @@ import TradeReassignmentModal from "./TradeReassignmentModal";
 import SwapHorizIcon from "@mui/icons-material/SwapHoriz";
 import HistoryIcon from "@mui/icons-material/History";
 import AssignmentIcon from "@mui/icons-material/Assignment";
+import LinkIcon from "@mui/icons-material/Link";
 import PurchaseOrderPDFButton from "./PurchaseOrderPDFButton";
 import { IPurchaseOrder } from "./Sourcing.interface";
 
@@ -194,6 +195,130 @@ const InvestorAllocationForm: FC<{
   );
 };
 
+// ─── Link Buyer Order Dialog ─────────────────────────────────────────────────
+const LinkBuyerOrderDialog: FC<{
+  open: boolean;
+  sourceOrderId: string;
+  currentLinkedOrderId?: string | null;
+  onClose: () => void;
+  onSuccess: () => void;
+}> = ({ open, sourceOrderId, currentLinkedOrderId, onClose, onSuccess }) => {
+  const [buyerOrders, setBuyerOrders] = useState<any[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [selectedId, setSelectedId] = useState<string>("");
+  const [search, setSearch] = useState("");
+
+  useEffect(() => {
+    if (!open) return;
+    setSelectedId(currentLinkedOrderId ?? "");
+    setSearch("");
+    setLoading(true);
+    SourcingService.getBuyerOrders({ page_size: 200 })
+      .then(r => setBuyerOrders(r.results ?? []))
+      .catch(() => toast.error("Failed to load buyer orders"))
+      .finally(() => setLoading(false));
+  }, [open, currentLinkedOrderId]);
+
+  const filtered = buyerOrders.filter(o => {
+    const q = search.toLowerCase();
+    return !q ||
+      o.order_number?.toLowerCase().includes(q) ||
+      o.buyer_name?.toLowerCase().includes(q) ||
+      o.grain_type_name?.toLowerCase().includes(q);
+  });
+
+  const handleLink = async () => {
+    setSubmitting(true);
+    try {
+      await SourcingService.linkSourceOrderToBuyerOrder(sourceOrderId, selectedId || null);
+      toast.success(selectedId ? "Buyer order linked successfully" : "Buyer order link cleared");
+      onSuccess();
+      onClose();
+    } catch (e: any) {
+      toast.error(e.response?.data?.error || "Failed to link buyer order");
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  return (
+    <Dialog open={open} onClose={() => !submitting && onClose()} maxWidth="sm" fullWidth>
+      <DialogTitle sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+        <LinkIcon color="secondary" />
+        Link to Buyer Order
+      </DialogTitle>
+      <DialogContent dividers>
+        <Alert severity="info" sx={{ mb: 2 }}>
+          Linking a buyer order allows you to plan which customer order this source order fulfils.
+          {currentLinkedOrderId && " Currently linked to a buyer order."}
+        </Alert>
+        <TextField
+          fullWidth size="small" label="Search buyer orders…"
+          value={search} onChange={e => setSearch(e.target.value)}
+          sx={{ mb: 2 }}
+        />
+        {loading ? (
+          <Box sx={{ display: "flex", justifyContent: "center", py: 3 }}><ProgressIndicator /></Box>
+        ) : (
+          <FormControl fullWidth>
+            <InputLabel>Buyer Order</InputLabel>
+            <Select
+              value={selectedId}
+              label="Buyer Order"
+              onChange={e => setSelectedId(e.target.value)}
+            >
+              <MenuItem value=""><em>— None (clear link) —</em></MenuItem>
+              {filtered.map(o => (
+                <MenuItem key={o.id} value={o.id}>
+                  <Box>
+                    <Typography variant="body2" sx={{ fontWeight: 600 }}>{o.order_number}</Typography>
+                    <Typography variant="caption" color="text.secondary">
+                      {o.buyer_name} · {o.grain_type_name} · {o.status?.toUpperCase()}
+                    </Typography>
+                  </Box>
+                </MenuItem>
+              ))}
+            </Select>
+            <FormHelperText>Select a buyer order to link, or choose "None" to remove the link.</FormHelperText>
+          </FormControl>
+        )}
+      </DialogContent>
+      <DialogActions>
+        <Button onClick={onClose} disabled={submitting}>Cancel</Button>
+        {currentLinkedOrderId && (
+          <Button
+            color="error"
+            disabled={submitting}
+            onClick={async () => {
+              setSubmitting(true);
+              try {
+                await SourcingService.linkSourceOrderToBuyerOrder(sourceOrderId, null);
+                toast.success("Buyer order link cleared");
+                onSuccess();
+                onClose();
+              } catch (e: any) {
+                toast.error(e.response?.data?.error || "Failed to clear link");
+              } finally { setSubmitting(false); }
+            }}
+          >
+            Clear Link
+          </Button>
+        )}
+        <Button
+          variant="contained"
+          color="secondary"
+          startIcon={<LinkIcon />}
+          disabled={submitting || loading}
+          onClick={handleLink}
+        >
+          {submitting ? "Saving…" : selectedId ? "Link Order" : "Clear Link"}
+        </Button>
+      </DialogActions>
+    </Dialog>
+  );
+};
+
 // ─── Generate LPO Dialog ─────────────────────────────────────────────────────
 const GenerateLPODialog: FC<{
   open: boolean;
@@ -335,6 +460,7 @@ const SourceOrderDetails = () => {
   const [purchaseOrders, setPurchaseOrders] = useState<IPurchaseOrder[]>([]);
   const [purchaseOrdersLoading, setPurchaseOrdersLoading] = useState(false);
   const [showGenerateLPO, setShowGenerateLPO] = useState(false);
+  const [showLinkBuyerOrder, setShowLinkBuyerOrder] = useState(false);
 
   // ✅ NEW: full trade tree data for invoice/payments/deliveries tabs
   const [tradeTree, setTradeTree] = useState<any>(null);
@@ -472,6 +598,14 @@ const SourceOrderDetails = () => {
           onClick={() => setShowGenerateLPO(true)}
         >
           Generate LPO
+        </Button>
+        <Button
+          variant="outlined"
+          color="secondary"
+          startIcon={<LinkIcon />}
+          onClick={() => setShowLinkBuyerOrder(true)}
+        >
+          {order.planned_buyer_order ? "Change Buyer Order Link" : "Link to Buyer Order"}
         </Button>
         {["accepted", "in_transit", "sent"].includes(order.status) && <Button variant="contained" startIcon={<LocalShippingIcon />} onClick={() => setShowDeliveryForm(true)}>Record Delivery</Button>}
         {["delivered", "accepted", "in_transit"].includes(order.status) && (
@@ -900,6 +1034,15 @@ const SourceOrderDetails = () => {
         onSuccess={() => { setShowGenerateLPO(false); fetchPurchaseOrders(); }}
       />
 
+      {/* ── Link Buyer Order Dialog ──────────────────────────────────────── */}
+      <LinkBuyerOrderDialog
+        open={showLinkBuyerOrder}
+        sourceOrderId={order.id}
+        currentLinkedOrderId={order.planned_buyer_order ?? null}
+        onClose={() => setShowLinkBuyerOrder(false)}
+        onSuccess={() => { fetchOrderDetails(); fetchTradeTree(); }}
+      />
+
       {/* Modals */}
       <InvestorAllocationForm open={showAllocationForm} order={order} handleClose={() => setShowAllocationForm(false)} callBack={() => { fetchOrderDetails(); fetchTradeTree(); }} />
       {showDeliveryForm && <StandaloneDeliveryRecordForm sourceOrderId={order.id} callBack={() => { setShowDeliveryForm(false); fetchOrderDetails(); fetchTradeTree(); }} handleClose={() => setShowDeliveryForm(false)} />}
@@ -909,7 +1052,7 @@ const SourceOrderDetails = () => {
         open={showReassignModal}
         sourceOrderId={order.id}
         orderNumber={order.order_number}
-        currentInvestorName={treeAllocation?.investor_account_name ?? treeAllocation?.investor_account ?? undefined}
+        currentInvestorName={treeAllocation?.investor_name ?? undefined}
         allocationId={treeAllocation?.id ?? ""}
         allocationAmount={parseFloat(treeAllocation?.amount_allocated ?? "0")}
         onClose={() => setShowReassignModal(false)}

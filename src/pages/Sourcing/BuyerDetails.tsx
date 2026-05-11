@@ -328,15 +328,20 @@ const BuyerDetails: FC = () => {
           <Table size="small">
             <TableHead>
               <TableRow sx={{ bgcolor: "action.hover" }}>
-                {["Invoice #", "Amount Due", "Paid", "Balance", "Terms", "Due Date", "Status"].map(h => <TableCell key={h} sx={{ fontWeight: 700 }}>{h}</TableCell>)}
+                {["Invoice #", "Tonnage (kg)", "Amount Due", "Paid", "Balance", "Terms", "Due Date", "Status"].map(h => <TableCell key={h} sx={{ fontWeight: 700 }}>{h}</TableCell>)}
               </TableRow>
             </TableHead>
             <TableBody>
               {invoices.length === 0 ? (
-                <TableRow><TableCell colSpan={7} align="center" sx={{ py: 4, color: "text.primary" }}>No invoices yet</TableCell></TableRow>
+                <TableRow><TableCell colSpan={8} align="center" sx={{ py: 4, color: "text.primary" }}>No invoices yet</TableCell></TableRow>
               ) : invoices.map((inv: any) => (
                 <TableRow key={inv.id} hover sx={{ cursor: "pointer" }} onClick={() => navigate(`/admin/sourcing/buyer-invoices/${inv.id}`)}>
                   <TableCell><Typography variant="body2" color="primary" sx={{ fontWeight: 600 }}>{inv.invoice_number}</Typography></TableCell>
+                  <TableCell sx={{ fontSize: 12 }}>
+                    {inv.quantity_requested_kg
+                      ? Number(inv.quantity_requested_kg).toLocaleString("en-UG", { maximumFractionDigits: 0 })
+                      : "—"}
+                  </TableCell>
                   <TableCell>{formatCurrency(inv.amount_due)}</TableCell>
                   <TableCell sx={{ color: "success.main" }}>{formatCurrency(inv.amount_paid)}</TableCell>
                   <TableCell sx={{ fontWeight: 700, color: inv.balance_due > 0 ? "error.main" : "success.main" }}>{formatCurrency(inv.balance_due)}</TableCell>
