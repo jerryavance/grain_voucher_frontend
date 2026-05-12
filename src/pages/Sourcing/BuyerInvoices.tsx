@@ -222,7 +222,7 @@ const BuyerInvoices: React.FC = () => {
                         "—"}
                     </TableCell>
                     <TableCell>
-                      {formatCurrency(inv.amount_due)}
+                      {formatCurrency(inv.amount_due, inv.currency)}
                     </TableCell>
                     <TableCell
                       sx={{
@@ -232,7 +232,7 @@ const BuyerInvoices: React.FC = () => {
                             : "inherit",
                       }}
                     >
-                      {formatCurrency(inv.amount_paid)}
+                      {formatCurrency(inv.amount_paid, inv.currency)}
                     </TableCell>
                     <TableCell
                       sx={{
@@ -243,7 +243,7 @@ const BuyerInvoices: React.FC = () => {
                         fontWeight: 600,
                       }}
                     >
-                      {formatCurrency(inv.balance_due)}
+                      {formatCurrency(inv.balance_due, inv.currency)}
                     </TableCell>
                     <TableCell>
                       {inv.payment_terms_days > 0
@@ -252,7 +252,7 @@ const BuyerInvoices: React.FC = () => {
                     </TableCell>
                     <TableCell>{formatDate(inv.due_date)}</TableCell>
                     <TableCell sx={{ color: Number(inv.penalty_amount || 0) > 0 ? "error.main" : "text.primary" }}>
-                      {Number(inv.penalty_amount || 0) > 0 ? formatCurrency(inv.penalty_amount) : "—"}
+                      {Number(inv.penalty_amount || 0) > 0 ? formatCurrency(inv.penalty_amount, inv.currency) : "—"}
                     </TableCell>
                     <TableCell>
                       {Number(inv.days_overdue || 0) > 0

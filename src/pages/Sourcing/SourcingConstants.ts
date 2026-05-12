@@ -7,11 +7,22 @@
 
 // ─── Currency / Weight / Percentage formatters ──────────────────────────────
 
-export const formatCurrency = (amount: number | string | null | undefined): string => {
-  if (amount === null || amount === undefined || amount === "") return "USh 0";
+const CURRENCY_PREFIX: Record<string, string> = {
+  UGX: "USh",
+  USD: "USD",
+  EUR: "EUR",
+  GBP: "GBP",
+};
+
+export const formatCurrency = (
+  amount: number | string | null | undefined,
+  currency: string | null | undefined = "UGX",
+): string => {
+  const prefix = CURRENCY_PREFIX[(currency || "UGX").toUpperCase()] || (currency || "USh");
+  if (amount === null || amount === undefined || amount === "") return `${prefix} 0`;
   const num = typeof amount === "string" ? parseFloat(amount) : amount;
-  if (isNaN(num)) return "USh 0";
-  return `USh ${num.toLocaleString("en-US", { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`;
+  if (isNaN(num)) return `${prefix} 0`;
+  return `${prefix} ${num.toLocaleString("en-US", { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`;
 };
 
 export const formatWeight = (kg: number | string | null | undefined): string => {

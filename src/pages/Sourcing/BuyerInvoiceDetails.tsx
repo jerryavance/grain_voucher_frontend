@@ -65,7 +65,7 @@ const RecordPaymentDialog: FC<{
       amount: Yup.number()
         .typeError("Must be a number")
         .positive("Must be positive")
-        .max(Number(invoice.balance_due), `Max: ${formatCurrency(invoice.balance_due)}`)
+        .max(Number(invoice.balance_due), `Max: ${formatCurrency(invoice.balance_due, invoice.currency)}`)
         .required("Amount is required"),
       method: Yup.string().required("Payment method is required"),
       reference_number: Yup.string().required("Reference number is required"),
@@ -104,11 +104,11 @@ const RecordPaymentDialog: FC<{
       </DialogTitle>
       <DialogContent dividers>
         <Alert severity="info" sx={{ mb: 2 }}>
-          Balance due: <strong>{formatCurrency(invoice.balance_due)}</strong>
+          Balance due: <strong>{formatCurrency(invoice.balance_due, invoice.currency)}</strong>
         </Alert>
         <Box sx={{ display: "flex", flexDirection: "column", gap: 2, pt: 1 }}>
           <TextField
-            label="Amount (UGX) *"
+            label={`Amount (${invoice.currency_display || invoice.currency || "UGX"}) *`}
             type="number"
             fullWidth
             value={form.values.amount}
@@ -334,13 +334,13 @@ const BuyerInvoiceDetails: FC = () => {
       {/* ── Summary cards ── */}
       <Grid container spacing={2} sx={{ mb: 3 }}>
         {[
-          { label: "Invoice Amount", value: formatCurrency(invoice.amount_due), color: "text.primary" },
-          { label: "Amount Paid",    value: formatCurrency(invoice.amount_paid), color: "success.main" },
-          { label: "Balance Due",    value: formatCurrency(invoice.balance_due), color: Number(invoice.balance_due) > 0 ? "error.main" : "success.main" },
-          { label: "Gross Profit",   value: formatCurrency(grossProfit), color: grossProfit >= 0 ? "success.main" : "error.main" },
-          ...(Number(invoice.penalty_amount || 0) > 0 ? [{ label: "Penalty", value: formatCurrency(invoice.penalty_amount), color: "error.main" }] : []),
-          ...(creditNoteTotal > 0 ? [{ label: "Credit Note", value: `− ${formatCurrency(creditNoteTotal)}`, color: "success.main" }] : []),
-          ...(debitNoteTotal > 0 ? [{ label: "Debit Note", value: `+ ${formatCurrency(debitNoteTotal)}`, color: "warning.main" }] : []),
+          { label: "Invoice Amount", value: formatCurrency(invoice.amount_due, invoice.currency), color: "text.primary" },
+          { label: "Amount Paid",    value: formatCurrency(invoice.amount_paid, invoice.currency), color: "success.main" },
+          { label: "Balance Due",    value: formatCurrency(invoice.balance_due, invoice.currency), color: Number(invoice.balance_due) > 0 ? "error.main" : "success.main" },
+          { label: "Gross Profit",   value: formatCurrency(grossProfit, "UGX"), color: grossProfit >= 0 ? "success.main" : "error.main" },
+          ...(Number(invoice.penalty_amount || 0) > 0 ? [{ label: "Penalty", value: formatCurrency(invoice.penalty_amount, invoice.currency), color: "error.main" }] : []),
+          ...(creditNoteTotal > 0 ? [{ label: "Credit Note", value: `− ${formatCurrency(creditNoteTotal, invoice.currency)}`, color: "success.main" }] : []),
+          ...(debitNoteTotal > 0 ? [{ label: "Debit Note", value: `+ ${formatCurrency(debitNoteTotal, invoice.currency)}`, color: "warning.main" }] : []),
           ...(Number(invoice.days_overdue || 0) > 0 ? [{ label: "Days Overdue", value: `${invoice.days_overdue} days`, color: "error.main" }] : []),
         ].map(({ label, value, color }) => (
           <Grid key={label} item xs={6} sm={3}>
@@ -455,15 +455,15 @@ const BuyerInvoiceDetails: FC = () => {
                         {line.source_order_number || "—"}
                       </TableCell>
                       <TableCell>{Number(line.quantity_kg).toLocaleString()}</TableCell>
-                      <TableCell>{formatCurrency(line.sale_price_per_kg)}</TableCell>
+                      <TableCell>{formatCurrency(line.sale_price_per_kg, invoice.currency)}</TableCell>
                       <TableCell sx={{ fontWeight: 600 }}>
-                        {formatCurrency(line.line_total)}
+                        {formatCurrency(line.line_total, invoice.currency)}
                       </TableCell>
                       <TableCell sx={{ color: "text.primary" }}>
-                        {formatCurrency(line.cogs_per_kg)}
+                        {formatCurrency(line.cogs_per_kg, "UGX")}
                       </TableCell>
                       <TableCell sx={{ color: "warning.main" }}>
-                        {formatCurrency(line.cogs_total)}
+                        {formatCurrency(line.cogs_total, "UGX")}
                       </TableCell>
                       <TableCell
                         sx={{
@@ -471,7 +471,7 @@ const BuyerInvoiceDetails: FC = () => {
                           color: Number(line.line_gross_profit) >= 0 ? "success.main" : "error.main",
                         }}
                       >
-                        {formatCurrency(line.line_gross_profit)}
+                        {formatCurrency(line.line_gross_profit, "UGX")}
                       </TableCell>
                     </TableRow>
                   ))}
@@ -512,7 +512,7 @@ const BuyerInvoiceDetails: FC = () => {
                             {exp.receipt_reference || "—"}
                           </TableCell>
                           <TableCell sx={{ fontWeight: 600, color: "warning.main" }}>
-                            {formatCurrency(exp.amount)}
+                            {formatCurrency(exp.amount, "UGX")}
                           </TableCell>
                         </TableRow>
                       ))}
@@ -534,10 +534,10 @@ const BuyerInvoiceDetails: FC = () => {
               <Divider sx={{ mb: 2 }} />
               <Box sx={{ display: "flex", flexDirection: "column" }}>
                 {[
-                  { label: "Revenue (Subtotal)",   value: subtotal,      color: "text.primary",  negative: false },
-                  { label: "Cost of Goods Sold",   value: totalCogs,     color: "warning.main",  negative: true  },
-                  { label: "Selling Expenses",      value: totalExpenses, color: "warning.main",  negative: true  },
-                ].map(({ label, value, color, negative }) => (
+                  { label: "Revenue (Subtotal)",   value: subtotal,      currency: invoice.currency, color: "text.primary",  negative: false },
+                  { label: "Cost of Goods Sold",   value: totalCogs,     currency: "UGX",            color: "warning.main",  negative: true  },
+                  { label: "Selling Expenses",     value: totalExpenses, currency: "UGX",            color: "warning.main",  negative: true  },
+                ].map(({ label, value, currency, color, negative }) => (
                   <Box
                     key={label}
                     sx={{
@@ -547,7 +547,7 @@ const BuyerInvoiceDetails: FC = () => {
                   >
                     <Span sx={{ color: "text.primary" }}>{label}</Span>
                     <Span sx={{ fontWeight: 600, color }}>
-                      {negative ? `(${formatCurrency(value)})` : formatCurrency(value)}
+                      {negative ? `(${formatCurrency(value, currency)})` : formatCurrency(value, currency)}
                     </Span>
                   </Box>
                 ))}
@@ -564,7 +564,7 @@ const BuyerInvoiceDetails: FC = () => {
                     Gross Profit
                   </Span>
                   <Span sx={{ fontWeight: 800, fontSize: "1rem", color: grossProfit >= 0 ? "success.main" : "error.main" }}>
-                    {formatCurrency(grossProfit)}
+                    {formatCurrency(grossProfit, "UGX")}
                   </Span>
                 </Box>
 
@@ -622,7 +622,7 @@ const BuyerInvoiceDetails: FC = () => {
                           {p.payment_number}
                         </Typography>
                       </TableCell>
-                      <TableCell sx={{ fontWeight: 600 }}>{formatCurrency(p.amount)}</TableCell>
+                      <TableCell sx={{ fontWeight: 600 }}>{formatCurrency(p.amount, invoice.currency)}</TableCell>
                       <TableCell>{p.method.replace(/_/g, " ").toUpperCase()}</TableCell>
                       <TableCell sx={{ fontFamily: "monospace" }}>
                         {p.reference_number || "—"}
@@ -672,7 +672,7 @@ const BuyerInvoiceDetails: FC = () => {
                         />
                       </TableCell>
                       <TableCell sx={{ fontWeight: 600, color: note.note_type === "credit" ? "success.main" : "warning.main" }}>
-                        {note.note_type === "credit" ? "−" : "+"} {formatCurrency(note.amount)}
+                        {note.note_type === "credit" ? "−" : "+"} {formatCurrency(note.amount, invoice.currency)}
                       </TableCell>
                       <TableCell sx={{ maxWidth: 200 }}>{note.reason}</TableCell>
                       <TableCell>
@@ -741,7 +741,7 @@ const BuyerInvoiceDetails: FC = () => {
           <Typography variant="body2" color="text.primary" gutterBottom>
             A credit note reduces the amount owed on this invoice. This will be recorded against invoice {invoice.invoice_number}.
           </Typography>
-          <TextField label="Amount (UGX)" type="number" fullWidth sx={{ mt: 2, mb: 2 }}
+          <TextField label={`Amount (${invoice.currency_display || invoice.currency || "UGX"})`} type="number" fullWidth sx={{ mt: 2, mb: 2 }}
             value={noteAmount} onChange={e => setNoteAmount(e.target.value)} />
           <TextField label="Reason" multiline rows={3} fullWidth
             value={noteReason} onChange={e => setNoteReason(e.target.value)}
@@ -770,7 +770,7 @@ const BuyerInvoiceDetails: FC = () => {
         <DialogContent dividers>
           <Typography gutterBottom>
             Current penalty on <strong>{invoice.invoice_number}</strong>:{" "}
-            <strong style={{ color: "#d32f2f" }}>{formatCurrency(invoice.penalty_amount)}</strong>.
+            <strong style={{ color: "#d32f2f" }}>{formatCurrency(invoice.penalty_amount, invoice.currency)}</strong>.
             This will waive the penalty and must be logged with a reason.
           </Typography>
           <TextField
@@ -810,7 +810,7 @@ const BuyerInvoiceDetails: FC = () => {
           <Typography variant="body2" color="text.primary" gutterBottom>
             A debit note increases the amount owed on this invoice (e.g. late fees, additional charges). This will be recorded against invoice {invoice.invoice_number}.
           </Typography>
-          <TextField label="Amount (UGX)" type="number" fullWidth sx={{ mt: 2, mb: 2 }}
+          <TextField label={`Amount (${invoice.currency_display || invoice.currency || "UGX"})`} type="number" fullWidth sx={{ mt: 2, mb: 2 }}
             value={noteAmount} onChange={e => setNoteAmount(e.target.value)} />
           <TextField label="Reason" multiline rows={3} fullWidth
             value={noteReason} onChange={e => setNoteReason(e.target.value)}

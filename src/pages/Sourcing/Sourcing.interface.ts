@@ -625,7 +625,7 @@ export interface ICreditDebitNote {
 // ============ Buyer Payment ============
 export interface IBuyerPayment {
   id: string; payment_number: string; buyer_invoice: string; invoice_number: string;
-  buyer_name: string; amount: number; method: 'bank_transfer'|'mobile_money'|'cash'|'cheque';
+  buyer_name: string; currency?: TCurrency; amount: number; method: 'bank_transfer'|'mobile_money'|'cash'|'cheque';
   reference_number: string; status: 'pending'|'confirmed'|'failed'|'reversed';
   received_by: string; payment_date: string; confirmed_at: string | null;
   notes: string; created_at: string; updated_at: string;

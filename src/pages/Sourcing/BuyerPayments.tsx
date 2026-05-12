@@ -160,7 +160,7 @@ const RecordPaymentForm: FC<IRecordPaymentFormProps> = ({ handleClose, preselect
             value={selectedInvoice}
             onChange={(_, val) => handleInvoiceChange(val)}
             onInputChange={(_, val) => setInvoiceSearch(val)}
-            getOptionLabel={inv => `${inv.invoice_number} — ${inv.buyer_name} (Balance: ${formatCurrency(inv.balance_due)})`}
+            getOptionLabel={inv => `${inv.invoice_number} — ${inv.buyer_name} (Balance: ${formatCurrency(inv.balance_due, inv.currency)})`}
             isOptionEqualToValue={(a, b) => a.id === b.id}
             // If launched from a row, allow editing (not locked) per spec
             renderInput={params => (
@@ -185,9 +185,9 @@ const RecordPaymentForm: FC<IRecordPaymentFormProps> = ({ handleClose, preselect
             <Box sx={{ mt: 1, p: 1.5, bgcolor: "action.hover", borderRadius: 1 }}>
               <Typography variant="caption" color="text.primary">
                 Invoice: <strong>{selectedInvoice.invoice_number}</strong>
-                &nbsp;·&nbsp;Total: <strong>{formatCurrency(selectedInvoice.amount_due)}</strong>
-                &nbsp;·&nbsp;Paid: <strong>{formatCurrency(selectedInvoice.amount_paid)}</strong>
-                &nbsp;·&nbsp;Balance: <strong style={{ color: "inherit" }}>{formatCurrency(selectedInvoice.balance_due)}</strong>
+                &nbsp;·&nbsp;Total: <strong>{formatCurrency(selectedInvoice.amount_due, selectedInvoice.currency)}</strong>
+                &nbsp;·&nbsp;Paid: <strong>{formatCurrency(selectedInvoice.amount_paid, selectedInvoice.currency)}</strong>
+                &nbsp;·&nbsp;Balance: <strong style={{ color: "inherit" }}>{formatCurrency(selectedInvoice.balance_due, selectedInvoice.currency)}</strong>
               </Typography>
             </Box>
           )}
@@ -351,7 +351,7 @@ const BuyerPayments: FC = () => {
       accessor: "amount",
       minWidth: 130,
       Cell: ({ row }: any) => (
-        <Span sx={{ fontWeight: 600, color: "success.main" }}>{formatCurrency(row.original.amount)}</Span>
+        <Span sx={{ fontWeight: 600, color: "success.main" }}>{formatCurrency(row.original.amount, row.original.currency)}</Span>
       ),
     },
     {

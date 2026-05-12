@@ -213,20 +213,21 @@ const LinkBuyerOrderDialog: FC<{
     if (!open) return;
     setSelectedId(currentLinkedOrderId ?? "");
     setSearch("");
-    setLoading(true);
-    SourcingService.getBuyerOrders({ page_size: 200 })
-      .then(r => setBuyerOrders(r.results ?? []))
-      .catch(() => toast.error("Failed to load buyer orders"))
-      .finally(() => setLoading(false));
   }, [open, currentLinkedOrderId]);
 
-  const filtered = buyerOrders.filter(o => {
-    const q = search.toLowerCase();
-    return !q ||
-      o.order_number?.toLowerCase().includes(q) ||
-      o.buyer_name?.toLowerCase().includes(q) ||
-      o.grain_type_name?.toLowerCase().includes(q);
-  });
+  useEffect(() => {
+    if (!open) return;
+    const handle = setTimeout(() => {
+      setLoading(true);
+      SourcingService.getBuyerOrders({ page_size: 200, ...(search ? { search } : {}) })
+        .then(r => setBuyerOrders(r.results ?? []))
+        .catch(() => toast.error("Failed to load buyer orders"))
+        .finally(() => setLoading(false));
+    }, search ? 300 : 0);
+    return () => clearTimeout(handle);
+  }, [open, search]);
+
+  const filtered = buyerOrders;
 
   const handleLink = async () => {
     setSubmitting(true);
@@ -538,9 +539,15 @@ const SourceOrderDetails = () => {
   const treePayments = tradeTree?.supplier_payments || [];
 
   const treeAllocation = tradeTree?.investor_allocation;
+  // Allocation can be reassigned for any source order status except cancelled.
+  // (Backend only checks allocation.status == "active", which is independent of source order status.)
   const canReassign =
-    order.has_investor_allocation &&
-    !["cancelled", "completed"].includes(order.status);
+    order.has_investor_allocation && order.status !== "cancelled";
+  // Investor can be assigned to any non-draft, non-sent, non-cancelled trade.
+  // Covers old/in-production trades (in_transit, delivered) that were never assigned.
+  const canAssignInvestor =
+    !order.has_investor_allocation &&
+    !["draft", "sent", "cancelled"].includes(order.status);
 
   const tabLabels = [
     "Order Details",
@@ -580,11 +587,11 @@ const SourceOrderDetails = () => {
             <Button variant="outlined" color="error" startIcon={<CloseIcon />} onClick={() => handleAction(() => SourcingService.cancelOrder(id!), "Cancelled")}>Cancel</Button>
           </>
         )}
+        {canAssignInvestor && (
+          <Button variant="contained" color="primary" startIcon={<AccountBalanceIcon />} onClick={() => setShowAllocationForm(true)}>Assign Investor</Button>
+        )}
         {order.status === "accepted" && (
-          <>
-            {!order.has_investor_allocation && <Button variant="contained" color="primary" startIcon={<AccountBalanceIcon />} onClick={() => setShowAllocationForm(true)}>Assign Investor</Button>}
-            <Button variant="outlined" startIcon={<LocalShippingIcon />} onClick={() => handleAction(() => SourcingService.markInTransit(id!), "Marked in transit")}>Mark In Transit</Button>
-          </>
+          <Button variant="outlined" startIcon={<LocalShippingIcon />} onClick={() => handleAction(() => SourcingService.markInTransit(id!), "Marked in transit")}>Mark In Transit</Button>
         )}
         {canReassign && (
           <Button variant="outlined" color="warning" startIcon={<SwapHorizIcon />} onClick={() => setShowReassignModal(true)}>

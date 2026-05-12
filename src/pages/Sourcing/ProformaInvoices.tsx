@@ -277,12 +277,12 @@ const CreatePFIForm: FC<{
               helperText='Free text — e.g. "10th May 2026" or "Various"' />
           </Grid>
           <Grid item xs={12} md={4}>
-            <TextField fullWidth label="Shipped Via" value={form.values.shipped_via}
+            <TextField fullWidth label="Trade Terms" value={form.values.shipped_via}
               onChange={e => form.setFieldValue("shipped_via", e.target.value)}
-              helperText="e.g. Truck, Various" />
+              helperText="e.g. FOB, CIF, Ex-Warehouse" />
           </Grid>
           <Grid item xs={12} md={4}>
-            <TextField fullWidth label="Pick From" value={form.values.pick_from}
+            <TextField fullWidth label="Location" value={form.values.pick_from}
               onChange={e => form.setFieldValue("pick_from", e.target.value)} />
           </Grid>
 

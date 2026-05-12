@@ -179,11 +179,11 @@ const EditPFIDialog: FC<{
               helperText="Free text e.g. 'Various' or '10th May 2026'" />
           </Grid>
           <Grid item xs={12} md={4}>
-            <TextField fullWidth label="Shipped Via" value={form.values.shipped_via}
+            <TextField fullWidth label="Trade Terms" value={form.values.shipped_via}
               onChange={e => form.setFieldValue("shipped_via", e.target.value)} />
           </Grid>
           <Grid item xs={12} md={4}>
-            <TextField fullWidth label="Pick From" value={form.values.pick_from}
+            <TextField fullWidth label="Location" value={form.values.pick_from}
               onChange={e => form.setFieldValue("pick_from", e.target.value)} />
           </Grid>
 
@@ -418,8 +418,8 @@ const ProformaInvoiceDetails: FC = () => {
             <CardContent>
               <Typography variant="subtitle1" fontWeight={700} gutterBottom>Logistics</Typography>
               <InfoRow label="Ship Date"    value={pfi.ship_date} />
-              <InfoRow label="Shipped Via"  value={pfi.shipped_via} />
-              <InfoRow label="Pick From"    value={pfi.pick_from} />
+              <InfoRow label="Trade Terms"  value={pfi.shipped_via} />
+              <InfoRow label="Location"     value={pfi.pick_from} />
               <InfoRow label="Salesperson"  value={pfi.salesperson_name} />
             </CardContent>
           </Card>

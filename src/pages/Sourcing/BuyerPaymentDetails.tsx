@@ -86,7 +86,7 @@ const BuyerPaymentDetails: FC = () => {
               ["Payment #", payment.payment_number],
               ["Invoice #", payment.invoice_number || "—"],
               ["Buyer", payment.buyer_name || "—"],
-              ["Amount", formatCurrency(payment.amount)],
+              ["Amount", formatCurrency(payment.amount, payment.currency)],
               ["Method", payment.method.replace(/_/g, " ").toUpperCase()],
               ["Reference", payment.reference_number || "—"],
               ["Status", payment.status.toUpperCase()],
@@ -106,7 +106,7 @@ const BuyerPaymentDetails: FC = () => {
           <Card variant="outlined" sx={{ bgcolor: "success.50" }}><CardContent>
             <Typography variant="h6" gutterBottom>Amount</Typography>
             <Typography variant="h3" sx={{ fontWeight: 700, color: "success.main", mt: 2 }}>
-              {formatCurrency(payment.amount)}
+              {formatCurrency(payment.amount, payment.currency)}
             </Typography>
             <Typography variant="body2" color="text.primary" sx={{ mt: 1 }}>
               {payment.method.replace(/_/g, " ").toUpperCase()} — Ref: {payment.reference_number || "N/A"}

@@ -310,8 +310,8 @@ const BuyerDetails: FC = () => {
                       ? Number(o.quantity_requested_kg).toLocaleString("en-UG", { maximumFractionDigits: 0 })
                       : "—"}
                   </TableCell>
-                  <TableCell>{formatCurrency(o.subtotal)}</TableCell>
-                  <TableCell sx={{ color: (o.gross_profit ?? 0) >= 0 ? "success.main" : "error.main", fontWeight: 600 }}>{formatCurrency(o.gross_profit)}</TableCell>
+                  <TableCell>{formatCurrency(o.subtotal, o.currency)}</TableCell>
+                  <TableCell sx={{ color: (o.gross_profit ?? 0) >= 0 ? "success.main" : "error.main", fontWeight: 600 }}>{formatCurrency(o.gross_profit, "UGX")}</TableCell>
                   <TableCell><Chip label={(o.status || "").toUpperCase()} color={ORDER_STATUS_COLORS[o.status] || "default"} size="small" /></TableCell>
                   <TableCell>{o.invoice_status ? <Chip label={o.invoice_status.toUpperCase()} color={INVOICE_STATUS_COLORS[o.invoice_status] || "default"} size="small" /> : <Span sx={{ color: "text.primary", fontSize: 12 }}>—</Span>}</TableCell>
                   <TableCell sx={{ fontSize: 12 }}>{formatDateToDDMMYYYY(o.created_at)}</TableCell>
@@ -342,9 +342,9 @@ const BuyerDetails: FC = () => {
                       ? Number(inv.quantity_requested_kg).toLocaleString("en-UG", { maximumFractionDigits: 0 })
                       : "—"}
                   </TableCell>
-                  <TableCell>{formatCurrency(inv.amount_due)}</TableCell>
-                  <TableCell sx={{ color: "success.main" }}>{formatCurrency(inv.amount_paid)}</TableCell>
-                  <TableCell sx={{ fontWeight: 700, color: inv.balance_due > 0 ? "error.main" : "success.main" }}>{formatCurrency(inv.balance_due)}</TableCell>
+                  <TableCell>{formatCurrency(inv.amount_due, inv.currency)}</TableCell>
+                  <TableCell sx={{ color: "success.main" }}>{formatCurrency(inv.amount_paid, inv.currency)}</TableCell>
+                  <TableCell sx={{ fontWeight: 700, color: inv.balance_due > 0 ? "error.main" : "success.main" }}>{formatCurrency(inv.balance_due, inv.currency)}</TableCell>
                   <TableCell>{inv.payment_terms_days === 0 ? "On Delivery" : `Net ${inv.payment_terms_days}`}</TableCell>
                   <TableCell sx={{ fontSize: 12, color: inv.is_overdue ? "error.main" : "inherit" }}>{inv.due_date ? formatDateToDDMMYYYY(inv.due_date) : "—"}{inv.is_overdue && " ⚠"}</TableCell>
                   <TableCell><Chip label={(inv.status || "").toUpperCase()} color={INVOICE_STATUS_COLORS[inv.status] || "default"} size="small" /></TableCell>
@@ -371,7 +371,7 @@ const BuyerDetails: FC = () => {
                 <TableRow key={p.id} hover sx={{ cursor: "pointer" }} onClick={() => navigate(`/admin/sourcing/buyer-payments/${p.id}`)}>
                   <TableCell><Typography variant="body2" color="primary" sx={{ fontWeight: 600 }}>{p.payment_number}</Typography></TableCell>
                   <TableCell>{p.invoice_number || "—"}</TableCell>
-                  <TableCell sx={{ fontWeight: 600, color: "success.main" }}>{formatCurrency(p.amount)}</TableCell>
+                  <TableCell sx={{ fontWeight: 600, color: "success.main" }}>{formatCurrency(p.amount, p.currency)}</TableCell>
                   <TableCell>{(p.method || "").replace(/_/g, " ").toUpperCase()}</TableCell>
                   <TableCell sx={{ fontFamily: "monospace", fontSize: 12 }}>{p.reference_number || "—"}</TableCell>
                   <TableCell><Chip label={(p.status || "").toUpperCase()} color={PAYMENT_STATUS_COLORS[p.status] || "default"} size="small" /></TableCell>
