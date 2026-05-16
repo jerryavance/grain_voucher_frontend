@@ -381,7 +381,7 @@ const IssueInvoiceForm: FC<{
       <DialogContent>
         <Box sx={{ display: "flex", flexDirection: "column", gap: 2, pt: 1 }}>
           <Alert severity="info">
-            <strong>Invoice Amount: {formatCurrency(order.subtotal)}</strong><br />
+            <strong>Invoice Amount: {formatCurrency(order.subtotal, order.currency)}</strong><br />
             This creates a receivable for the buyer.
           </Alert>
           <TextField
@@ -975,7 +975,7 @@ const BuyerOrderDetails: FC = () => {
                         Order Fulfillment Progress
                       </Typography>
                       <Typography variant="body2" color={pct >= 100 ? "success.main" : "text.primary"} fontWeight={700}>
-                        {pct.toFixed(1)}%
+                        {Math.min(pct, 100).toFixed(1)}%
                       </Typography>
                     </Box>
                     <Tooltip title={`${fmtKg(filled)} filled of ${fmtKg(requested)} requested`}>

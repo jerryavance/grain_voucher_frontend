@@ -269,7 +269,7 @@ const AllocationsTable: React.FC<{
                   <TableCell>{alloc.allocation_number}</TableCell>
                   <TableCell>{alloc.source_order_number}</TableCell>
                   <TableCell>
-                    {formatCurrency(alloc.amount_allocated)}
+                    {formatCurrency(alloc.amount_allocated, "UGX")}
                   </TableCell>
                   <TableCell
                     sx={{
@@ -332,12 +332,20 @@ const ReceivablesTable: React.FC<{ data: IInvestorReceivable[] }> = ({ data }) =
     );
   }
 
-  // Totals row
+  // Totals row — invoice amounts converted to UGX equivalent via
+  // exchange_rate_to_ugx so mixed-currency rows aggregate sensibly.
+  // Capital / margins / settlement are already in UGX by backend invariant.
+  const toUgx = (value: string | number | null | undefined, item: any): number => {
+    const n = Number(value || 0);
+    if (!item.currency || item.currency === "UGX") return n;
+    const rate = Number(item.exchange_rate_to_ugx || 0);
+    return rate > 0 ? n * rate : n;
+  };
   const totals = data.reduce(
     (acc, item) => ({
-      invoiceAmountDue:  acc.invoiceAmountDue  + Number(item.invoice_amount_due),
-      invoiceAmountPaid: acc.invoiceAmountPaid + Number(item.invoice_amount_paid),
-      invoiceBalanceDue: acc.invoiceBalanceDue + Number(item.invoice_balance_due),
+      invoiceAmountDue:  acc.invoiceAmountDue  + toUgx(item.invoice_amount_due,  item),
+      invoiceAmountPaid: acc.invoiceAmountPaid + toUgx(item.invoice_amount_paid, item),
+      invoiceBalanceDue: acc.invoiceBalanceDue + toUgx(item.invoice_balance_due, item),
       amountAllocated:   acc.amountAllocated   + Number(item.amount_allocated),
       projectedMargin:   acc.projectedMargin   + Number(item.projected_investor_margin),
       projectedReturn:   acc.projectedReturn   + Number(item.projected_return),
@@ -455,19 +463,19 @@ const ReceivablesTable: React.FC<{ data: IInvestorReceivable[] }> = ({ data }) =
                       </Typography>
                     </TableCell>
 
-                    {/* Invoice amount */}
+                    {/* Invoice amount — trade currency */}
                     <TableCell sx={{ whiteSpace: "nowrap" }}>
-                      {formatCurrency(item.invoice_amount_due)}
+                      {formatCurrency(item.invoice_amount_due, item.currency)}
                     </TableCell>
 
-                    {/* Amount paid */}
+                    {/* Amount paid — trade currency */}
                     <TableCell sx={{ color: amtPaid > 0 ? "#4caf50" : "inherit", whiteSpace: "nowrap" }}>
-                      {formatCurrency(item.invoice_amount_paid)}
+                      {formatCurrency(item.invoice_amount_paid, item.currency)}
                     </TableCell>
 
-                    {/* Balance due */}
+                    {/* Balance due — trade currency */}
                     <TableCell sx={{ color: balanceDue > 0 ? "#f44336" : "#4caf50", fontWeight: 600, whiteSpace: "nowrap" }}>
-                      {formatCurrency(item.invoice_balance_due)}
+                      {formatCurrency(item.invoice_balance_due, item.currency)}
                     </TableCell>
 
                     {/* Status */}
@@ -484,9 +492,9 @@ const ReceivablesTable: React.FC<{ data: IInvestorReceivable[] }> = ({ data }) =
                       {formatDate(item.invoice_due_date)}
                     </TableCell>
 
-                    {/* Capital deployed */}
+                    {/* Capital deployed — always UGX */}
                     <TableCell sx={{ fontWeight: 600, whiteSpace: "nowrap" }}>
-                      {formatCurrency(item.amount_allocated)}
+                      {formatCurrency(item.amount_allocated, "UGX")}
                     </TableCell>
 
                     {/* Capital share % */}
@@ -506,16 +514,16 @@ const ReceivablesTable: React.FC<{ data: IInvestorReceivable[] }> = ({ data }) =
                         fontWeight={700}
                         sx={{ color: projMargin >= 0 ? "#1565c0" : "#f44336" }}
                       >
-                        {formatCurrency(projMargin)}
+                        {formatCurrency(projMargin, "UGX")}
                       </Typography>
                       <Typography variant="caption" color="text.secondary">
                         threshold: {item.profit_threshold_pct}% · share: {item.investor_share_pct}%
                       </Typography>
                     </TableCell>
 
-                    {/* Projected return */}
+                    {/* Projected return — always UGX */}
                     <TableCell sx={{ fontWeight: 700, whiteSpace: "nowrap", color: "#1565c0" }}>
-                      {formatCurrency(projReturn)}
+                      {formatCurrency(projReturn, "UGX")}
                     </TableCell>
 
                     {/* Projected ROI % */}
@@ -532,11 +540,11 @@ const ReceivablesTable: React.FC<{ data: IInvestorReceivable[] }> = ({ data }) =
                       />
                     </TableCell>
 
-                    {/* Settled margin */}
+                    {/* Settled margin — always UGX */}
                     <TableCell sx={{ whiteSpace: "nowrap" }}>
                       {isSettled ? (
                         <Typography variant="body2" fontWeight={700} sx={{ color: "#2e7d32" }}>
-                          {formatCurrency(settledMgn)}
+                          {formatCurrency(settledMgn, "UGX")}
                         </Typography>
                       ) : (
                         <Typography variant="caption" color="text.secondary" sx={{ fontStyle: "italic" }}>
@@ -555,19 +563,19 @@ const ReceivablesTable: React.FC<{ data: IInvestorReceivable[] }> = ({ data }) =
                 <TableCell colSpan={2} sx={{ fontWeight: 700, color: "text.secondary", fontSize: "0.75rem", letterSpacing: 0.5 }}>
                   TOTALS ({data.length} invoice{data.length !== 1 ? "s" : ""})
                 </TableCell>
-                <TableCell sx={{ fontWeight: 700 }}>{formatCurrency(totals.invoiceAmountDue)}</TableCell>
-                <TableCell sx={{ fontWeight: 700, color: "#4caf50" }}>{formatCurrency(totals.invoiceAmountPaid)}</TableCell>
+                <TableCell sx={{ fontWeight: 700 }}>{formatCurrency(totals.invoiceAmountDue, "UGX")}</TableCell>
+                <TableCell sx={{ fontWeight: 700, color: "#4caf50" }}>{formatCurrency(totals.invoiceAmountPaid, "UGX")}</TableCell>
                 <TableCell sx={{ fontWeight: 700, color: totals.invoiceBalanceDue > 0 ? "#f44336" : "#4caf50" }}>
-                  {formatCurrency(totals.invoiceBalanceDue)}
+                  {formatCurrency(totals.invoiceBalanceDue, "UGX")}
                 </TableCell>
                 <TableCell />{/* status */}
                 <TableCell />{/* due date */}
-                <TableCell sx={{ fontWeight: 700 }}>{formatCurrency(totals.amountAllocated)}</TableCell>
+                <TableCell sx={{ fontWeight: 700 }}>{formatCurrency(totals.amountAllocated, "UGX")}</TableCell>
                 <TableCell />{/* share % */}
-                <TableCell sx={{ fontWeight: 800, color: "#1565c0" }}>{formatCurrency(totals.projectedMargin)}</TableCell>
-                <TableCell sx={{ fontWeight: 800, color: "#1565c0" }}>{formatCurrency(totals.projectedReturn)}</TableCell>
+                <TableCell sx={{ fontWeight: 800, color: "#1565c0" }}>{formatCurrency(totals.projectedMargin, "UGX")}</TableCell>
+                <TableCell sx={{ fontWeight: 800, color: "#1565c0" }}>{formatCurrency(totals.projectedReturn, "UGX")}</TableCell>
                 <TableCell />{/* ROI */}
-                <TableCell sx={{ fontWeight: 800, color: "#2e7d32" }}>{formatCurrency(totals.settledMargin)}</TableCell>
+                <TableCell sx={{ fontWeight: 800, color: "#2e7d32" }}>{formatCurrency(totals.settledMargin, "UGX")}</TableCell>
               </TableRow>
             </TableBody>
           </Table>

@@ -526,26 +526,26 @@ const ReceivablesTab = ({
                       </Typography>
                     </TableCell>
 
-                    {/* Invoice amount */}
+                    {/* Invoice amount — trade currency */}
                     <TableCell sx={{ whiteSpace: "nowrap" }}>
-                      {formatCurrency(item.invoice_amount_due)}
+                      {formatCurrency(item.invoice_amount_due, item.currency)}
                     </TableCell>
 
-                    {/* Amount paid */}
+                    {/* Amount paid — trade currency */}
                     <TableCell sx={{
                       color: amtPaid > 0 ? "success.main" : "text.primary",
                       whiteSpace: "nowrap",
                     }}>
-                      {formatCurrency(item.invoice_amount_paid)}
+                      {formatCurrency(item.invoice_amount_paid, item.currency)}
                     </TableCell>
 
-                    {/* Balance due */}
+                    {/* Balance due — trade currency */}
                     <TableCell sx={{
                       fontWeight: 600,
                       color: balanceDue > 0 ? "error.main" : "success.main",
                       whiteSpace: "nowrap",
                     }}>
-                      {formatCurrency(item.invoice_balance_due)}
+                      {formatCurrency(item.invoice_balance_due, item.currency)}
                     </TableCell>
 
                     {/* Status */}
@@ -563,9 +563,9 @@ const ReceivablesTab = ({
                         : "—"}
                     </TableCell>
 
-                    {/* Capital deployed */}
+                    {/* Capital deployed — always UGX */}
                     <TableCell sx={{ fontWeight: 600, whiteSpace: "nowrap" }}>
-                      {formatCurrency(item.amount_allocated)}
+                      {formatCurrency(item.amount_allocated, "UGX")}
                     </TableCell>
 
                     {/* Est. margin */}
@@ -575,20 +575,20 @@ const ReceivablesTab = ({
                         fontWeight={700}
                         sx={{ color: estMargin >= 0 ? "primary.main" : "error.main" }}
                       >
-                        {formatCurrency(estMargin)}
+                        {formatCurrency(estMargin, "UGX")}
                       </Typography>
                       <Typography variant="caption" color="text.primary">
                         {item.profit_threshold_pct}% threshold · {item.investor_share_pct}% share
                       </Typography>
                     </TableCell>
 
-                    {/* Est. return */}
+                    {/* Est. return — always UGX */}
                     <TableCell sx={{
                       fontWeight: 700,
                       color: "primary.main",
                       whiteSpace: "nowrap",
                     }}>
-                      {formatCurrency(estReturn)}
+                      {formatCurrency(estReturn, "UGX")}
                     </TableCell>
 
                     {/* Est. ROI % */}

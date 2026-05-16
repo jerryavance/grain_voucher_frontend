@@ -539,15 +539,21 @@ const SourceOrderDetails = () => {
   const treePayments = tradeTree?.supplier_payments || [];
 
   const treeAllocation = tradeTree?.investor_allocation;
-  // Allocation can be reassigned for any source order status except cancelled.
-  // (Backend only checks allocation.status == "active", which is independent of source order status.)
+  // Allocation can be reassigned for any source order status except cancelled —
+  // EXCEPT once a buyer invoice has been paid, at which point EMD has already
+  // moved and reassignment would corrupt the audit trail. Backend enforces the
+  // same rule; this is just to hide the button.
   const canReassign =
-    order.has_investor_allocation && order.status !== "cancelled";
-  // Investor can be assigned to any non-draft, non-sent, non-cancelled trade.
-  // Covers old/in-production trades (in_transit, delivered) that were never assigned.
+    order.has_investor_allocation
+    && order.status !== "cancelled"
+    && !order.has_paid_buyer_invoice;
+  // Investor can be assigned to any non-draft, non-sent, non-cancelled trade
+  // that hasn't yet had its invoice paid. Covers old/in-production trades
+  // (in_transit, delivered) that were never assigned.
   const canAssignInvestor =
-    !order.has_investor_allocation &&
-    !["draft", "sent", "cancelled"].includes(order.status);
+    !order.has_investor_allocation
+    && !["draft", "sent", "cancelled"].includes(order.status)
+    && !order.has_paid_buyer_invoice;
 
   const tabLabels = [
     "Order Details",

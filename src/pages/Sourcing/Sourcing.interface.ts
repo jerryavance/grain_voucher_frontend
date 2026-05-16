@@ -82,6 +82,9 @@ export interface ISourceOrder {
   status: TSourceOrderStatus; status_display: string; notes: string;
   has_investor_allocation: boolean; has_sale_lot: boolean;
   has_delivery: boolean; has_weighbridge: boolean; has_invoice: boolean;
+  /** True if any downstream BuyerInvoice for this trade has status "paid".
+   *  When true, investor reassignment is locked (backend will 400). */
+  has_paid_buyer_invoice?: boolean;
   // NEW: link to rejected lot if one exists
   rejected_lot: string | null;
   /** UUID of the planned buyer order this source order fulfils (null if not linked) */
@@ -720,6 +723,11 @@ export interface IInvestorReceivable {
   buyer_order_number: string;
   grain_type: string;
   hub_name: string;
+  /** Currency of the underlying buyer order (UGX / USD / EUR / GBP). */
+  currency?: TCurrency;
+  currency_display?: string;
+  /** Exchange rate to UGX — null for UGX rows. */
+  exchange_rate_to_ugx?: string | null;
   invoice_amount_due: string;
   invoice_amount_paid: string;
   invoice_balance_due: string;

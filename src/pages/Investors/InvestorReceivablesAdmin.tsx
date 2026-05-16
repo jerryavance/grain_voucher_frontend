@@ -117,12 +117,22 @@ const InvestorReceivablesAdmin = () => {
     });
   }, [data, investorFilter, statusFilter]);
 
-  // ── Totals ────────────────────────────────────────────────────────────────
+  // ── Totals (UGX-equivalent) ───────────────────────────────────────────────
+  // Invoice amounts may be in non-UGX currencies. Convert to UGX via the
+  // row's exchange_rate_to_ugx so the dashboard totals stay meaningful when
+  // mixed-currency rows are present. Capital / margin / return fields are
+  // already UGX by backend invariant (see BuyerOrderLine.save()).
+  const toUgx = (value: string | number | null | undefined, r: IInvestorReceivable): number => {
+    const n = Number(value || 0);
+    if (!r.currency || r.currency === "UGX") return n;
+    const rate = Number(r.exchange_rate_to_ugx || 0);
+    return rate > 0 ? n * rate : n; // fall back to raw value if rate missing
+  };
   const totals = useMemo(() => filtered.reduce(
     (acc, r) => ({
-      invoiceDue:      acc.invoiceDue      + Number(r.invoice_amount_due),
-      invoicePaid:     acc.invoicePaid     + Number(r.invoice_amount_paid),
-      invoiceBalance:  acc.invoiceBalance  + Number(r.invoice_balance_due),
+      invoiceDue:      acc.invoiceDue      + toUgx(r.invoice_amount_due,     r),
+      invoicePaid:     acc.invoicePaid     + toUgx(r.invoice_amount_paid,    r),
+      invoiceBalance:  acc.invoiceBalance  + toUgx(r.invoice_balance_due,    r),
       capitalDeployed: acc.capitalDeployed + Number(r.amount_allocated),
       estMargin:       acc.estMargin       + Number(r.projected_investor_margin),
       estReturn:       acc.estReturn       + Number(r.projected_return),
@@ -172,12 +182,12 @@ const InvestorReceivablesAdmin = () => {
         mb: 3,
       }}>
         {[
-          { icon: <AccountBalanceIcon />, label: "Total Invoiced",      value: formatCurrency(totals.invoiceDue),      color: "text.primary"  },
-          { icon: <AccountBalanceIcon />, label: "Collected",           value: formatCurrency(totals.invoicePaid),     color: "success.main"  },
-          { icon: <AccountBalanceIcon />, label: "Outstanding",         value: formatCurrency(totals.invoiceBalance),  color: "error.main"    },
-          { icon: <AccountBalanceIcon />, label: "Capital Deployed",    value: formatCurrency(totals.capitalDeployed), color: "text.primary"  },
-          { icon: <TrendingUpIcon />,     label: "Est. Total Margin",   value: formatCurrency(totals.estMargin),       color: "primary.main"  },
-          { icon: <TrendingUpIcon />,     label: "Est. Total Return",   value: formatCurrency(totals.estReturn),       color: "primary.main"  },
+          { icon: <AccountBalanceIcon />, label: "Total Invoiced (UGX eq.)",     value: formatCurrency(totals.invoiceDue,     "UGX"), color: "text.primary"  },
+          { icon: <AccountBalanceIcon />, label: "Collected (UGX eq.)",          value: formatCurrency(totals.invoicePaid,    "UGX"), color: "success.main"  },
+          { icon: <AccountBalanceIcon />, label: "Outstanding (UGX eq.)",        value: formatCurrency(totals.invoiceBalance, "UGX"), color: "error.main"    },
+          { icon: <AccountBalanceIcon />, label: "Capital Deployed",             value: formatCurrency(totals.capitalDeployed, "UGX"), color: "text.primary"  },
+          { icon: <TrendingUpIcon />,     label: "Est. Total Margin",            value: formatCurrency(totals.estMargin,       "UGX"), color: "primary.main"  },
+          { icon: <TrendingUpIcon />,     label: "Est. Total Return",            value: formatCurrency(totals.estReturn,       "UGX"), color: "primary.main"  },
         ].map(({ icon, label, value, color }) => (
           <Card key={label} elevation={0} sx={{ border: "1px solid #e0e0e0" }}>
             <CardContent sx={{ p: 1.5, "&:last-child": { pb: 1.5 } }}>
@@ -314,19 +324,19 @@ const InvestorReceivablesAdmin = () => {
                         </Typography>
                       </TableCell>
 
-                      {/* Invoice amount */}
+                      {/* Invoice amount — trade currency (UGX / USD / …) */}
                       <TableCell sx={{ whiteSpace: "nowrap" }}>
-                        {formatCurrency(item.invoice_amount_due)}
+                        {formatCurrency(item.invoice_amount_due, item.currency)}
                       </TableCell>
 
-                      {/* Paid */}
+                      {/* Paid — trade currency */}
                       <TableCell sx={{ color: amtPaid > 0 ? "success.main" : "text.primary", whiteSpace: "nowrap" }}>
-                        {formatCurrency(item.invoice_amount_paid)}
+                        {formatCurrency(item.invoice_amount_paid, item.currency)}
                       </TableCell>
 
-                      {/* Balance due */}
+                      {/* Balance due — trade currency */}
                       <TableCell sx={{ fontWeight: 600, color: balanceDue > 0 ? "error.main" : "success.main", whiteSpace: "nowrap" }}>
-                        {formatCurrency(item.invoice_balance_due)}
+                        {formatCurrency(item.invoice_balance_due, item.currency)}
                       </TableCell>
 
                       {/* Status */}
@@ -337,24 +347,24 @@ const InvestorReceivablesAdmin = () => {
                         {item.invoice_due_date ? formatDateToDDMMYYYY(item.invoice_due_date) : "—"}
                       </TableCell>
 
-                      {/* Capital deployed */}
+                      {/* Capital deployed — always UGX (investor EMD is UGX) */}
                       <TableCell sx={{ fontWeight: 600, whiteSpace: "nowrap" }}>
-                        {formatCurrency(item.amount_allocated)}
+                        {formatCurrency(item.amount_allocated, "UGX")}
                       </TableCell>
 
-                      {/* Est. margin */}
+                      {/* Est. margin — always UGX */}
                       <TableCell sx={{ whiteSpace: "nowrap" }}>
                         <Typography variant="body2" fontWeight={700} sx={{ color: estMargin >= 0 ? "primary.main" : "error.main" }}>
-                          {formatCurrency(estMargin)}
+                          {formatCurrency(estMargin, "UGX")}
                         </Typography>
                         <Typography variant="caption" color="text.primary">
                           {item.profit_threshold_pct}% thr · {item.investor_share_pct}% share
                         </Typography>
                       </TableCell>
 
-                      {/* Est. return */}
+                      {/* Est. return — always UGX */}
                       <TableCell sx={{ fontWeight: 700, color: "primary.main", whiteSpace: "nowrap" }}>
-                        {formatCurrency(estReturn)}
+                        {formatCurrency(estReturn, "UGX")}
                       </TableCell>
 
                       {/* Est. ROI % */}
@@ -387,14 +397,14 @@ const InvestorReceivablesAdmin = () => {
                   </TableCell>
                   <TableCell />{/* invoice # */}
                   <TableCell />{/* buyer */}
-                  <TableCell sx={{ fontWeight: 700, whiteSpace: "nowrap" }}>{formatCurrency(totals.invoiceDue)}</TableCell>
-                  <TableCell sx={{ fontWeight: 700, color: "success.main", whiteSpace: "nowrap" }}>{formatCurrency(totals.invoicePaid)}</TableCell>
-                  <TableCell sx={{ fontWeight: 700, color: "error.main", whiteSpace: "nowrap" }}>{formatCurrency(totals.invoiceBalance)}</TableCell>
+                  <TableCell sx={{ fontWeight: 700, whiteSpace: "nowrap" }}>{formatCurrency(totals.invoiceDue, "UGX")}</TableCell>
+                  <TableCell sx={{ fontWeight: 700, color: "success.main", whiteSpace: "nowrap" }}>{formatCurrency(totals.invoicePaid, "UGX")}</TableCell>
+                  <TableCell sx={{ fontWeight: 700, color: "error.main", whiteSpace: "nowrap" }}>{formatCurrency(totals.invoiceBalance, "UGX")}</TableCell>
                   <TableCell />{/* status */}
                   <TableCell />{/* due date */}
-                  <TableCell sx={{ fontWeight: 700, whiteSpace: "nowrap" }}>{formatCurrency(totals.capitalDeployed)}</TableCell>
-                  <TableCell sx={{ fontWeight: 800, color: "primary.main", whiteSpace: "nowrap" }}>{formatCurrency(totals.estMargin)}</TableCell>
-                  <TableCell sx={{ fontWeight: 800, color: "primary.main", whiteSpace: "nowrap" }}>{formatCurrency(totals.estReturn)}</TableCell>
+                  <TableCell sx={{ fontWeight: 700, whiteSpace: "nowrap" }}>{formatCurrency(totals.capitalDeployed, "UGX")}</TableCell>
+                  <TableCell sx={{ fontWeight: 800, color: "primary.main", whiteSpace: "nowrap" }}>{formatCurrency(totals.estMargin, "UGX")}</TableCell>
+                  <TableCell sx={{ fontWeight: 800, color: "primary.main", whiteSpace: "nowrap" }}>{formatCurrency(totals.estReturn, "UGX")}</TableCell>
                   <TableCell />{/* ROI */}
                   <TableCell />{/* alloc # */}
                 </TableRow>
