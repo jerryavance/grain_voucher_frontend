@@ -302,6 +302,7 @@ export interface IBuyerProfileMinimal {
   id: string;
   business_name: string;
   buyer_type_display: string;
+  contact_name?: string;
   phone: string;
   email: string;
   default_credit_terms_days: number;

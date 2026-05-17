@@ -277,6 +277,32 @@ export const TRADE_SETTLEMENT_EXPORT_COLUMNS: ExportColumn[] = [
   { header: "Settled At", key: "settled_at" },
 ];
 
+export const BUYER_CONTRACT_EXPORT_COLUMNS: ExportColumn[] = [
+  { header: "Contract #", key: "contract_number" },
+  { header: "Buyer", key: "buyer_name" },
+  { header: "Hub", key: "hub_name" },
+  { header: "Grain Type", key: "grain_type_name" },
+  { header: "Volume (kg)", key: "contracted_quantity_kg" },
+  { header: "Delivered (kg)", key: "delivered_quantity_kg" },
+  { header: "Remaining (kg)", key: "remaining_quantity_kg" },
+  { header: "Fulfilled %", key: "fulfillment_pct" },
+  { header: "Trade Unit", key: "trade_unit" },
+  { header: "Price / unit", key: "contracted_price_per_unit" },
+  { header: "Currency", key: "currency" },
+  { header: "FX → UGX", key: "exchange_rate_to_ugx" },
+  { header: "Contract Value", key: "contracted_total_value" },
+  { header: "Total Invoiced", key: "total_invoiced" },
+  { header: "Total Paid", key: "total_paid" },
+  { header: "Balance Due", key: "total_balance_due" },
+  { header: "Gross Profit (UGX)", key: "total_gross_profit" },
+  { header: "Payment Terms (days)", key: "payment_terms_days" },
+  { header: "Delivery Start", key: "delivery_start_date" },
+  { header: "Delivery End", key: "delivery_end_date" },
+  { header: "Status", key: "status" },
+  { header: "Child Orders", key: "child_order_count" },
+  { header: "Created", key: "created_at" },
+];
+
 export const REJECTED_LOT_EXPORT_COLUMNS: ExportColumn[] = [
   { header: "Rejection #", key: "rejection_number" },
   { header: "Lot #", key: "lot_number" },

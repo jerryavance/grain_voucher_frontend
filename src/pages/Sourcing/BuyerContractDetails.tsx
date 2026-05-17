@@ -12,9 +12,11 @@
 import { FC, useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import {
-  Alert, Box, Button, Card, CardContent, Chip, Divider, Grid, IconButton,
-  LinearProgress, Tab, Tabs, Table, TableBody, TableCell, TableContainer,
-  TableHead, TableRow, Typography, Tooltip,
+  Alert, Autocomplete, Box, Button, Card, CardContent, Checkbox, Chip,
+  CircularProgress, Dialog, DialogActions, DialogContent, DialogTitle,
+  Divider, FormControlLabel, Grid, IconButton, LinearProgress, Tab, Tabs,
+  Table, TableBody, TableCell, TableContainer, TableHead, TableRow,
+  TextField, Typography, Tooltip,
 } from "@mui/material";
 import { toast } from "react-hot-toast";
 import ArrowBackIcon from "@mui/icons-material/ArrowBack";
@@ -24,6 +26,8 @@ import PlayArrowIcon from "@mui/icons-material/PlayArrow";
 import DoneAllIcon from "@mui/icons-material/DoneAll";
 import CancelIcon from "@mui/icons-material/Cancel";
 import VisibilityIcon from "@mui/icons-material/Visibility";
+import LinkOffIcon from "@mui/icons-material/LinkOff";
+import LinkIcon from "@mui/icons-material/Link";
 
 import useTitle from "../../hooks/useTitle";
 import LoadingScreen from "../../components/LoadingScreen";
@@ -31,6 +35,13 @@ import { Span } from "../../components/Typography";
 import { formatDateToDDMMYYYY } from "../../utils/date_formatter";
 import { SourcingService } from "./Sourcing.service";
 import { formatCurrency } from "./SourcingConstants";
+import BuyerContractPDFButton from "./BuyerContractPDFButton";
+import {
+  ExportButtons,
+  BUYER_CONTRACT_EXPORT_COLUMNS,
+  BUYER_ORDER_EXPORT_COLUMNS,
+  BUYER_INVOICE_EXPORT_COLUMNS,
+} from "./ExportUtils";
 import {
   IBuyerContract, IBuyerOrder, IBuyerInvoice,
 } from "./Sourcing.interface";
@@ -58,6 +69,121 @@ const InfoRow: FC<{ label: string; value?: string | null }> = ({ label, value })
   </Box>
 );
 
+// ─── Attach Existing Order Dialog ─────────────────────────────────────────────
+
+const AttachExistingOrderDialog: FC<{
+  open: boolean;
+  contract: IBuyerContract;
+  onClose: () => void;
+  onAttached: () => void;
+}> = ({ open, contract, onClose, onAttached }) => {
+  const [eligible, setEligible] = useState<IBuyerOrder[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [selected, setSelected] = useState<IBuyerOrder | null>(null);
+  const [includeLinked, setIncludeLinked] = useState(false);
+
+  useEffect(() => {
+    if (!open) return;
+    setSelected(null);
+    setLoading(true);
+    SourcingService.getBuyerContractEligibleOrders(contract.id, { include_linked: includeLinked })
+      .then(setEligible)
+      .catch(() => toast.error("Failed to load eligible orders"))
+      .finally(() => setLoading(false));
+  }, [open, includeLinked, contract.id]);
+
+  const handleAttach = async () => {
+    if (!selected) return;
+    setSubmitting(true);
+    try {
+      await SourcingService.setBuyerOrderContract(selected.id, contract.id);
+      toast.success(`${selected.order_number} attached to ${contract.contract_number}`);
+      onAttached();
+      onClose();
+    } catch (e: any) {
+      toast.error(
+        e?.response?.data?.contract?.[0] ||
+        e?.response?.data?.detail ||
+        "Failed to attach order",
+      );
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  return (
+    <Dialog open={open} onClose={() => !submitting && onClose()} maxWidth="sm" fullWidth>
+      <DialogTitle sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+        <LinkIcon color="primary" />
+        Attach existing buyer order to {contract.contract_number}
+      </DialogTitle>
+      <DialogContent dividers>
+        <Alert severity="info" sx={{ mb: 2 }}>
+          Showing orders that match this contract's buyer, hub, product and currency.
+        </Alert>
+        <Autocomplete
+          options={eligible}
+          value={selected}
+          onChange={(_, val) => setSelected(val)}
+          loading={loading}
+          getOptionLabel={(o: IBuyerOrder) =>
+            `${o.order_number} · ${o.status}` +
+            (o.contract_number ? ` · already on ${o.contract_number}` : "")
+          }
+          isOptionEqualToValue={(a, b) => a.id === b.id}
+          renderInput={params => (
+            <TextField
+              {...params}
+              label="Buyer Order"
+              placeholder={eligible.length === 0 ? "No eligible orders found" : "Pick an order..."}
+              InputProps={{
+                ...params.InputProps,
+                endAdornment: (
+                  <>
+                    {loading && <CircularProgress color="inherit" size={18} />}
+                    {params.InputProps.endAdornment}
+                  </>
+                ),
+              }}
+            />
+          )}
+        />
+        <FormControlLabel
+          sx={{ mt: 1 }}
+          control={
+            <Checkbox
+              size="small"
+              checked={includeLinked}
+              onChange={e => setIncludeLinked(e.target.checked)}
+            />
+          }
+          label="Include orders already on a different contract (re-route)"
+        />
+        {selected && (
+          <Alert severity="warning" sx={{ mt: 2 }} icon={false}>
+            <strong>{selected.order_number}</strong> will be attached to this contract.
+            {selected.contract_number && selected.contract !== contract.id && (
+              <> It will be moved from <strong>{selected.contract_number}</strong>.</>
+            )}
+          </Alert>
+        )}
+      </DialogContent>
+      <DialogActions>
+        <Button onClick={onClose} disabled={submitting}>Cancel</Button>
+        <Button
+          variant="contained"
+          startIcon={<LinkIcon />}
+          onClick={handleAttach}
+          disabled={!selected || submitting}
+        >
+          {submitting ? "Attaching..." : "Attach Order"}
+        </Button>
+      </DialogActions>
+    </Dialog>
+  );
+};
+
 const BuyerContractDetails: FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
@@ -67,6 +193,7 @@ const BuyerContractDetails: FC = () => {
   const [tab, setTab] = useState(0);
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState(false);
+  const [showAttachDialog, setShowAttachDialog] = useState(false);
 
   useTitle(contract ? `Contract ${contract.contract_number}` : "Buyer Contract");
 
@@ -107,6 +234,17 @@ const BuyerContractDetails: FC = () => {
     }
   };
 
+  const handleDetach = async (orderId: string, orderNumber: string) => {
+    if (!window.confirm(`Detach ${orderNumber} from this contract?`)) return;
+    try {
+      await SourcingService.setBuyerOrderContract(orderId, null);
+      toast.success(`${orderNumber} detached`);
+      fetchAll();
+    } catch (e: any) {
+      toast.error(e?.response?.data?.contract?.[0] || "Failed to detach");
+    }
+  };
+
   if (loading) return <LoadingScreen />;
   if (!contract) return <Alert severity="error">Contract not found.</Alert>;
 
@@ -138,6 +276,12 @@ const BuyerContractDetails: FC = () => {
 
       {/* ── Action buttons ── */}
       <Box sx={{ mb: 3, display: "flex", gap: 1, flexWrap: "wrap" }}>
+        <BuyerContractPDFButton contract={contract} orders={orders} size="medium" />
+        <ExportButtons
+          data={[contract]}
+          columns={BUYER_CONTRACT_EXPORT_COLUMNS}
+          filename={`contract_${contract.contract_number}`}
+        />
         {contract.status === "draft" && (
           <Button
             variant="contained" color="success" startIcon={<PlayArrowIcon />}
@@ -148,22 +292,30 @@ const BuyerContractDetails: FC = () => {
           </Button>
         )}
         {(contract.status === "draft" || contract.status === "active") && (
-          <Button
-            variant="contained" startIcon={<AddIcon />}
-            onClick={() => {
-              const qs = new URLSearchParams({
-                contract: contract.id,
-                buyer: contract.buyer,
-                hub: contract.hub,
-                grain_type: contract.grain_type,
-                currency: contract.currency,
-                trade_unit: contract.trade_unit,
-              }).toString();
-              navigate(`/admin/sourcing/buyer-orders?${qs}&new=1`);
-            }}
-          >
-            New Delivery Order
-          </Button>
+          <>
+            <Button
+              variant="contained" startIcon={<AddIcon />}
+              onClick={() => {
+                const qs = new URLSearchParams({
+                  contract: contract.id,
+                  buyer: contract.buyer,
+                  hub: contract.hub,
+                  grain_type: contract.grain_type,
+                  currency: contract.currency,
+                  trade_unit: contract.trade_unit,
+                }).toString();
+                navigate(`/admin/sourcing/buyer-orders?${qs}&new=1`);
+              }}
+            >
+              New Delivery Order
+            </Button>
+            <Button
+              variant="outlined" startIcon={<LinkIcon />}
+              onClick={() => setShowAttachDialog(true)}
+            >
+              Attach Existing Order
+            </Button>
+          </>
         )}
         {contract.status === "active" && (
           <Button
@@ -283,11 +435,30 @@ const BuyerContractDetails: FC = () => {
 
         {tab === 0 && (
           <Box sx={{ p: 2 }}>
+            <Box sx={{ display: "flex", gap: 1, mb: 1.5, flexWrap: "wrap" }}>
+              {(contract.status === "draft" || contract.status === "active") && (
+                <Button
+                  size="small"
+                  variant="outlined"
+                  startIcon={<LinkIcon />}
+                  onClick={() => setShowAttachDialog(true)}
+                >
+                  Attach Existing Order
+                </Button>
+              )}
+              <Box sx={{ ml: "auto" }}>
+                <ExportButtons
+                  data={orders}
+                  columns={BUYER_ORDER_EXPORT_COLUMNS}
+                  filename={`contract_${contract.contract_number}_orders`}
+                />
+              </Box>
+            </Box>
             {orders.length === 0 ? (
               <Alert severity="info">
                 No delivery orders yet.
                 {(contract.status === "draft" || contract.status === "active") && (
-                  <> Click <strong>New Delivery Order</strong> to add the first truckload.</>
+                  <> Click <strong>New Delivery Order</strong> or <strong>Attach Existing Order</strong>.</>
                 )}
               </Alert>
             ) : (
@@ -295,16 +466,20 @@ const BuyerContractDetails: FC = () => {
                 <Table size="small">
                   <TableHead>
                     <TableRow sx={{ bgcolor: "action.hover" }}>
-                      {["Order #", "Status", "Revenue", "Gross Profit (UGX)", "Created", ""].map(h => (
+                      {["Order #", "Status", "Revenue", "Gross Profit (UGX)", "Created", "Actions"].map(h => (
                         <TableCell key={h} sx={{ fontWeight: 700 }}>{h}</TableCell>
                       ))}
                     </TableRow>
                   </TableHead>
                   <TableBody>
                     {orders.map(o => (
-                      <TableRow key={o.id} hover sx={{ cursor: "pointer" }}
-                        onClick={() => navigate(`/admin/sourcing/buyer-orders/${o.id}`)}>
-                        <TableCell sx={{ fontWeight: 600, color: "primary.main" }}>{o.order_number}</TableCell>
+                      <TableRow key={o.id} hover>
+                        <TableCell
+                          sx={{ fontWeight: 600, color: "primary.main", cursor: "pointer" }}
+                          onClick={() => navigate(`/admin/sourcing/buyer-orders/${o.id}`)}
+                        >
+                          {o.order_number}
+                        </TableCell>
                         <TableCell>
                           <Chip label={(o.status || "").toUpperCase()} size="small" color={BO_STATUS_COLORS[o.status] ?? "default"} />
                         </TableCell>
@@ -315,8 +490,24 @@ const BuyerContractDetails: FC = () => {
                         <TableCell sx={{ fontSize: 12 }}>{formatDateToDDMMYYYY(o.created_at)}</TableCell>
                         <TableCell>
                           <Tooltip title="Open">
-                            <IconButton size="small"><VisibilityIcon fontSize="small" /></IconButton>
+                            <IconButton
+                              size="small"
+                              onClick={() => navigate(`/admin/sourcing/buyer-orders/${o.id}`)}
+                            >
+                              <VisibilityIcon fontSize="small" />
+                            </IconButton>
                           </Tooltip>
+                          {contract.status !== "completed" && contract.status !== "cancelled" && (
+                            <Tooltip title="Detach from this contract">
+                              <IconButton
+                                size="small"
+                                color="error"
+                                onClick={() => handleDetach(o.id, o.order_number)}
+                              >
+                                <LinkOffIcon fontSize="small" />
+                              </IconButton>
+                            </Tooltip>
+                          )}
                         </TableCell>
                       </TableRow>
                     ))}
@@ -329,6 +520,13 @@ const BuyerContractDetails: FC = () => {
 
         {tab === 1 && (
           <Box sx={{ p: 2 }}>
+            <Box sx={{ display: "flex", justifyContent: "flex-end", mb: 1.5 }}>
+              <ExportButtons
+                data={invoices}
+                columns={BUYER_INVOICE_EXPORT_COLUMNS}
+                filename={`contract_${contract.contract_number}_invoices`}
+              />
+            </Box>
             {invoices.length === 0 ? (
               <Alert severity="info">No invoices have been issued on this contract yet.</Alert>
             ) : (
@@ -367,6 +565,14 @@ const BuyerContractDetails: FC = () => {
           </Box>
         )}
       </Card>
+
+      {/* ── Attach existing order dialog ── */}
+      <AttachExistingOrderDialog
+        open={showAttachDialog}
+        contract={contract}
+        onClose={() => setShowAttachDialog(false)}
+        onAttached={fetchAll}
+      />
     </Box>
   );
 };

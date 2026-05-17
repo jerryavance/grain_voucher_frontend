@@ -35,6 +35,7 @@ import { formatDateToDDMMYYYY } from "../../utils/date_formatter";
 import { INITIAL_PAGE_SIZE } from "../../api/constants";
 import { SourcingService } from "./Sourcing.service";
 import { formatCurrency } from "./SourcingConstants";
+import { ExportButtons, BUYER_CONTRACT_EXPORT_COLUMNS } from "./ExportUtils";
 import {
   IBuyerContract, IBuyerContractsResults, IBuyerProfile,
 } from "./Sourcing.interface";
@@ -542,14 +543,20 @@ const BuyerContracts: FC = () => {
             ))}
           </Select>
         </FormControl>
-        <Button
-          sx={{ ml: "auto" }}
-          variant="contained"
-          startIcon={<AddIcon />}
-          onClick={() => setShowCreate(true)}
-        >
-          New Contract
-        </Button>
+        <Box sx={{ ml: "auto", display: "flex", gap: 1 }}>
+          <ExportButtons
+            data={contracts?.results || []}
+            columns={BUYER_CONTRACT_EXPORT_COLUMNS}
+            filename="buyer_contracts"
+          />
+          <Button
+            variant="contained"
+            startIcon={<AddIcon />}
+            onClick={() => setShowCreate(true)}
+          >
+            New Contract
+          </Button>
+        </Box>
       </Box>
 
       <CustomTable

@@ -347,6 +347,26 @@ export const SourcingService = {
   async getBuyerContractInvoices(id: string): Promise<IBuyerInvoice[]> {
     return instance.get(`sourcing/buyer-contracts/${id}/invoices/`).then(r => r.data);
   },
+  async getBuyerContractEligibleOrders(
+    id: string,
+    opts: { include_linked?: boolean } = {},
+  ): Promise<IBuyerOrder[]> {
+    return instance
+      .get(`sourcing/buyer-contracts/${id}/eligible-orders/`, {
+        params: opts.include_linked ? { include_linked: 1 } : {},
+      })
+      .then(r => r.data);
+  },
+  /**
+   * Link / unlink an existing BuyerOrder to a contract. Pass contractId=null
+   * to remove the link. Backend's BuyerOrderSerializer.validate enforces that
+   * buyer / hub / grain_type / currency match the target contract.
+   */
+  async setBuyerOrderContract(orderId: string, contractId: string | null): Promise<IBuyerOrder> {
+    return instance
+      .patch(`sourcing/buyer-orders/${orderId}/`, { contract: contractId })
+      .then(r => r.data);
+  },
 
   // ── Buyer Orders ──────────────────────────────────────────────────────────
   async getBuyerOrders(filters: Record<string, any>): Promise<IBuyerOrdersResults> {

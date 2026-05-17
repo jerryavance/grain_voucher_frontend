@@ -1,7 +1,7 @@
 import { FC, useEffect, useState, useCallback } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import {
-  Alert, Box, Button, Card, CardContent, Chip, CircularProgress,
+  Alert, Autocomplete, Box, Button, Card, CardContent, Chip, CircularProgress,
   Dialog, DialogActions, DialogContent, DialogTitle, Divider,
   FormControl, FormHelperText, Grid, IconButton, InputLabel,
   LinearProgress, MenuItem, Paper, Select, Tab, Tabs,
@@ -19,6 +19,8 @@ import LocalShippingIcon from "@mui/icons-material/LocalShipping";
 import ReceiptIcon from "@mui/icons-material/Receipt";
 import TrackChangesIcon from "@mui/icons-material/TrackChanges";
 import LinkOffIcon from "@mui/icons-material/LinkOff";
+import LinkIcon from "@mui/icons-material/Link";
+import HandshakeIcon from "@mui/icons-material/Handshake";
 import LoadingScreen from "../../components/LoadingScreen";
 import ProgressIndicator from "../../components/UI/ProgressIndicator";
 import { Span } from "../../components/Typography";
@@ -26,7 +28,7 @@ import useTitle from "../../hooks/useTitle";
 import { formatDateToDDMMYYYY } from "../../utils/date_formatter";
 import { SourcingService } from "./Sourcing.service";
 import { formatCurrency, formatWeight } from "./SourcingConstants";
-import { IBuyerOrder, IBuyerOrderLine, IBuyerOrderFulfillment, ISaleLot, ISaleExpense, IProformaInvoice } from "./Sourcing.interface";
+import { IBuyerOrder, IBuyerOrderLine, IBuyerOrderFulfillment, ISaleLot, ISaleExpense, IProformaInvoice, IBuyerContract } from "./Sourcing.interface";
 
 const BUYER_ORDER_STATUS_COLORS: Record<string, any> = {
   quotation: "info", draft: "default", confirmed: "primary", dispatched: "warning",
@@ -412,6 +414,131 @@ const IssueInvoiceForm: FC<{
   );
 };
 
+// ─── Link to Contract Dialog ─────────────────────────────────────────────────
+const LinkContractDialog: FC<{
+  open: boolean;
+  order: IBuyerOrder;
+  onClose: () => void;
+  onLinked: () => void;
+}> = ({ open, order, onClose, onLinked }) => {
+  const [contracts, setContracts] = useState<IBuyerContract[]>([]);
+  const [search, setSearch] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [selected, setSelected] = useState<IBuyerContract | null>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    setSelected(null);
+    setSearch("");
+  }, [open]);
+
+  useEffect(() => {
+    if (!open) return;
+    let cancelled = false;
+    const handle = setTimeout(() => {
+      setLoading(true);
+      // Only show active contracts that match this order's buyer/hub/grain/currency
+      SourcingService.getBuyerContracts({
+        status: "active",
+        page_size: 50,
+        buyer: order.buyer || undefined,
+        hub: order.hub,
+        currency: order.currency,
+        ...(search ? { search } : {}),
+      })
+        .then(r => {
+          if (cancelled) return;
+          // Client-side filter for grain_type since backend filterset only has it not currency match
+          const filtered = (r.results || []).filter(c =>
+            !order.grain_type || c.grain_type === order.grain_type,
+          );
+          setContracts(filtered);
+        })
+        .catch(() => {})
+        .finally(() => { if (!cancelled) setLoading(false); });
+    }, search ? 300 : 0);
+    return () => { cancelled = true; clearTimeout(handle); };
+  }, [open, search, order.buyer, order.hub, order.currency, order.grain_type]);
+
+  const handleLink = async () => {
+    if (!selected) return;
+    setSubmitting(true);
+    try {
+      await SourcingService.setBuyerOrderContract(order.id, selected.id);
+      toast.success(`Linked to ${selected.contract_number}`);
+      onLinked();
+      onClose();
+    } catch (e: any) {
+      toast.error(
+        e?.response?.data?.contract?.[0] ||
+        e?.response?.data?.detail ||
+        "Failed to link contract",
+      );
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  return (
+    <Dialog open={open} onClose={() => !submitting && onClose()} maxWidth="sm" fullWidth>
+      <DialogTitle sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+        <HandshakeIcon color="primary" />
+        {order.contract ? "Change parent contract" : "Link to a contract"}
+      </DialogTitle>
+      <DialogContent dividers>
+        <Alert severity="info" sx={{ mb: 2 }}>
+          Showing active contracts matching this order's buyer, hub, product and currency.
+        </Alert>
+        <Autocomplete
+          options={contracts}
+          loading={loading}
+          value={selected}
+          onChange={(_, val) => setSelected(val)}
+          onInputChange={(_, val) => setSearch(val)}
+          getOptionLabel={c => `${c.contract_number} — ${c.buyer_name || c.buyer_detail?.business_name || ""} · ${c.grain_type_name}`}
+          isOptionEqualToValue={(a, b) => a.id === b.id}
+          renderInput={params => (
+            <TextField
+              {...params}
+              label="Contract"
+              placeholder={contracts.length === 0 && !loading ? "No matching contracts" : "Search active contracts..."}
+              InputProps={{
+                ...params.InputProps,
+                endAdornment: (
+                  <>
+                    {loading && <CircularProgress color="inherit" size={18} />}
+                    {params.InputProps.endAdornment}
+                  </>
+                ),
+              }}
+            />
+          )}
+        />
+        {selected && (
+          <Alert severity="warning" sx={{ mt: 2 }} icon={false}>
+            <strong>{order.order_number}</strong> will be linked to <strong>{selected.contract_number}</strong>.
+            {order.contract_number && order.contract !== selected.id && (
+              <> It will be moved from <strong>{order.contract_number}</strong>.</>
+            )}
+          </Alert>
+        )}
+      </DialogContent>
+      <DialogActions>
+        <Button onClick={onClose} disabled={submitting}>Cancel</Button>
+        <Button
+          variant="contained"
+          startIcon={<LinkIcon />}
+          onClick={handleLink}
+          disabled={!selected || submitting}
+        >
+          {submitting ? "Linking..." : (order.contract ? "Move to Contract" : "Link Contract")}
+        </Button>
+      </DialogActions>
+    </Dialog>
+  );
+};
+
 // ─── Main Page ──────────────────────────────────────────────────────────────
 const BuyerOrderDetails: FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -423,6 +550,7 @@ const BuyerOrderDetails: FC = () => {
   const [showAddExpense, setShowAddExpense] = useState(false);
   const [showIssueInvoice, setShowIssueInvoice] = useState(false);
   const [showCreatePFI, setShowCreatePFI] = useState(false);
+  const [showLinkContract, setShowLinkContract] = useState(false);
   const [availableLots, setAvailableLots] = useState<ISaleLot[]>([]);
   const [actionLoading, setActionLoading] = useState(false);
   const [linkedSourceOrders, setLinkedSourceOrders] = useState<string[]>([]);
@@ -496,6 +624,19 @@ const BuyerOrderDetails: FC = () => {
     } finally { setActionLoading(false); }
   };
 
+  const handleDetachContract = async () => {
+    if (!id || !order?.contract) return;
+    if (!window.confirm(`Remove ${order.order_number} from contract ${order.contract_number}?`)) return;
+    setActionLoading(true);
+    try {
+      await SourcingService.setBuyerOrderContract(id, null);
+      toast.success("Detached from contract");
+      fetchOrder();
+    } catch (e: any) {
+      toast.error(e?.response?.data?.contract?.[0] || "Failed to detach");
+    } finally { setActionLoading(false); }
+  };
+
   const handleRemoveLine = async (lineId: string) => {
     if (!window.confirm("Remove this line?")) return;
     try {
@@ -536,6 +677,18 @@ const BuyerOrderDetails: FC = () => {
                 color={BUYER_INVOICE_STATUS_COLORS[order.invoice_status]}
                 variant="outlined"
               />
+            )}
+            {order.contract && order.contract_number && (
+              <Tooltip title="Open parent contract">
+                <Chip
+                  icon={<HandshakeIcon />}
+                  label={`Contract: ${order.contract_number}`}
+                  color="primary"
+                  variant="outlined"
+                  onClick={() => navigate(`/admin/sourcing/buyer-contracts/${order.contract}`)}
+                  sx={{ cursor: "pointer" }}
+                />
+              </Tooltip>
             )}
           </Box>
           <Box sx={{ display: "flex", alignItems: "center", gap: 1, mt: 0.5 }}>
@@ -626,6 +779,28 @@ const BuyerOrderDetails: FC = () => {
           >
             Issue Invoice
           </Button>
+        )}
+        {/* Contract attachment management — available on any non-cancelled order */}
+        {order.status !== "cancelled" && (
+          <>
+            <Button
+              variant="outlined"
+              startIcon={<HandshakeIcon />}
+              onClick={() => setShowLinkContract(true)}
+              disabled={actionLoading}
+            >
+              {order.contract ? "Change Contract" : "Link to Contract"}
+            </Button>
+            {order.contract && (
+              <Button
+                variant="outlined" color="error" startIcon={<LinkOffIcon />}
+                onClick={handleDetachContract}
+                disabled={actionLoading}
+              >
+                Remove from Contract
+              </Button>
+            )}
+          </>
         )}
       </Box>
 
@@ -1169,6 +1344,14 @@ const BuyerOrderDetails: FC = () => {
           order={order}
           handleClose={() => setShowIssueInvoice(false)}
           callBack={() => { setShowIssueInvoice(false); fetchOrder(); }}
+        />
+      )}
+      {order && (
+        <LinkContractDialog
+          open={showLinkContract}
+          order={order}
+          onClose={() => setShowLinkContract(false)}
+          onLinked={fetchOrder}
         />
       )}
     </Box>
