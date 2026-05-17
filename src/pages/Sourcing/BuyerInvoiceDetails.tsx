@@ -41,6 +41,7 @@ import {
 } from "./SourcingConstants";
 import { formatDateToDDMMYYYY } from "../../utils/date_formatter";
 import BuyerInvoicePDFButton from "./BuyerInvoicePDF";
+import CommodityAISyncChip from "./CommodityAISyncChip";
 
 // ─── Record Payment Dialog ────────────────────────────────────────────────────
 
@@ -258,6 +259,11 @@ const BuyerInvoiceDetails: FC = () => {
         {invoice.is_overdue && invoice.status !== "paid" && (
           <Chip label="OVERDUE" color="error" size="small" sx={{ fontWeight: 700 }} />
         )}
+        <CommodityAISyncChip
+          kind="commercial_invoice"
+          primaryKeyValue={invoice.invoice_number}
+          bennuRecordId={invoice.id}
+        />
       </Box>
 
       {/* ── Action buttons ── */}

@@ -876,3 +876,32 @@ export interface IPurchaseOrder {
   updated_at: string;
 }
 export interface IPurchaseOrdersResults { results: IPurchaseOrder[]; count: number; }
+
+// ============ CommodityAI Integration ============
+export type TCommodityAIPushStatus =
+  | "pending" | "success" | "already_synced" | "failed" | "skipped";
+
+export interface ICommodityAIPushLog {
+  id: string;
+  object_kind: string;            // e.g. "commercial_invoice"
+  commodityai_object_id: string;
+  primary_key_value: string;      // e.g. invoice_number
+  bennu_object_id: string;
+  status: TCommodityAIPushStatus;
+  attempt_number: number;
+  http_status: number | null;
+  error_message: string;
+  request_payload: Record<string, any>;
+  response_payload: Record<string, any>;
+  commodityai_record_id: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ICommodityAISyncStatus {
+  /** True if a previous attempt resulted in success or already_synced. */
+  synced: boolean;
+  /** "never_pushed" | TCommodityAIPushStatus */
+  status: TCommodityAIPushStatus | "never_pushed";
+  last_attempt: ICommodityAIPushLog | null;
+}

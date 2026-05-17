@@ -20,6 +20,7 @@ import {
   IPurchaseOrder, IPurchaseOrdersResults,
   IBuyerOrderFulfillment,
   IBuyerContract, IBuyerContractsResults,
+  ICommodityAIPushLog, ICommodityAISyncStatus,
 } from "./Sourcing.interface";
 
 export const SourcingService = {
@@ -683,6 +684,37 @@ export const SourcingService = {
     return instance.post(`sourcing/source-orders/${sourceOrderId}/link-buyer-order/`, {
       buyer_order_id: buyerOrderId,
     }).then(r => r.data);
+  },
+
+  // ── CommodityAI Integration ──────────────────────────────────────────────
+  /**
+   * Returns the sync status of a Bennu record against CommodityAI.
+   * Pass `kind="commercial_invoice"` and `primary_key_value=invoice_number`
+   * for BuyerInvoices.
+   */
+  async getCommodityAISyncStatus(kind: string, primary_key_value: string): Promise<ICommodityAISyncStatus> {
+    return instance
+      .get("integrations/commodityai/sync-status/", { params: { kind, primary_key_value } })
+      .then(r => r.data);
+  },
+  /** Manually (re-)push a BuyerInvoice to CommodityAI. */
+  async pushBuyerInvoiceToCommodityAI(buyerInvoiceId: string): Promise<ICommodityAIPushLog> {
+    return instance
+      .post(`integrations/commodityai/push/buyer-invoice/${buyerInvoiceId}/`)
+      .then(r => r.data);
+  },
+  /** Paginated list of push log rows. Supports `status`, `object_kind`,
+   *  `primary_key_value`, `bennu_object_id` filters. */
+  async getCommodityAIPushLogs(params?: Record<string, any>): Promise<{ results: ICommodityAIPushLog[]; count: number }> {
+    return instance.get("integrations/commodityai/logs/", { params }).then(r => r.data);
+  },
+  /** Re-attempt a specific log row. */
+  async retryCommodityAILog(logId: string): Promise<ICommodityAIPushLog> {
+    return instance.post(`integrations/commodityai/logs/${logId}/retry/`).then(r => r.data);
+  },
+  /** Bulk retry every failed log row. */
+  async retryAllFailedCommodityAI(kind?: string, limit = 50): Promise<{ retried: number }> {
+    return instance.post("integrations/commodityai/retry-failed/", { kind, limit }).then(r => r.data);
   },
 };
 
