@@ -187,6 +187,10 @@ const routes = [
       { path: "buyers", element: <LazyLoader.Buyers /> },
       { path: "buyers/:id", element: <LazyLoader.BuyerDetails /> },
       
+      // Buyer Contracts (multi-delivery aggregator above buyer orders)
+      { path: "buyer-contracts", element: <LazyLoader.BuyerContracts /> },
+      { path: "buyer-contracts/:id", element: <LazyLoader.BuyerContractDetails /> },
+
       // Buyer Orders (selling to buyers)
       { path: "buyer-orders", element: <LazyLoader.BuyerOrders /> },
       { path: "buyer-orders/:id", element: <LazyLoader.BuyerOrderDetails /> },

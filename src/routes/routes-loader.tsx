@@ -94,6 +94,8 @@ const RouteLazyLoader = {
 
   Buyers: Loadable(lazy(() => import("../pages/Sourcing/Buyers"))),
   BuyerDetails: Loadable(lazy(() => import("../pages/Sourcing/BuyerDetails"))),
+  BuyerContracts: Loadable(lazy(() => import("../pages/Sourcing/BuyerContracts"))),
+  BuyerContractDetails: Loadable(lazy(() => import("../pages/Sourcing/BuyerContractDetails"))),
   BuyerOrders: Loadable(lazy(() => import("../pages/Sourcing/BuyerOrders"))),
   BuyerOrderDetails: Loadable(lazy(() => import("../pages/Sourcing/BuyerOrderDetails"))),
   BuyerInvoices: Loadable(lazy(() => import("../pages/Sourcing/BuyerInvoices"))),

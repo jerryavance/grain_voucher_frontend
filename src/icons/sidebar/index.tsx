@@ -72,6 +72,7 @@ import AssignmentIcon from "@mui/icons-material/Assignment";
 import LocalShippingIcon from '@mui/icons-material/LocalShipping';
 import PeopleIcon from '@mui/icons-material/People';
 import ShoppingCartIcon from '@mui/icons-material/ShoppingCart';
+import HandshakeIcon from '@mui/icons-material/Handshake';
 
 // eslint-disable-next-line import/no-anonymous-default-export
 export default {
@@ -142,6 +143,7 @@ export default {
   LocalShippingIcon,
   PeopleIcon,
   ShoppingCartIcon,
+  HandshakeIcon,
 
 };
 

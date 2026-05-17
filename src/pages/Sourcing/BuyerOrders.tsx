@@ -12,7 +12,7 @@ import {
 import { useFormik } from "formik";
 import * as Yup from "yup";
 import { toast } from "react-hot-toast";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import AddIcon from "@mui/icons-material/Add";
 import CheckCircleIcon from "@mui/icons-material/CheckCircle";
 import DeleteIcon from "@mui/icons-material/Delete";
@@ -20,6 +20,7 @@ import LocalShippingIcon from "@mui/icons-material/LocalShipping";
 import VisibilityIcon from "@mui/icons-material/Visibility";
 import BusinessIcon from "@mui/icons-material/Business";
 import PersonIcon from "@mui/icons-material/Person";
+import HandshakeIcon from "@mui/icons-material/Handshake";
 import CustomTable from "../../components/UI/CustomTable";
 import DropdownActionBtn, { IDropdownAction } from "../../components/UI/DropdownActionBtn";
 import ModalDialog from "../../components/UI/Modal/ModalDialog";
@@ -32,7 +33,7 @@ import { formatDateToDDMMYYYY } from "../../utils/date_formatter";
 import { INITIAL_PAGE_SIZE } from "../../api/constants";
 import { SourcingService } from "./Sourcing.service";
 import { formatCurrency } from "./SourcingConstants";
-import { IBuyerOrderList, IBuyerOrdersResults, IBuyerProfile } from "./Sourcing.interface";
+import { IBuyerOrderList, IBuyerOrdersResults, IBuyerProfile, IBuyerContract } from "./Sourcing.interface";
 import { ExportButtons, BUYER_ORDER_EXPORT_COLUMNS } from "./ExportUtils";
 import DateRangeFilter from "./DateRangeFilter";
 
@@ -42,8 +43,13 @@ const BUYER_INVOICE_STATUS_COLORS: Record<string, any> = { draft: "default", iss
 
 // ── Create Buyer Order Form (same as original, abbreviated for space) ────
 const CreateBuyerOrderForm: FC<{
-  hubs: { value: string; label: string }[]; handleClose: () => void; callBack?: () => void;
-}> = ({ hubs, handleClose, callBack }) => {
+  hubs: { value: string; label: string }[];
+  handleClose: () => void;
+  callBack?: () => void;
+  /** Optional pre-selected contract — when set, child order inherits its
+   *  buyer/hub/grain_type/currency and those fields lock. */
+  prefillContract?: IBuyerContract | null;
+}> = ({ hubs, handleClose, callBack, prefillContract }) => {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
   const [buyerMode, setBuyerMode] = useState<"profile" | "adhoc">("profile");
@@ -53,6 +59,12 @@ const CreateBuyerOrderForm: FC<{
   const [selectedBuyer, setSelectedBuyer] = useState<IBuyerProfile | null>(null);
   const [grainTypes, setGrainTypes] = useState<{ value: string; label: string }[]>([]);
   const modalId = useRef(uniqueId()).current;
+  // Optional contract link (multi-delivery deals)
+  const [contracts, setContracts] = useState<IBuyerContract[]>([]);
+  const [contractSearch, setContractSearch] = useState("");
+  const [contractsLoading, setContractsLoading] = useState(false);
+  const [selectedContract, setSelectedContract] = useState<IBuyerContract | null>(prefillContract ?? null);
+  const contractLocked = Boolean(selectedContract);
 
   useEffect(() => {
     SourcingService.getGrainTypes().then(r =>
@@ -69,8 +81,26 @@ const CreateBuyerOrderForm: FC<{
     return () => { cancelled = true; };
   }, [buyerSearch]);
 
+  // Fetch open contracts (debounced) so the user can optionally attach a child
+  // delivery order to a parent contract. Only draft + active contracts shown.
+  useEffect(() => {
+    let cancelled = false;
+    const handle = setTimeout(() => {
+      setContractsLoading(true);
+      SourcingService.getBuyerContracts({
+        status: "active",
+        page_size: 50,
+        ...(contractSearch ? { search: contractSearch } : {}),
+      })
+        .then(r => { if (!cancelled) setContracts(r.results || []); })
+        .catch(() => {})
+        .finally(() => { if (!cancelled) setContractsLoading(false); });
+    }, contractSearch ? 300 : 0);
+    return () => { cancelled = true; clearTimeout(handle); };
+  }, [contractSearch]);
+
   const form = useFormik({
-    initialValues: { buyer: "", buyer_name: "", buyer_contact_name: "", buyer_phone: "", buyer_email: "", buyer_address: "", hub: "", credit_terms_days: 0, payment_type: "financed", currency: "UGX", exchange_rate_to_ugx: "", trade_unit: "kg", grain_type: "", quantity_requested_kg: "", notes: "" },
+    initialValues: { contract: "", buyer: "", buyer_name: "", buyer_contact_name: "", buyer_phone: "", buyer_email: "", buyer_address: "", hub: "", credit_terms_days: 0, payment_type: "financed", currency: "UGX", exchange_rate_to_ugx: "", trade_unit: "kg", grain_type: "", quantity_requested_kg: "", notes: "" },
     validationSchema: Yup.object({
       hub: Yup.string().required("Hub is required"),
       buyer: Yup.string(),
@@ -84,6 +114,7 @@ const CreateBuyerOrderForm: FC<{
       setLoading(true);
       try {
         const payload: any = { hub: values.hub, notes: values.notes, credit_terms_days: values.credit_terms_days, payment_type: values.payment_type, currency: values.currency, trade_unit: values.trade_unit, ...(values.exchange_rate_to_ugx ? { exchange_rate_to_ugx: Number(values.exchange_rate_to_ugx) } : {}) };
+        if (values.contract) payload.contract = values.contract;
         if (values.grain_type) payload.grain_type = values.grain_type;
         if (values.quantity_requested_kg) payload.quantity_requested_kg = Number(values.quantity_requested_kg);
         if (buyerMode === "profile" && values.buyer) { payload.buyer = values.buyer; }
@@ -98,13 +129,72 @@ const CreateBuyerOrderForm: FC<{
 
   useEffect(() => { if (selectedBuyer) { form.setFieldValue("buyer", selectedBuyer.id); form.setFieldValue("credit_terms_days", selectedBuyer.default_credit_terms_days); } }, [selectedBuyer]);
 
+  // When a contract is selected, lock buyer/hub/grain_type/currency to its
+  // values so the backend invariant (order matches contract) is satisfied.
+  useEffect(() => {
+    if (!selectedContract) {
+      form.setFieldValue("contract", "");
+      return;
+    }
+    form.setFieldValue("contract", selectedContract.id);
+    form.setFieldValue("hub", selectedContract.hub);
+    form.setFieldValue("grain_type", selectedContract.grain_type);
+    form.setFieldValue("currency", selectedContract.currency);
+    form.setFieldValue("trade_unit", selectedContract.trade_unit);
+    form.setFieldValue("buyer", selectedContract.buyer);
+    if (selectedContract.exchange_rate_to_ugx) {
+      form.setFieldValue("exchange_rate_to_ugx", selectedContract.exchange_rate_to_ugx);
+    }
+    if (selectedContract.payment_terms_days) {
+      form.setFieldValue("credit_terms_days", selectedContract.payment_terms_days);
+    }
+    // Force buyer mode to "profile" since contracts always link a registered buyer
+    setBuyerMode("profile");
+    if (selectedContract.buyer_detail) {
+      setSelectedBuyer({ ...(selectedContract.buyer_detail as any), id: selectedContract.buyer });
+    }
+    // eslint-disable-next-line
+  }, [selectedContract]);
+
   return (
     <ModalDialog title="New Buyer Order" onClose={handleClose} id={modalId} open={true} ActionButtons={() => (<><Button onClick={handleClose} disabled={loading}>Cancel</Button><Button variant="contained" onClick={() => form.handleSubmit()} disabled={loading}>{loading ? <ProgressIndicator color="inherit" size={20} /> : "Create & Open Order"}</Button></>)} maxWidth="md">
       <Grid container spacing={2} sx={{ pt: 1 }}>
+        {/* Optional: link this order to a parent multi-delivery contract */}
+        <Grid item xs={12}>
+          <Autocomplete
+            options={contracts}
+            loading={contractsLoading}
+            value={selectedContract}
+            onChange={(_, val) => setSelectedContract(val)}
+            onInputChange={(_, val) => setContractSearch(val)}
+            getOptionLabel={c => `${c.contract_number} — ${c.buyer_name || c.buyer_detail?.business_name || ""} (${c.grain_type_name})`}
+            isOptionEqualToValue={(a, b) => a.id === b.id}
+            renderInput={params => (
+              <TextField
+                {...params}
+                label="Link to Contract (optional)"
+                placeholder="Search active contracts..."
+                helperText={selectedContract
+                  ? `Buyer / hub / product / currency will be locked to ${selectedContract.contract_number}.`
+                  : "Leave empty for a stand-alone order."}
+                InputProps={{
+                  ...params.InputProps,
+                  startAdornment: <HandshakeIcon sx={{ ml: 1, mr: 0.5, color: "primary.main" }} fontSize="small" />,
+                  endAdornment: (
+                    <>
+                      {contractsLoading && <CircularProgress color="inherit" size={18} />}
+                      {params.InputProps.endAdornment}
+                    </>
+                  ),
+                }}
+              />
+            )}
+          />
+        </Grid>
         <Grid item xs={12}>
           <Box sx={{ display: "flex", gap: 1, mb: 1 }}>
-            <Button variant={buyerMode === "profile" ? "contained" : "outlined"} size="small" startIcon={<BusinessIcon />} onClick={() => { setBuyerMode("profile"); form.setFieldValue("buyer_name", ""); }}>Registered Buyer</Button>
-            <Button variant={buyerMode === "adhoc" ? "contained" : "outlined"} size="small" color="secondary" startIcon={<PersonIcon />} onClick={() => { setBuyerMode("adhoc"); form.setFieldValue("buyer", ""); setSelectedBuyer(null); }}>Ad-hoc Buyer</Button>
+            <Button variant={buyerMode === "profile" ? "contained" : "outlined"} size="small" startIcon={<BusinessIcon />} disabled={contractLocked} onClick={() => { setBuyerMode("profile"); form.setFieldValue("buyer_name", ""); }}>Registered Buyer</Button>
+            <Button variant={buyerMode === "adhoc" ? "contained" : "outlined"} size="small" color="secondary" startIcon={<PersonIcon />} disabled={contractLocked} onClick={() => { setBuyerMode("adhoc"); form.setFieldValue("buyer", ""); setSelectedBuyer(null); }}>Ad-hoc Buyer</Button>
           </Box>
         </Grid>
         {buyerMode === "profile" && (
@@ -121,7 +211,7 @@ const CreateBuyerOrderForm: FC<{
           <Grid item xs={12} md={6}><TextField fullWidth label="Email" value={form.values.buyer_email} onChange={e => form.setFieldValue("buyer_email", e.target.value)} /></Grid></>
         )}
         <Grid item xs={12} md={6}>
-          <FormControl fullWidth error={Boolean(form.errors.hub)}><InputLabel>Hub *</InputLabel><Select value={form.values.hub} label="Hub *" onChange={e => form.setFieldValue("hub", e.target.value)}>{hubs.map(h => <MenuItem key={h.value} value={h.value}>{h.label}</MenuItem>)}</Select></FormControl>
+          <FormControl fullWidth error={Boolean(form.errors.hub)} disabled={contractLocked}><InputLabel>Hub *</InputLabel><Select value={form.values.hub} label="Hub *" onChange={e => form.setFieldValue("hub", e.target.value)}>{hubs.map(h => <MenuItem key={h.value} value={h.value}>{h.label}</MenuItem>)}</Select></FormControl>
         </Grid>
         <Grid item xs={12} md={6}><TextField fullWidth label="Credit Terms (Days)" type="number" value={form.values.credit_terms_days} onChange={e => form.setFieldValue("credit_terms_days", parseInt(e.target.value) || 0)} /></Grid>
         {/* Payment type — cash buyer funds own purchase, financed = investor EMD backs it */}
@@ -135,7 +225,7 @@ const CreateBuyerOrderForm: FC<{
         </Grid>
         {/* Currency */}
         <Grid item xs={12} md={6}>
-          <FormControl fullWidth>
+          <FormControl fullWidth disabled={contractLocked}>
             <InputLabel>Currency *</InputLabel>
             <Select value={form.values.currency} label="Currency *" onChange={e => form.setFieldValue("currency", e.target.value)}>
               <MenuItem value="UGX">UGX — Ugandan Shilling</MenuItem>
@@ -163,7 +253,7 @@ const CreateBuyerOrderForm: FC<{
         </Grid>
         {/* Pre-sourcing demand — optional grain type + quantity for quotation */}
         <Grid item xs={12} md={6}>
-          <FormControl fullWidth><InputLabel>Product Type (optional)</InputLabel>
+          <FormControl fullWidth disabled={contractLocked}><InputLabel>Product Type (optional)</InputLabel>
             <Select value={form.values.grain_type} label="Product Type (optional)" onChange={e => form.setFieldValue("grain_type", e.target.value)}>
               <MenuItem value="">— Not specified —</MenuItem>
               {grainTypes.map(g => <MenuItem key={g.value} value={g.value}>{g.label}</MenuItem>)}
@@ -181,15 +271,31 @@ const CreateBuyerOrderForm: FC<{
 const BuyerOrders: FC = () => {
   useTitle("Buyer Orders");
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const [orders, setOrders] = useState<IBuyerOrdersResults>();
   const [filters, setFilters] = useState<any>({ page: 1, page_size: INITIAL_PAGE_SIZE });
   const [loading, setLoading] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [hubs, setHubs] = useState<{ value: string; label: string }[]>([]);
+  // Optional contract to pre-select when arriving from a contract details page.
+  const [prefillContract, setPrefillContract] = useState<IBuyerContract | null>(null);
 
   useEffect(() => { fetchData(filters); }, [filters]);
   useEffect(() => { SourcingService.getHubs().then(r => setHubs((r.results || r).map((h: any) => ({ value: h.id, label: h.name })))).catch(() => {}); }, []);
+
+  // Handle deep-link from BuyerContractDetails: /admin/sourcing/buyer-orders?contract=<id>&new=1
+  useEffect(() => {
+    const contractId = searchParams.get("contract");
+    const wantsNew = searchParams.get("new");
+    if (contractId && wantsNew === "1") {
+      SourcingService.getBuyerContractDetails(contractId)
+        .then(c => { setPrefillContract(c); setShowCreateForm(true); })
+        .catch(() => { setShowCreateForm(true); });
+    }
+    // Only react to the first mount — query params shouldn't keep firing.
+    // eslint-disable-next-line
+  }, []);
 
   const fetchData = async (params?: any) => { setLoading(true); try { setOrders(await SourcingService.getBuyerOrders(params)); } catch { toast.error("Failed"); } finally { setLoading(false); } };
 
@@ -205,6 +311,7 @@ const BuyerOrders: FC = () => {
 
   const columns = [
     { Header: "Order #", accessor: "order_number", minWidth: 170, Cell: ({ row }: any) => <Typography color="primary" variant="body2" sx={{ fontWeight: 700, cursor: "pointer", "&:hover": { textDecoration: "underline" } }} onClick={() => navigate(`/admin/sourcing/buyer-orders/${row.original.id}`)}>{row.original.order_number}</Typography> },
+    { Header: "Contract", accessor: "contract_number", minWidth: 130, Cell: ({ row }: any) => row.original.contract ? (<Chip icon={<HandshakeIcon />} label={row.original.contract_number} size="small" color="primary" variant="outlined" sx={{ cursor: "pointer", fontSize: 11 }} onClick={(e: any) => { e.stopPropagation(); navigate(`/admin/sourcing/buyer-contracts/${row.original.contract}`); }} />) : <Span sx={{ color: "text.disabled", fontSize: 12 }}>—</Span> },
     { Header: "Buyer", accessor: "buyer_name", minWidth: 200, Cell: ({ row }: any) => { const o = row.original; return (<Box><Typography variant="body2" sx={{ fontWeight: 600 }}>{o.buyer_detail?.business_name || o.buyer_name}</Typography>{o.buyer_detail && <Typography variant="caption" color="primary" sx={{ cursor: "pointer" }} onClick={(e: any) => { e.stopPropagation(); navigate(`/admin/sourcing/buyers/${o.buyer}`); }}>View profile →</Typography>}</Box>); } },
     { Header: "Type", accessor: "payment_type", minWidth: 100, Cell: ({ row }: any) => <Chip label={(row.original.payment_type_display || row.original.payment_type || "—").toUpperCase()} color={PAYMENT_TYPE_COLORS[row.original.payment_type] ?? "default"} size="small" variant="outlined" /> },
     { Header: "Revenue", accessor: "subtotal", minWidth: 130, Cell: ({ row }: any) => <Span sx={{ fontWeight: 600 }}>{formatCurrency(row.original.subtotal, row.original.currency)}</Span> },
@@ -231,7 +338,7 @@ const BuyerOrders: FC = () => {
         <Button sx={{ ml: "auto" }} variant="contained" startIcon={<AddIcon />} onClick={() => setShowCreateForm(true)}>New Buyer Order</Button>
       </Box>
       <CustomTable columnShape={columns} data={orders?.results || []} dataCount={orders?.count || 0} pageInitialState={{ pageSize: INITIAL_PAGE_SIZE, pageIndex: 0 }} setPageIndex={(p: number) => setFilters({ ...filters, page: p + 1 })} pageIndex={filters.page - 1} setPageSize={(s: number) => setFilters({ ...filters, page_size: s, page: 1 })} loading={loading} />
-      {showCreateForm && <CreateBuyerOrderForm hubs={hubs} handleClose={() => setShowCreateForm(false)} callBack={() => { setShowCreateForm(false); fetchData(filters); }} />}
+      {showCreateForm && <CreateBuyerOrderForm hubs={hubs} prefillContract={prefillContract} handleClose={() => { setShowCreateForm(false); setPrefillContract(null); }} callBack={() => { setShowCreateForm(false); setPrefillContract(null); fetchData(filters); }} />}
     </Box>
   );
 };

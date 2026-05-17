@@ -196,6 +196,12 @@ export const MenuList = (
               visible: isStaff || isHubAdmin || isSuperUser,
             },
             {
+              title: "Buyer Contracts",
+              Icon: Icons.HandshakeIcon,
+              path: "/admin/sourcing/buyer-contracts",
+              visible: isStaff || isHubAdmin || isSuperUser,
+            },
+            {
               title: "Buyer Orders",
               Icon: Icons.ShoppingCartIcon,
               path: "/admin/sourcing/buyer-orders",

@@ -19,6 +19,7 @@ import {
   IProformaInvoice, IProformaInvoicesResults,
   IPurchaseOrder, IPurchaseOrdersResults,
   IBuyerOrderFulfillment,
+  IBuyerContract, IBuyerContractsResults,
 } from "./Sourcing.interface";
 
 export const SourcingService = {
@@ -313,6 +314,38 @@ export const SourcingService = {
   },
   async deleteBuyerContact(id: string): Promise<void> {
     return instance.delete(`sourcing/buyer-contacts/${id}/`).then(r => r.data);
+  },
+
+  // ── Buyer Contracts (multi-delivery aggregator) ──────────────────────────
+  async getBuyerContracts(filters: Record<string, any> = {}): Promise<IBuyerContractsResults> {
+    return instance.get("sourcing/buyer-contracts/", { params: filters }).then(r => r.data);
+  },
+  async getBuyerContractDetails(id: string): Promise<IBuyerContract> {
+    return instance.get(`sourcing/buyer-contracts/${id}/`).then(r => r.data);
+  },
+  async createBuyerContract(payload: Partial<IBuyerContract>): Promise<IBuyerContract> {
+    return instance.post("sourcing/buyer-contracts/", payload).then(r => r.data);
+  },
+  async updateBuyerContract(id: string, payload: Partial<IBuyerContract>): Promise<IBuyerContract> {
+    return instance.patch(`sourcing/buyer-contracts/${id}/`, payload).then(r => r.data);
+  },
+  async deleteBuyerContract(id: string): Promise<void> {
+    return instance.delete(`sourcing/buyer-contracts/${id}/`).then(r => r.data);
+  },
+  async activateBuyerContract(id: string): Promise<IBuyerContract> {
+    return instance.post(`sourcing/buyer-contracts/${id}/activate/`).then(r => r.data);
+  },
+  async cancelBuyerContract(id: string): Promise<IBuyerContract> {
+    return instance.post(`sourcing/buyer-contracts/${id}/cancel/`).then(r => r.data);
+  },
+  async completeBuyerContract(id: string): Promise<IBuyerContract> {
+    return instance.post(`sourcing/buyer-contracts/${id}/complete/`).then(r => r.data);
+  },
+  async getBuyerContractOrders(id: string): Promise<IBuyerOrder[]> {
+    return instance.get(`sourcing/buyer-contracts/${id}/orders/`).then(r => r.data);
+  },
+  async getBuyerContractInvoices(id: string): Promise<IBuyerInvoice[]> {
+    return instance.get(`sourcing/buyer-contracts/${id}/invoices/`).then(r => r.data);
   },
 
   // ── Buyer Orders ──────────────────────────────────────────────────────────

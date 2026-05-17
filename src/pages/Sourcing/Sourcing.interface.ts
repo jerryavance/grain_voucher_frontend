@@ -390,6 +390,57 @@ export interface IProformaInvoice {
 }
 export interface IProformaInvoicesResults { results: IProformaInvoice[]; count: number; }
 
+// ============ Buyer Contract (multi-delivery aggregator) ============
+export type TBuyerContractStatus = 'draft' | 'active' | 'completed' | 'cancelled';
+
+export interface IBuyerContract {
+  id: string;
+  contract_number: string;
+  buyer: string;
+  buyer_name: string;
+  buyer_detail: IBuyerProfileMinimal | null;
+  hub: string;
+  hub_name: string;
+  grain_type: string;
+  grain_type_name: string;
+  contracted_quantity_kg: string;
+  contracted_price_per_unit: string;
+  currency: TCurrency;
+  currency_display: string;
+  exchange_rate_to_ugx: string | null;
+  trade_unit: 'kg' | 'tonne';
+  trade_unit_display: string;
+  payment_terms_days: number;
+  delivery_start_date: string | null;
+  delivery_end_date: string | null;
+  status: TBuyerContractStatus;
+  status_display: string;
+  notes: string;
+  created_by: string;
+  created_by_name: string;
+  created_at: string;
+  updated_at: string;
+  completed_at: string | null;
+  // Aggregates (read-only, computed server-side)
+  delivered_quantity_kg: string;
+  remaining_quantity_kg: string;
+  fulfillment_pct: string;
+  contracted_total_value: string;
+  total_invoiced: string;
+  total_paid: string;
+  total_balance_due: string;
+  total_gross_profit: string;
+  child_order_count: number;
+}
+
+export interface IBuyerContractsResults {
+  results: IBuyerContract[];
+  count: number;
+  total_pages?: number;
+  current_page?: number;
+  page_size?: number;
+}
+
 // ============ Buyer Order ============
 export type TBuyerOrderStatus = 'quotation'|'draft'|'confirmed'|'dispatched'|'delivered'|'invoiced'|'completed'|'cancelled';
 export type TPaymentType = 'cash'|'financed';
@@ -410,6 +461,9 @@ export interface ISaleExpense {
 
 export interface IBuyerOrder {
   id: string; order_number: string;
+  /** Optional parent contract for multi-delivery deals (UNGA 400 MT etc.). */
+  contract?: string | null;
+  contract_number?: string | null;
   // Flat buyer fields (ad-hoc / fallback)
   buyer_name: string; buyer_contact_name: string; buyer_phone: string;
   buyer_email: string; buyer_address: string;
