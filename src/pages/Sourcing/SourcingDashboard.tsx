@@ -497,10 +497,35 @@ const SourcingDashboard: React.FC = () => {
     <Box p={3}>
       <GlobalStyles styles={{
         "@media print": {
-          "body": { WebkitPrintColorAdjust: "exact", printColorAdjust: "exact" },
-          "@page": { margin: "10mm", size: "A4 portrait" },
-          /* Hide nav, header chrome, buttons when printing */
-          ".no-print, button, [role='button']": { display: "none !important" },
+          "@page": { margin: "12mm", size: "A4 portrait" },
+          "html, body": {
+            WebkitPrintColorAdjust: "exact",
+            printColorAdjust: "exact",
+            overflow: "visible !important",
+            height: "auto !important",
+            background: "#fff !important",
+          },
+          // Hide page-level action chrome
+          ".no-print, button, [role='button'], .MuiIconButton-root, .MuiTooltip-popper": {
+            display: "none !important",
+          },
+          // Keep cards together when they fit on a page; allow break otherwise
+          ".MuiCard-root, .MuiPaper-root": {
+            breakInside: "avoid",
+            pageBreakInside: "avoid",
+            boxShadow: "none !important",
+            border: "1px solid #ddd !important",
+          },
+          // Charts: ensure SVG renders at intrinsic size
+          "svg.recharts-surface, .recharts-wrapper": {
+            maxWidth: "100% !important",
+            height: "auto !important",
+          },
+          // Section spacing
+          "h1, h2, h3, h4, h5, h6": {
+            pageBreakAfter: "avoid",
+            breakAfter: "avoid-page",
+          },
         },
       }} />
       {/* Header */}

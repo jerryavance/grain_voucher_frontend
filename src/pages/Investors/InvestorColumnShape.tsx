@@ -238,13 +238,19 @@ export const WithdrawalColumnShape = (actions: IDropdownAction[]) => [
   },
   {
     Header: "Approved By",
-    accessor: "approved_by",
+    accessor: "approved_by_name",
     minWidth: 150,
     Cell: ({ row }: any) => {
-      const ab = row.original.approved_by;
-      return (
-        <Span>{ab ? `${ab.first_name} ${ab.last_name}` : "N/A"}</Span>
-      );
+      // Backend exposes approved_by as a UUID string and approved_by_name
+      // as the resolved full name. Older rows may have an object-shaped
+      // approved_by from a previous serializer — handle both gracefully.
+      const r = row.original;
+      const name =
+        r.approved_by_name ||
+        (r.approved_by && typeof r.approved_by === "object"
+          ? `${r.approved_by.first_name || ""} ${r.approved_by.last_name || ""}`.trim()
+          : "");
+      return <Span>{name || "N/A"}</Span>;
     },
   },
   {
@@ -414,11 +420,16 @@ export const MarginPayoutColumnShape = (actions: IDropdownAction[]) => [
   },
   {
     Header: "Approved By",
-    accessor: "approved_by",
+    accessor: "approved_by_name",
     minWidth: 160,
     Cell: ({ row }: any) => {
-      const ab = row.original.approved_by;
-      return <Span>{ab ? `${ab.first_name} ${ab.last_name}` : "—"}</Span>;
+      const r = row.original;
+      const name =
+        r.approved_by_name ||
+        (r.approved_by && typeof r.approved_by === "object"
+          ? `${r.approved_by.first_name || ""} ${r.approved_by.last_name || ""}`.trim()
+          : "");
+      return <Span>{name || "—"}</Span>;
     },
   },
   {

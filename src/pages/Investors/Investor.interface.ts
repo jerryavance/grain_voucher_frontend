@@ -51,8 +51,11 @@ export interface IInvestorWithdrawal {
     withdrawal_date: string;
     status: 'pending' | 'approved' | 'rejected';
     notes: string;
-    approved_by?: IInvestor;
-    approved_at?: string;
+    // Backend returns approved_by as a UUID string. The resolved full name
+    // arrives as approved_by_name.
+    approved_by?: string | IInvestor | null;
+    approved_by_name?: string;
+    approved_at?: string | null;
     created_at: string;
     updated_at: string;
 }
@@ -134,12 +137,15 @@ export interface IMarginPayout {
     period_end: string;
     status: 'pending' | 'approved' | 'paid' | 'cancelled';
     notes: string;
-    requested_by?: IInvestor;
-    approved_by?: IInvestor;
-    approved_at?: string;
-    paid_at?: string;
+    // Backend returns these as UUID strings; resolved full names land in *_name
+    requested_by?: string | IInvestor | null;
+    requested_by_name?: string;
+    approved_by?: string | IInvestor | null;
+    approved_by_name?: string;
+    approved_at?: string | null;
+    paid_at?: string | null;
     payment_reference?: string;
-    cancelled_at?: string;
+    cancelled_at?: string | null;
     created_at: string;
     updated_at: string;
 }

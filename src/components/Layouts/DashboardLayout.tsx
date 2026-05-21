@@ -41,6 +41,14 @@ const Wrapper = styled.div`
   @media (max-width: 960px) {
     padding: 0;
   }
+
+  /* When printing, drop the sidebar gap and viewport-height clamp so the
+     dashboard content fills the page and isn't clipped by overflow:hidden. */
+  @media print {
+    padding-left: 0 !important;
+    height: auto !important;
+    overflow: visible !important;
+  }
 `;
 
 const ContentWrapper = styled.div`
@@ -49,5 +57,10 @@ const ContentWrapper = styled.div`
   overflow: auto;
   @media (max-width: 960px) {
     height: calc(100% - 60px);
+  }
+
+  @media print {
+    height: auto !important;
+    overflow: visible !important;
   }
 `;

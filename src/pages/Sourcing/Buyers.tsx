@@ -177,7 +177,7 @@ const Buyers: FC = () => {
             { label: "Total Buyers", value: buyers.count, color: "primary.main" },
             { label: "Verified", value: buyers.results.filter(b => b.is_verified).length, color: "success.main" },
             { label: "Active", value: buyers.results.filter(b => b.is_active).length, color: "info.main" },
-            { label: "Outstanding AR", value: formatCurrency(buyers.results.reduce((s, b) => s + (b.outstanding_balance || 0), 0)), color: "error.main" },
+            { label: "Outstanding AR", value: formatCurrency(buyers.results.reduce((s, b) => s + Number(b.outstanding_balance || 0), 0), "UGX"), color: "error.main" },
           ].map(s => (
             <Grid item xs={6} sm={3} key={s.label}>
               <Card variant="outlined"><CardContent sx={{ p: 1.5, "&:last-child": { pb: 1.5 } }}>

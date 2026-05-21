@@ -61,6 +61,12 @@ const Wrapper = styled.div`
       display: none;
     }
   }
+
+  /* Hide the top navbar when printing. Pages that need a print header
+     should render their own (will appear inside the print content). */
+  @media print {
+    display: none !important;
+  }
 `;
 
 const TaglineWrapper = styled.div`

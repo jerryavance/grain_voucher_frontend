@@ -49,6 +49,9 @@ const MainMenu = styled(Box)(({ theme }) => ({
   "&::-webkit-scrollbar-thumb:hover": {
     background: "rgba(255,255,255,0.4)",
   },
+  // When the page is sent to the printer (e.g. dashboard PDF export), the
+  // sidebar should vanish entirely so the content fills the page.
+  "@media print": { display: "none !important" },
   [theme.breakpoints.down("md")]: { width: 260 },
 }));
 
