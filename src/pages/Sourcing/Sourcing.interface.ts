@@ -494,6 +494,7 @@ export interface IBuyerOrder {
   accepted_pfi: string | null;
   subtotal: number; total_cogs: number; total_selling_expenses: number; gross_profit: number;
   status: TBuyerOrderStatus; notes: string; invoice_status: string | null;
+  invoice_number?: string | null;
   invoice_balance_due: number | null; lines: IBuyerOrderLine[]; sale_expenses: ISaleExpense[];
   confirmed_at: string | null; dispatched_at: string | null;
   delivered_at: string | null; completed_at: string | null;

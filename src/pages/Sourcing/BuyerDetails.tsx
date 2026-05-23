@@ -49,6 +49,25 @@ const INVOICE_STATUS_COLORS: Record<string, any> = { draft: "default", issued: "
 const PAYMENT_STATUS_COLORS: Record<string, any> = { pending: "warning", confirmed: "success", failed: "error", reversed: "default" };
 const BUYER_TYPE_COLORS: Record<string, any> = { grain_company: "primary", trader: "secondary", processor: "info", exporter: "warning", retailer: "success", other: "default" };
 
+/**
+ * Format a quantity stored in kg according to the order's trade_unit.
+ * - trade_unit='tonne' → display in MT (kg/1000), e.g. "28.00 MT"
+ * - trade_unit='kg' (or missing) → display in kg, e.g. "28,000 kg"
+ * Backend always stores kg internally; trade_unit is the document/display unit.
+ */
+const formatTonnage = (
+  qtyKg: number | string | null | undefined,
+  tradeUnit?: "kg" | "tonne" | string | null,
+): string => {
+  if (qtyKg === null || qtyKg === undefined || qtyKg === "") return "—";
+  const n = Number(qtyKg);
+  if (!isFinite(n) || n === 0) return "—";
+  if (tradeUnit === "tonne") {
+    return `${(n / 1000).toLocaleString("en-UG", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} MT`;
+  }
+  return `${n.toLocaleString("en-UG", { maximumFractionDigits: 0 })} kg`;
+};
+
 interface TabPanelProps { children?: React.ReactNode; index: number; value: number; }
 const TabPanel = ({ children, value, index }: TabPanelProps) => (
   <div role="tabpanel" hidden={value !== index}>{value === index && <Box sx={{ pt: 2 }}>{children}</Box>}</div>
@@ -296,7 +315,7 @@ const BuyerDetails: FC = () => {
           <Table size="small">
             <TableHead>
               <TableRow sx={{ bgcolor: "action.hover" }}>
-                {["Order #", "Tonnage (kg)", "Revenue", "Gross Profit", "Status", "Invoice", "Date"].map(h => <TableCell key={h} sx={{ fontWeight: 700 }}>{h}</TableCell>)}
+                {["Order #", "Tonnage", "Revenue", "Gross Profit", "Status", "Invoice", "Date"].map(h => <TableCell key={h} sx={{ fontWeight: 700 }}>{h}</TableCell>)}
               </TableRow>
             </TableHead>
             <TableBody>
@@ -306,9 +325,7 @@ const BuyerDetails: FC = () => {
                 <TableRow key={o.id} hover sx={{ cursor: "pointer" }} onClick={() => navigate(`/admin/sourcing/buyer-orders/${o.id}`)}>
                   <TableCell><Typography variant="body2" color="primary" sx={{ fontWeight: 600 }}>{o.order_number}</Typography></TableCell>
                   <TableCell sx={{ fontSize: 12 }}>
-                    {o.quantity_requested_kg
-                      ? Number(o.quantity_requested_kg).toLocaleString("en-UG", { maximumFractionDigits: 0 })
-                      : "—"}
+                    {formatTonnage(o.quantity_requested_kg, o.trade_unit)}
                   </TableCell>
                   <TableCell>{formatCurrency(o.subtotal, o.currency)}</TableCell>
                   <TableCell sx={{ color: (o.gross_profit ?? 0) >= 0 ? "success.main" : "error.main", fontWeight: 600 }}>{formatCurrency(o.gross_profit, "UGX")}</TableCell>
@@ -328,7 +345,7 @@ const BuyerDetails: FC = () => {
           <Table size="small">
             <TableHead>
               <TableRow sx={{ bgcolor: "action.hover" }}>
-                {["Invoice #", "Tonnage (kg)", "Amount Due", "Paid", "Balance", "Terms", "Due Date", "Status"].map(h => <TableCell key={h} sx={{ fontWeight: 700 }}>{h}</TableCell>)}
+                {["Invoice #", "Tonnage", "Amount Due", "Paid", "Balance", "Terms", "Due Date", "Status"].map(h => <TableCell key={h} sx={{ fontWeight: 700 }}>{h}</TableCell>)}
               </TableRow>
             </TableHead>
             <TableBody>
@@ -338,9 +355,7 @@ const BuyerDetails: FC = () => {
                 <TableRow key={inv.id} hover sx={{ cursor: "pointer" }} onClick={() => navigate(`/admin/sourcing/buyer-invoices/${inv.id}`)}>
                   <TableCell><Typography variant="body2" color="primary" sx={{ fontWeight: 600 }}>{inv.invoice_number}</Typography></TableCell>
                   <TableCell sx={{ fontSize: 12 }}>
-                    {inv.quantity_requested_kg
-                      ? Number(inv.quantity_requested_kg).toLocaleString("en-UG", { maximumFractionDigits: 0 })
-                      : "—"}
+                    {formatTonnage(inv.quantity_requested_kg, inv.trade_unit)}
                   </TableCell>
                   <TableCell>{formatCurrency(inv.amount_due, inv.currency)}</TableCell>
                   <TableCell sx={{ color: "success.main" }}>{formatCurrency(inv.amount_paid, inv.currency)}</TableCell>

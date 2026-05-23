@@ -79,24 +79,38 @@ export const generateContractHTML = (
   const statusBg = statusColor[statusText] || "#1976d2";
   const buyerBusinessName = contract.buyer_detail?.business_name || contract.buyer_name || "—";
 
+  // Order rows: includes invoice number + invoice status per delivery
+  // (replaces the previous "Created" column per bug report).
+  const INV_STATUS_COLOR: Record<string, string> = {
+    paid: "#2e7d32", issued: "#1976d2", partial: "#ed6c02",
+    overdue: "#c62828", cancelled: "#9e9e9e", draft: "#9e9e9e",
+  };
   const ordersRows = orders.length === 0
     ? `<tr><td colspan="6" style="text-align:center;color:#888;padding:14px;">No delivery orders attached yet</td></tr>`
-    : orders.map((o, i) => `
+    : orders.map((o, i) => {
+        const invNum = (o as any).invoice_number || "—";
+        const invStatus = (o as any).invoice_status || "—";
+        const invColor = INV_STATUS_COLOR[invStatus] || "#666";
+        return `
       <tr>
         <td>${i + 1}</td>
         <td style="font-family:monospace;font-weight:600;">${o.order_number}</td>
-        <td style="text-transform:uppercase;font-size:10px;">${o.status || "—"}</td>
+        <td style="font-family:monospace;font-size:10px;">${invNum}</td>
+        <td>
+          <span style="display:inline-block;padding:1px 7px;border-radius:9px;background:${invColor}22;color:${invColor};font-size:9px;font-weight:700;text-transform:uppercase;">
+            ${invStatus.toUpperCase()}
+          </span>
+        </td>
         <td style="text-align:right;">${fmtKg(o.quantity_requested_kg ?? 0)} kg</td>
         <td style="text-align:right;">${fmtMoney(o.subtotal, o.currency || currency)}</td>
-        <td>${fmtDate(o.created_at)}</td>
-      </tr>
-    `).join("");
+      </tr>`;
+      }).join("");
 
   return `<!DOCTYPE html>
 <html>
 <head>
   <meta charset="UTF-8">
-  <title>Contract ${contract.contract_number}</title>
+  <title>Customer Statement ${contract.contract_number}</title>
   <style>
     @media print {
       @page { size: A4; margin: 14mm; }
@@ -165,13 +179,13 @@ export const generateContractHTML = (
           ${logoDataUrl ? `<img src="${logoDataUrl}" alt="logo"/>` : `<div style="font-weight:700;color:#1976d2;">B</div>`}
         </div>
         <div>
-          <h1>COMMERCIAL CONTRACT</h1>
+          <h1>CUSTOMER STATEMENT</h1>
           <div class="sub">Bennu Agfin Services Limited</div>
           <div class="sub">Plot 16 Mackinnon Road, Nakasero · Kampala, Uganda</div>
         </div>
       </div>
       <div class="meta">
-        <div>Contract No.</div>
+        <div>Statement Ref</div>
         <div class="ref">${contract.contract_number}</div>
         <div style="margin-top:6px;">Issued: ${fmtDate(contract.created_at)}</div>
         <div class="status-badge">${statusText}</div>
@@ -275,27 +289,23 @@ export const generateContractHTML = (
         <span>Total Paid</span>
         <span>${fmtMoney(contract.total_paid, currency)}</span>
       </div>
-      <div class="row">
-        <span>Outstanding Balance</span>
+      <div class="row grand">
+        <span>Total Outstanding</span>
         <span>${fmtMoney(contract.total_balance_due, currency)}</span>
-      </div>
-      <div class="row">
-        <span>Gross Profit (UGX)</span>
-        <span>${fmtMoney(contract.total_gross_profit, "UGX")}</span>
       </div>
     </div>
 
-    <!-- Delivery orders attached -->
-    <div class="section-heading">Delivery Orders Attached</div>
+    <!-- Delivery orders + their invoices -->
+    <div class="section-heading">Delivery Orders &amp; Invoices</div>
     <table class="data-table">
       <thead>
         <tr>
           <th style="width:30px;">#</th>
           <th>Order #</th>
-          <th>Status</th>
+          <th>Invoice #</th>
+          <th>Invoice Status</th>
           <th class="r">Quantity</th>
-          <th class="r">Subtotal</th>
-          <th>Created</th>
+          <th class="r">Amount</th>
         </tr>
       </thead>
       <tbody>${ordersRows}</tbody>
@@ -307,33 +317,20 @@ export const generateContractHTML = (
       <strong>Notes:</strong> ${contract.notes.replace(/\n/g, "<br/>")}
     </div>` : ""}
 
-    <!-- General terms -->
-    <div class="section-heading">General Terms</div>
-    <div style="font-size:10px;color:#444;line-height:1.55;">
-      <p>1. This contract represents the agreed commercial commitment between the Seller and Buyer for the total volume above. Deliveries shall be made in multiple truckloads, each evidenced by a separate Buyer Order and Commercial Invoice linked to this contract.</p>
-      <p>2. Title to the goods passes to the Buyer on issuance of the Commercial Invoice for each delivery.</p>
-      <p>3. Payment terms apply per delivery invoice. Payment shall be made into the Seller's designated bank account by the invoice due date.</p>
-      <p>4. Any change to volume, price or delivery window must be agreed in writing and recorded as a contract amendment.</p>
-      <p>5. Disputes shall be resolved amicably; failing which, the laws of Uganda shall apply.</p>
-    </div>
-
-    <!-- Signatures -->
-    <div class="signatures">
-      <div class="sig-block">
-        <div class="role">For Seller — Bennu Agfin Services Ltd</div>
-        <div class="name">Authorised Signatory</div>
-        <div style="font-size:10px;color:#888;">Date: __________________</div>
+    <!-- Total outstanding callout -->
+    <div style="margin-top:24px;padding:14px 18px;background:#fff3e0;border:2px solid #ed6c02;border-radius:8px;display:flex;justify-content:space-between;align-items:center;">
+      <div>
+        <div style="font-size:10px;font-weight:700;color:#ed6c02;letter-spacing:0.8px;">TOTAL OUTSTANDING ON STATEMENT</div>
+        <div style="font-size:9px;color:#666;margin-top:2px;">Sum of unpaid invoices across all deliveries above.</div>
       </div>
-      <div class="sig-block">
-        <div class="role">For Buyer — ${buyerBusinessName}</div>
-        <div class="name">Authorised Signatory</div>
-        <div style="font-size:10px;color:#888;">Date: __________________</div>
+      <div style="font-size:20px;font-weight:800;color:#c62828;">
+        ${fmtMoney(contract.total_balance_due, currency)}
       </div>
     </div>
 
     <!-- Footer -->
     <div class="footer">
-      Generated ${fmtDate(new Date().toISOString())} · This document is a contractual record. Retain for your files.
+      Generated ${fmtDate(new Date().toISOString())} · For account queries, contact accounts@bennu.africa.
     </div>
 
   </div>
@@ -374,7 +371,7 @@ const BuyerContractPDFButton: React.FC<BuyerContractPDFButtonProps> = ({
 
   if (compact) {
     return (
-      <Tooltip title={`Print / PDF — ${contract.contract_number}`}>
+      <Tooltip title={`Customer Statement — ${contract.contract_number}`}>
         <IconButton size={size} color="primary" onClick={handlePrint} disabled={loading}>
           {loading ? <CircularProgress size={16} /> : <PictureAsPdfIcon />}
         </IconButton>
@@ -391,7 +388,7 @@ const BuyerContractPDFButton: React.FC<BuyerContractPDFButtonProps> = ({
       disabled={loading}
       startIcon={loading ? <CircularProgress size={14} color="inherit" /> : <PictureAsPdfIcon />}
     >
-      {loading ? "Generating…" : "Print / PDF"}
+      {loading ? "Generating…" : "Customer Statement"}
     </Button>
   );
 };

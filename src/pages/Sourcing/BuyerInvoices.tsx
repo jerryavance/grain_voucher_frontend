@@ -12,11 +12,14 @@
  */
 import React, { useEffect, useState, useCallback } from "react";
 import {
+  Alert,
   Box,
   Button,
   Card,
+  CardContent,
   Chip,
   FormControl,
+  Grid,
   InputLabel,
   MenuItem,
   Select,
@@ -31,6 +34,7 @@ import {
   Typography,
 } from "@mui/material";
 import { Download as DownloadIcon } from "@mui/icons-material";
+import EventBusyIcon from "@mui/icons-material/EventBusy";
 import { useNavigate } from "react-router-dom";
 import { toast } from "react-hot-toast";
 import SourcingService from "./Sourcing.service";
@@ -65,6 +69,14 @@ const BuyerInvoices: React.FC = () => {
   const [statusFilter, setStatusFilter] = useState("");
   const [buyerSearch, setBuyerSearch] = useState("");
 
+  // Upcoming receivables (next 7 days) — shown as a small dashboard card
+  const [upcoming, setUpcoming] = useState<any>(null);
+  useEffect(() => {
+    SourcingService.getUpcomingBuyerInvoices({ days: 7 })
+      .then((r: any) => setUpcoming(r))
+      .catch(() => {});
+  }, []);
+
   const fetchInvoices = useCallback(async () => {
     setLoading(true);
     try {
@@ -98,9 +110,59 @@ const BuyerInvoices: React.FC = () => {
 
   return (
     <Box p={3}>
-      <Typography variant="h4" fontWeight={700} mb={3}>
+      <Typography variant="h4" fontWeight={700} mb={2}>
         Buyer Invoices (Accounts Receivable)
       </Typography>
+
+      {/* ── Upcoming receivables (next 7 days) ─────────────────────────── */}
+      {upcoming && (
+        <Card
+          elevation={0}
+          sx={{
+            mb: 2,
+            border: "1px solid",
+            borderColor: upcoming.count > 0 ? "warning.light" : "success.light",
+            bgcolor: upcoming.count > 0 ? "#fff8e1" : "#e8f5e9",
+          }}
+        >
+          <CardContent sx={{ py: 1.5, "&:last-child": { pb: 1.5 } }}>
+            <Box sx={{ display: "flex", alignItems: "center", gap: 2, flexWrap: "wrap" }}>
+              <EventBusyIcon color={upcoming.count > 0 ? "warning" : "success"} />
+              <Box sx={{ flex: 1 }}>
+                <Typography variant="subtitle2" sx={{ fontWeight: 700 }}>
+                  Upcoming Receivables · Next 7 days
+                </Typography>
+                <Typography variant="caption" color="text.secondary">
+                  As of {upcoming.as_of} → due by {upcoming.horizon}
+                </Typography>
+              </Box>
+              <Box sx={{ textAlign: "right" }}>
+                <Typography variant="caption" color="text.secondary" sx={{ display: "block" }}>
+                  {upcoming.count} invoice{upcoming.count === 1 ? "" : "s"} maturing
+                </Typography>
+                <Typography variant="h6" sx={{ fontWeight: 800, color: upcoming.count > 0 ? "warning.dark" : "success.dark" }}>
+                  {formatCurrency(upcoming.total_balance_ugx_equivalent)}{" "}
+                  <Typography component="span" variant="caption" color="text.secondary">
+                    (UGX-eq)
+                  </Typography>
+                </Typography>
+              </Box>
+              <Button
+                size="small"
+                variant="outlined"
+                onClick={() => {
+                  // Filter the list below to show only the upcoming ones by status
+                  setStatusFilter("issued");
+                  setDateFrom("");
+                  setDateTo("");
+                }}
+              >
+                View list
+              </Button>
+            </Box>
+          </CardContent>
+        </Card>
+      )}
 
       {/* ── Filters ────────────────────────────────────────────────────── */}
       <Box display="flex" gap={2} alignItems="center" mb={3} flexWrap="wrap">

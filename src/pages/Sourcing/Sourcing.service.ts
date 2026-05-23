@@ -517,6 +517,20 @@ export const SourcingService = {
     }).then(r => r.data);
   },
 
+  /**
+   * Buyer invoices maturing inside the next `days` window (default 7).
+   * Returns {as_of, horizon, days, count, total_balance_ugx_equivalent, invoices[]}.
+   */
+  async getUpcomingBuyerInvoices(params: { days?: number; include_overdue?: boolean; buyer?: string } = {}): Promise<any> {
+    return instance.get("sourcing/buyer-invoices/upcoming/", {
+      params: {
+        days: params.days ?? 7,
+        ...(params.include_overdue ? { include_overdue: 1 } : {}),
+        ...(params.buyer ? { buyer: params.buyer } : {}),
+      },
+    }).then(r => r.data);
+  },
+
   async downloadCustomerStatement(buyerId: string): Promise<Blob> {
     return instance.get(`sourcing/buyers/${buyerId}/customer-statement/`, {
       responseType: "blob",

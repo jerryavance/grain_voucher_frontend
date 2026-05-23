@@ -5,6 +5,7 @@ import AccountBalanceWalletIcon from "@mui/icons-material/AccountBalanceWallet";
 import CallMadeIcon from "@mui/icons-material/CallMade";
 import CallReceivedIcon from "@mui/icons-material/CallReceived";
 import TrendingUpIcon from "@mui/icons-material/TrendingUp";
+import PaidIcon from "@mui/icons-material/Paid";
 import useTitle from "../../hooks/useTitle";
 import { InvestorService } from "./Investor.service";
 import { SourcingService } from "../Sourcing/Sourcing.service";
@@ -41,6 +42,7 @@ const InvestorTransactions = () => {
   const [deposits, setDeposits] = useState<any>();
   const [withdrawals, setWithdrawals] = useState<any>();
   const [allocations, setAllocations] = useState<any>();
+  const [marginPayouts, setMarginPayouts] = useState<any>();
   const [loading, setLoading] = useState(false);
   const [filters, setFilters] = useState({ page: 1, page_size: INITIAL_PAGE_SIZE });
 
@@ -53,7 +55,7 @@ const InvestorTransactions = () => {
     try {
       switch (tabValue) {
         case 0:
-          await Promise.all([fetchDeposits(), fetchWithdrawals(), fetchAllocations()]);
+          await Promise.all([fetchDeposits(), fetchWithdrawals(), fetchAllocations(), fetchMarginPayouts()]);
           break;
         case 1:
           await fetchDeposits();
@@ -63,6 +65,9 @@ const InvestorTransactions = () => {
           break;
         case 3:
           await fetchAllocations();
+          break;
+        case 4:
+          await fetchMarginPayouts();
           break;
       }
     } catch (error) {
@@ -87,6 +92,14 @@ const InvestorTransactions = () => {
     // ✅ FIX: use getMyInvestorAllocations — resolves account UUID automatically
     const response = await SourcingService.getMyInvestorAllocations(filters);
     setAllocations(response);
+  };
+
+  const fetchMarginPayouts = async () => {
+    // Margin payouts deduct from the investor's margin pool — surfacing them
+    // here closes the visibility gap Maurice flagged when Manji's account
+    // was decreased via a payout but no Withdrawal record existed.
+    const response = await InvestorService.getMarginPayouts(filters);
+    setMarginPayouts(response);
   };
 
   const handleTabChange = (event: React.SyntheticEvent, newValue: number) => {
@@ -170,6 +183,79 @@ const InvestorTransactions = () => {
       Header: "Notes",
       accessor: "notes",
       minWidth: 200,
+    },
+  ];
+
+  const marginPayoutColumns = [
+    {
+      Header: "Date",
+      accessor: "created_at",
+      minWidth: 120,
+      Cell: ({ value }: any) => formatDateToDDMMYYYY(value),
+    },
+    {
+      Header: "Type",
+      accessor: "type",
+      minWidth: 130,
+      Cell: () => (
+        <Chip icon={<PaidIcon />} label="Margin Payout" color="warning" size="small" />
+      ),
+    },
+    {
+      Header: "Payout #",
+      accessor: "payout_number",
+      minWidth: 170,
+      Cell: ({ value }: any) => (
+        <Typography variant="body2" sx={{ fontWeight: 600, fontFamily: "monospace" }}>{value || "—"}</Typography>
+      ),
+    },
+    {
+      Header: "Amount",
+      accessor: "amount",
+      minWidth: 150,
+      Cell: ({ value }: any) => (
+        <Typography color="warning.main" fontWeight="medium">
+          - {formatCurrency(value)}
+        </Typography>
+      ),
+    },
+    {
+      Header: "Period",
+      accessor: "period_start",
+      minWidth: 180,
+      Cell: ({ row }: any) => (
+        <Typography variant="caption" color="text.secondary">
+          {row.original.period_start ? formatDateToDDMMYYYY(row.original.period_start) : "—"}
+          {" → "}
+          {row.original.period_end ? formatDateToDDMMYYYY(row.original.period_end) : "—"}
+        </Typography>
+      ),
+    },
+    {
+      Header: "Status",
+      accessor: "status",
+      minWidth: 120,
+      Cell: ({ value }: any) => {
+        const colors: any = { pending: "warning", approved: "info", paid: "success", cancelled: "error" };
+        return <Chip label={(value || "").toUpperCase()} color={colors[value] || "default"} size="small" />;
+      },
+    },
+    {
+      Header: "Approved By",
+      accessor: "approved_by_name",
+      minWidth: 150,
+      Cell: ({ row }: any) => {
+        const r = row.original;
+        return <Typography variant="body2">{r.approved_by_name || "—"}</Typography>;
+      },
+    },
+    {
+      Header: "Payment Ref",
+      accessor: "payment_reference",
+      minWidth: 140,
+      Cell: ({ value }: any) => (
+        <Typography variant="caption" sx={{ fontFamily: "monospace" }}>{value || "—"}</Typography>
+      ),
     },
   ];
 
@@ -270,6 +356,22 @@ const InvestorTransactions = () => {
       });
     }
 
+    if (marginPayouts?.results) {
+      marginPayouts.results.forEach((p: any) => {
+        allTxns.push({
+          date: p.created_at,
+          type: "Margin Payout",
+          typeIcon: <PaidIcon />,
+          amount: -parseFloat(p.amount),
+          amountDisplay: `- ${formatCurrency(p.amount)}`,
+          color: "warning.main",
+          status: p.status,
+          details: p.payout_number || p.payment_reference || p.notes || "—",
+          created_at: p.created_at,
+        });
+      });
+    }
+
     return allTxns.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
   };
 
@@ -292,6 +394,7 @@ const InvestorTransactions = () => {
           color={
             row.original.type === "Deposit" ? "success"
             : row.original.type === "Withdrawal" ? "error"
+            : row.original.type === "Margin Payout" ? "warning"
             : "info"
           }
         />
@@ -320,6 +423,7 @@ const InvestorTransactions = () => {
           active: "info",
           settled: "success",
           cancelled: "error",
+          paid: "success",
         };
         return (
           <Chip
@@ -359,6 +463,7 @@ const InvestorTransactions = () => {
             <Tab label="Deposits" />
             <Tab label="Withdrawals" />
             <Tab label="Allocations" />
+            <Tab label="Margin Payouts" />
           </Tabs>
 
           <TabPanel value={tabValue} index={0}>
@@ -402,6 +507,18 @@ const InvestorTransactions = () => {
               columnShape={allocationColumns}
               data={allocations?.results || []}
               dataCount={allocations?.count || 0}
+              pageInitialState={{ pageSize: INITIAL_PAGE_SIZE, pageIndex: 0 }}
+              setPageIndex={(page: number) => setFilters({ ...filters, page: page + 1 })}
+              pageIndex={filters.page - 1}
+              loading={loading}
+            />
+          </TabPanel>
+
+          <TabPanel value={tabValue} index={4}>
+            <CustomTable
+              columnShape={marginPayoutColumns}
+              data={marginPayouts?.results || []}
+              dataCount={marginPayouts?.count || 0}
               pageInitialState={{ pageSize: INITIAL_PAGE_SIZE, pageIndex: 0 }}
               setPageIndex={(page: number) => setFilters({ ...filters, page: page + 1 })}
               pageIndex={filters.page - 1}
