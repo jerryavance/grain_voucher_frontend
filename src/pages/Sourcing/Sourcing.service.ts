@@ -20,6 +20,10 @@ import {
   IPurchaseOrder, IPurchaseOrdersResults,
   IBuyerOrderFulfillment,
   IBuyerContract, IBuyerContractsResults,
+  IBuyerAccount, IBuyerAccountsResults,
+  IBuyerAccountDeposit, IBuyerAccountDepositsResults,
+  ICashApplication, ICashApplicationsResults,
+  IBuyerAccountWithdrawal, IBuyerAccountWithdrawalsResults,
   ICommodityAIPushLog, ICommodityAISyncStatus,
 } from "./Sourcing.interface";
 
@@ -367,6 +371,95 @@ export const SourcingService = {
     return instance
       .patch(`sourcing/buyer-orders/${orderId}/`, { contract: contractId })
       .then(r => r.data);
+  },
+
+  // ── Buyer Cash Accounts ───────────────────────────────────────────────────
+  async getBuyerAccounts(filters: Record<string, any> = {}): Promise<IBuyerAccountsResults> {
+    return instance.get("sourcing/buyer-accounts/", { params: filters }).then(r => r.data);
+  },
+  async getBuyerAccountDetails(id: string): Promise<IBuyerAccount> {
+    return instance.get(`sourcing/buyer-accounts/${id}/`).then(r => r.data);
+  },
+  async createBuyerAccount(payload: Partial<IBuyerAccount>): Promise<IBuyerAccount> {
+    return instance.post("sourcing/buyer-accounts/", payload).then(r => r.data);
+  },
+  async updateBuyerAccount(id: string, payload: Partial<IBuyerAccount>): Promise<IBuyerAccount> {
+    return instance.patch(`sourcing/buyer-accounts/${id}/`, payload).then(r => r.data);
+  },
+  async recalculateBuyerAccount(id: string): Promise<IBuyerAccount> {
+    return instance.post(`sourcing/buyer-accounts/${id}/recalculate/`).then(r => r.data);
+  },
+  async getBuyerAccountDeposits(id: string): Promise<IBuyerAccountDeposit[]> {
+    return instance.get(`sourcing/buyer-accounts/${id}/deposits/`).then(r => r.data);
+  },
+  async getBuyerAccountApplications(id: string): Promise<ICashApplication[]> {
+    return instance.get(`sourcing/buyer-accounts/${id}/applications/`).then(r => r.data);
+  },
+  async getBuyerAccountWithdrawals(id: string): Promise<IBuyerAccountWithdrawal[]> {
+    return instance.get(`sourcing/buyer-accounts/${id}/withdrawals/`).then(r => r.data);
+  },
+  async getBuyerAccountOpenInvoices(id: string): Promise<IBuyerInvoice[]> {
+    return instance.get(`sourcing/buyer-accounts/${id}/open-invoices/`).then(r => r.data);
+  },
+
+  // ── Buyer Account Deposits ───────────────────────────────────────────────
+  async getBuyerDeposits(filters: Record<string, any> = {}): Promise<IBuyerAccountDepositsResults> {
+    return instance.get("sourcing/buyer-deposits/", { params: filters }).then(r => r.data);
+  },
+  async getBuyerDepositDetails(id: string): Promise<IBuyerAccountDeposit> {
+    return instance.get(`sourcing/buyer-deposits/${id}/`).then(r => r.data);
+  },
+  async createBuyerDeposit(payload: Partial<IBuyerAccountDeposit>): Promise<IBuyerAccountDeposit> {
+    return instance.post("sourcing/buyer-deposits/", payload).then(r => r.data);
+  },
+  async applyDepositManual(
+    depositId: string,
+    payload: { applications: { invoice: string; amount: string | number }[]; notes?: string },
+  ): Promise<{ applications: ICashApplication[]; deposit: IBuyerAccountDeposit }> {
+    return instance
+      .post(`sourcing/buyer-deposits/${depositId}/apply/`, payload)
+      .then(r => r.data);
+  },
+  async applyDepositAuto(
+    depositId: string,
+    payload: { strategy: "fifo" | "lifo"; max_invoices?: number; notes?: string },
+  ): Promise<{
+    strategy: string;
+    applications: ICashApplication[];
+    deposit: IBuyerAccountDeposit;
+  }> {
+    return instance
+      .post(`sourcing/buyer-deposits/${depositId}/auto-apply/`, payload)
+      .then(r => r.data);
+  },
+  async reverseDeposit(depositId: string, reason: string): Promise<IBuyerAccountDeposit> {
+    return instance
+      .post(`sourcing/buyer-deposits/${depositId}/reverse/`, { reason })
+      .then(r => r.data);
+  },
+
+  // ── Cash Applications ────────────────────────────────────────────────────
+  async getCashApplications(filters: Record<string, any> = {}): Promise<ICashApplicationsResults> {
+    return instance.get("sourcing/cash-applications/", { params: filters }).then(r => r.data);
+  },
+  async reverseCashApplication(id: string, reason: string): Promise<ICashApplication> {
+    return instance
+      .post(`sourcing/cash-applications/${id}/reverse/`, { reason })
+      .then(r => r.data);
+  },
+
+  // ── Buyer Account Withdrawals ────────────────────────────────────────────
+  async getBuyerWithdrawals(filters: Record<string, any> = {}): Promise<IBuyerAccountWithdrawalsResults> {
+    return instance.get("sourcing/buyer-withdrawals/", { params: filters }).then(r => r.data);
+  },
+  async createBuyerWithdrawal(payload: Partial<IBuyerAccountWithdrawal>): Promise<IBuyerAccountWithdrawal> {
+    return instance.post("sourcing/buyer-withdrawals/", payload).then(r => r.data);
+  },
+  async approveBuyerWithdrawal(id: string): Promise<IBuyerAccountWithdrawal> {
+    return instance.post(`sourcing/buyer-withdrawals/${id}/approve/`).then(r => r.data);
+  },
+  async rejectBuyerWithdrawal(id: string, reason: string): Promise<IBuyerAccountWithdrawal> {
+    return instance.post(`sourcing/buyer-withdrawals/${id}/reject/`, { reason }).then(r => r.data);
   },
 
   // ── Buyer Orders ──────────────────────────────────────────────────────────

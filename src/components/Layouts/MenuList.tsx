@@ -202,6 +202,12 @@ export const MenuList = (
               visible: isStaff || isHubAdmin || isSuperUser,
             },
             {
+              title: "Buyer Cash Accounts",
+              Icon: Icons.AccountBalanceWalletIcon,
+              path: "/admin/sourcing/buyer-accounts",
+              visible: isStaff || isHubAdmin || isSuperUser,
+            },
+            {
               title: "Buyer Orders",
               Icon: Icons.ShoppingCartIcon,
               path: "/admin/sourcing/buyer-orders",

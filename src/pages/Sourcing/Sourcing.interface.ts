@@ -391,6 +391,171 @@ export interface IProformaInvoice {
 }
 export interface IProformaInvoicesResults { results: IProformaInvoice[]; count: number; }
 
+// ============ Buyer Cash Account (lump-sum deposit + cash application) ============
+export type TBuyerAccountAutoApply = 'none' | 'fifo' | 'lifo';
+export type TDepositSource =
+  | 'bank_api' | 'bank_statement' | 'manual' | 'application_reversal';
+export type TCashApplicationStatus = 'applied' | 'reversed';
+export type TBuyerWithdrawalStatus = 'pending' | 'approved' | 'rejected';
+
+export interface IBuyerAccount {
+  id: string;
+  buyer: string;
+  buyer_name: string;
+  currency: TCurrency;
+  payment_reference: string;
+  auto_apply_strategy: TBuyerAccountAutoApply;
+  auto_apply_strategy_display: string;
+  total_deposits: string;
+  total_applied: string;
+  total_withdrawn: string;
+  available_balance: string;
+  is_active: boolean;
+  notes: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface IBuyerAccountsResults {
+  results: IBuyerAccount[];
+  count: number;
+  total_pages?: number;
+  current_page?: number;
+  page_size?: number;
+}
+
+export interface IBuyerAccountDeposit {
+  id: string;
+  deposit_number: string;
+  buyer_account: string;
+  buyer_name: string;
+  payment_reference: string;
+  amount: string;
+  currency: TCurrency;
+  source: TDepositSource;
+  source_display: string;
+  bank_reference: string;
+  bank_transaction_id: string;
+  bank_payer_name: string;
+  bank_channel: string;
+  amount_applied: string;
+  amount_unapplied: string;
+  received_at: string;
+  notes: string;
+  recorded_by: string | null;
+  recorded_by_name: string;
+  is_reversed: boolean;
+  reversed_at: string | null;
+  reversal_reason: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface IBuyerAccountDepositsResults {
+  results: IBuyerAccountDeposit[];
+  count: number;
+}
+
+export interface ICashApplication {
+  id: string;
+  application_number: string;
+  deposit: string;
+  deposit_number: string;
+  invoice: string;
+  invoice_number: string;
+  buyer_name: string;
+  currency: TCurrency;
+  amount: string;
+  status: TCashApplicationStatus;
+  applied_by: string;
+  applied_by_name: string;
+  applied_at: string;
+  reversed_by: string | null;
+  reversed_by_name: string;
+  reversed_at: string | null;
+  reversal_reason: string;
+  notes: string;
+  buyer_payment: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ICashApplicationsResults {
+  results: ICashApplication[];
+  count: number;
+}
+
+export interface IBuyerAccountWithdrawal {
+  id: string;
+  withdrawal_number: string;
+  buyer_account: string;
+  buyer_name: string;
+  amount: string;
+  method: string;
+  reference_number: string;
+  status: TBuyerWithdrawalStatus;
+  requested_by: string;
+  requested_by_name: string;
+  approved_by: string | null;
+  approved_by_name: string;
+  approved_at: string | null;
+  notes: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface IBuyerAccountWithdrawalsResults {
+  results: IBuyerAccountWithdrawal[];
+  count: number;
+}
+
+// ============ Bank integration admin views ============
+export type TBankNotificationStatus =
+  | 'received' | 'applied_to_account' | 'rejected' | 'duplicate' | 'error';
+
+export interface IBankNotification {
+  id: string;
+  bank_transaction_id: string;
+  payment_reference: string;
+  amount: string;
+  currency: TCurrency;
+  payer_name: string;
+  payment_date: string;
+  channel: string;
+  raw_payload: Record<string, any>;
+  status: TBankNotificationStatus;
+  deposit: string | null;
+  error_message: string;
+  received_at: string;
+  processed_at: string | null;
+}
+
+export interface IBankApiLog {
+  id: string;
+  method: string;
+  path: string;
+  client_ip: string | null;
+  request_headers: Record<string, any>;
+  request_body: Record<string, any>;
+  response_status: number | null;
+  response_body: Record<string, any>;
+  duration_ms: number | null;
+  signature_valid: boolean | null;
+  notification: string | null;
+  created_at: string;
+}
+
+export interface IBankIntegrationConfig {
+  id?: number;
+  bank_name: string;
+  base_url: string;
+  client_id: string;
+  client_secret_encrypted: string;
+  signing_key_encrypted: string;
+  ip_allowlist: string;
+  is_active: boolean;
+}
+
 // ============ Buyer Contract (multi-delivery aggregator) ============
 export type TBuyerContractStatus = 'draft' | 'active' | 'completed' | 'cancelled';
 

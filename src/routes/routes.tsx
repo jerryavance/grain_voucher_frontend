@@ -191,6 +191,10 @@ const routes = [
       { path: "buyer-contracts", element: <LazyLoader.BuyerContracts /> },
       { path: "buyer-contracts/:id", element: <LazyLoader.BuyerContractDetails /> },
 
+      // Buyer Cash Accounts (lump-sum deposits + cash application)
+      { path: "buyer-accounts", element: <LazyLoader.BuyerAccounts /> },
+      { path: "buyer-accounts/:id", element: <LazyLoader.BuyerAccountDetails /> },
+
       // Buyer Orders (selling to buyers)
       { path: "buyer-orders", element: <LazyLoader.BuyerOrders /> },
       { path: "buyer-orders/:id", element: <LazyLoader.BuyerOrderDetails /> },

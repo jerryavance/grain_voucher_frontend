@@ -137,6 +137,7 @@ const BuyerDetails: FC = () => {
   const [invoices, setInvoices] = useState<IBuyerInvoice[]>([]);
   const [payments, setPayments] = useState<IBuyerPayment[]>([]);
   const [contacts, setContacts] = useState<IBuyerContactPreference[]>([]);
+  const [cashAccounts, setCashAccounts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [tab, setTab] = useState(0);
   const [showAddContact, setShowAddContact] = useState(false);
@@ -172,6 +173,12 @@ const BuyerDetails: FC = () => {
         const buyerInvIds = new Set((Array.isArray(inv) ? inv : ((inv as any).results || [])).map((i: any) => i.id));
         setPayments((pResp.results || []).filter((p: IBuyerPayment) => buyerInvIds.has(p.buyer_invoice)));
       } catch { setPayments([]); }
+
+      // Fetch cash accounts for this buyer (one per currency)
+      try {
+        const accResp = await SourcingService.getBuyerAccounts({ buyer: id, page_size: 20 });
+        setCashAccounts(accResp.results || []);
+      } catch { setCashAccounts([]); }
     } catch {
       toast.error("Failed to load buyer");
       navigate("/admin/sourcing/buyers");
@@ -274,6 +281,7 @@ const BuyerDetails: FC = () => {
           <Tab label={`Invoices (${invoices.length})`} />
           <Tab label={`Payments (${payments.length})`} />
           <Tab label={`Contacts (${contacts.length})`} />
+          <Tab label={`Cash Accounts (${cashAccounts.length})`} />
         </Tabs>
       </Box>
 
@@ -424,6 +432,73 @@ const BuyerDetails: FC = () => {
                   <Box sx={{ display: "flex", alignItems: "center", gap: 0.5, mt: 0.5 }}><PhoneIcon sx={{ fontSize: 14, color: "text.primary" }} /><Typography variant="body2">{c.phone}</Typography></Box>
                   {c.email && <Box sx={{ display: "flex", alignItems: "center", gap: 0.5, mt: 0.5 }}><EmailIcon sx={{ fontSize: 14, color: "text.primary" }} /><Typography variant="body2">{c.email}</Typography></Box>}
                 </CardContent></Card>
+              </Grid>
+            ))}
+          </Grid>
+        )}
+      </TabPanel>
+
+      {/* Tab 5: Cash Accounts */}
+      <TabPanel value={tab} index={5}>
+        {cashAccounts.length === 0 ? (
+          <Alert severity="info">
+            No cash accounts yet. Create one from the{" "}
+            <Span sx={{ color: "primary.main", cursor: "pointer", textDecoration: "underline" }}
+              onClick={() => navigate("/admin/sourcing/buyer-accounts")}>
+              Buyer Cash Accounts page
+            </Span>.
+          </Alert>
+        ) : (
+          <Grid container spacing={2}>
+            {cashAccounts.map(acc => (
+              <Grid item xs={12} sm={6} md={4} key={acc.id}>
+                <Card
+                  variant="outlined"
+                  sx={{
+                    cursor: "pointer",
+                    "&:hover": { borderColor: "primary.main", boxShadow: 1 },
+                  }}
+                  onClick={() => navigate(`/admin/sourcing/buyer-accounts/${acc.id}`)}
+                >
+                  <CardContent>
+                    <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between", mb: 1 }}>
+                      <Chip label={acc.currency} size="small" variant="outlined" />
+                      <Chip
+                        label={(acc.auto_apply_strategy || "none").toUpperCase()}
+                        size="small"
+                        color={acc.auto_apply_strategy === "none" ? "default" : "primary"}
+                        variant={acc.auto_apply_strategy === "none" ? "outlined" : "filled"}
+                      />
+                    </Box>
+                    <Typography variant="caption" color="text.secondary" sx={{ letterSpacing: 1 }}>
+                      AVAILABLE BALANCE
+                    </Typography>
+                    <Typography
+                      variant="h5"
+                      sx={{
+                        fontWeight: 800,
+                        color: Number(acc.available_balance) > 0 ? "primary.main" : "text.secondary",
+                        my: 0.5,
+                      }}
+                    >
+                      {formatCurrency(acc.available_balance, acc.currency)}
+                    </Typography>
+                    <Box sx={{ display: "flex", justifyContent: "space-between", mt: 1.5 }}>
+                      <Box>
+                        <Typography variant="caption" color="text.secondary">Reference</Typography>
+                        <Typography variant="body2" sx={{ fontFamily: "monospace", fontWeight: 600 }}>
+                          {acc.payment_reference}
+                        </Typography>
+                      </Box>
+                      <Box sx={{ textAlign: "right" }}>
+                        <Typography variant="caption" color="text.secondary">Deposits</Typography>
+                        <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                          {formatCurrency(acc.total_deposits, acc.currency)}
+                        </Typography>
+                      </Box>
+                    </Box>
+                  </CardContent>
+                </Card>
               </Grid>
             ))}
           </Grid>
