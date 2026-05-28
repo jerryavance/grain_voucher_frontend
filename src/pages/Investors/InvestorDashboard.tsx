@@ -232,9 +232,11 @@ const InvestorDashboard = () => {
                 <Typography variant="h6" gutterBottom color="primary">EMD Summary</Typography>
                 <Grid container spacing={1.5}>
                   {[
-                    { label: "EMD Balance", value: dashboardData.emd_summary.emd_balance },
-                    { label: "EMD Utilized", value: dashboardData.emd_summary.emd_utilized },
-                    { label: "Total Committed", value: dashboardData.emd_summary.total_emd_committed },
+                    // "Available" = uncommitted EMD; "Committed" = locked in active
+                    // trades (emd_utilized); "Total EMD" = available + committed.
+                    { label: "EMD Available", value: dashboardData.emd_summary.emd_balance },
+                    { label: "EMD Committed", value: dashboardData.emd_summary.emd_committed ?? dashboardData.emd_summary.emd_utilized },
+                    { label: "Total EMD", value: dashboardData.emd_summary.total_emd ?? dashboardData.emd_summary.total_emd_committed },
                     { label: "Total Deposited", value: dashboardData.emd_summary.total_deposited },
                   ].map(({ label, value }) => (
                     <Grid item xs={6} key={label}>

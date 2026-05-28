@@ -209,8 +209,11 @@ export interface ILoan {
 // ── Dashboard interfaces (aligned with actual API response) ──────────────────
 
 export interface IEmdSummary {
-    emd_balance: number;
-    emd_utilized: number;
+    emd_balance: number;        // uncommitted EMD available for new trades
+    emd_utilized: number;       // EMD locked in active trades
+    emd_committed: number;      // alias of emd_utilized (locked in trades)
+    total_emd: number;          // emd_balance + emd_utilized (all EMD in system)
+    /** @deprecated equals total_emd, NOT the committed amount. Use total_emd. */
     total_emd_committed: number;
     total_deposited: number;
     unpaid_margin: number;
