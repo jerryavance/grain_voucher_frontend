@@ -333,7 +333,7 @@ const BuyerDetails: FC = () => {
                 <TableRow key={o.id} hover sx={{ cursor: "pointer" }} onClick={() => navigate(`/admin/sourcing/buyer-orders/${o.id}`)}>
                   <TableCell><Typography variant="body2" color="primary" sx={{ fontWeight: 600 }}>{o.order_number}</Typography></TableCell>
                   <TableCell sx={{ fontSize: 12 }}>
-                    {formatTonnage(o.quantity_requested_kg, o.trade_unit)}
+                    {formatTonnage(Number(o.quantity_filled_kg) > 0 ? o.quantity_filled_kg : o.quantity_requested_kg, o.trade_unit)}
                   </TableCell>
                   <TableCell>{formatCurrency(o.subtotal, o.currency)}</TableCell>
                   <TableCell sx={{ color: (o.gross_profit ?? 0) >= 0 ? "success.main" : "error.main", fontWeight: 600 }}>{formatCurrency(o.gross_profit, "UGX")}</TableCell>
@@ -363,7 +363,7 @@ const BuyerDetails: FC = () => {
                 <TableRow key={inv.id} hover sx={{ cursor: "pointer" }} onClick={() => navigate(`/admin/sourcing/buyer-invoices/${inv.id}`)}>
                   <TableCell><Typography variant="body2" color="primary" sx={{ fontWeight: 600 }}>{inv.invoice_number}</Typography></TableCell>
                   <TableCell sx={{ fontSize: 12 }}>
-                    {formatTonnage(inv.quantity_requested_kg, inv.trade_unit)}
+                    {formatTonnage(Number(inv.quantity_invoiced_kg) > 0 ? inv.quantity_invoiced_kg : inv.quantity_requested_kg, inv.trade_unit)}
                   </TableCell>
                   <TableCell>{formatCurrency(inv.amount_due, inv.currency)}</TableCell>
                   <TableCell sx={{ color: "success.main" }}>{formatCurrency(inv.amount_paid, inv.currency)}</TableCell>

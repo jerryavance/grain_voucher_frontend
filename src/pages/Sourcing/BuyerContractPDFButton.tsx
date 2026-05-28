@@ -91,6 +91,13 @@ export const generateContractHTML = (
         const invNum = (o as any).invoice_number || "—";
         const invStatus = (o as any).invoice_status || "—";
         const invColor = INV_STATUS_COLOR[invStatus] || "#666";
+        // Actual delivered tonnage = sum of order lines (quantity_filled_kg),
+        // not the demand/contract volume (quantity_requested_kg).
+        const filled = Number((o as any).quantity_filled_kg ?? 0);
+        const qtyKg = filled > 0 ? filled : Number(o.quantity_requested_kg ?? 0);
+        const qtyDisp = o.trade_unit === "tonne"
+          ? `${fmtMT(qtyKg)} MT`
+          : `${fmtKg(qtyKg)} kg`;
         return `
       <tr>
         <td>${i + 1}</td>
@@ -101,7 +108,7 @@ export const generateContractHTML = (
             ${invStatus.toUpperCase()}
           </span>
         </td>
-        <td style="text-align:right;">${fmtKg(o.quantity_requested_kg ?? 0)} kg</td>
+        <td style="text-align:right;">${qtyDisp}</td>
         <td style="text-align:right;">${fmtMoney(o.subtotal, o.currency || currency)}</td>
       </tr>`;
       }).join("");

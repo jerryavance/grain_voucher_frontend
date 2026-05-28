@@ -827,6 +827,11 @@ export interface IBuyerInvoice {
   /** Display unit for documents: 'kg' or 'tonne'. Internal data always in kg. */
   trade_unit: 'kg' | 'tonne';
   exchange_rate_to_ugx: number | null;
+  /** Demand/contract volume from the buyer order (can be the whole contract). */
+  quantity_requested_kg?: string | null;
+  /** Actual tonnage billed on this invoice = sum of sale lines. Use this on
+   *  customer statements, not quantity_requested_kg. */
+  quantity_invoiced_kg?: string | null;
 }
 export interface IBuyerInvoicesResults { results: IBuyerInvoice[]; count: number; }
 
