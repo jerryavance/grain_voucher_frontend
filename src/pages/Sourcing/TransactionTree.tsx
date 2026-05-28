@@ -127,12 +127,37 @@ const TransactionTree: React.FC = () => {
   const settlement = tree.trade_settlement;
 
   // ── Compute summary values ─────────────────────────────────────────────
-  const sourcingCost = Number(order?.total_cost || 0);
+  // The Trade Story is a single-currency (UGX) P&L: sourcing cost is always
+  // stored in UGX, so buyer-order revenue (which may be USD/EUR/GBP) must be
+  // converted to UGX before it can be compared. Otherwise a USD order shows
+  // its raw USD revenue against a UGX cost and the trade looks like a huge
+  // loss (e.g. 20,635 − 71,401,310).
+  const sourcingCost = Number(order?.total_cost || 0); // UGX
 
-  const saleRevenue = tree.buyer_orders.reduce(
-    (s: number, bo: any) => s + Number(bo.subtotal || 0),
+  const toUgx = (bo: any): number => {
+    const sub = Number(bo.subtotal || 0);
+    if (bo.currency && bo.currency !== "UGX" && bo.exchange_rate_to_ugx) {
+      return sub * Number(bo.exchange_rate_to_ugx);
+    }
+    return sub;
+  };
+
+  // Whether any linked buyer order is in a non-UGX currency (drives the
+  // "UGX equivalent" hint shown under the revenue card).
+  const hasFxOrder = tree.buyer_orders.some(
+    (bo: any) => bo.currency && bo.currency !== "UGX",
+  );
+
+  const saleRevenueUgx = tree.buyer_orders.reduce(
+    (s: number, bo: any) => s + toUgx(bo),
     0
   );
+
+  // Prefer the settlement's stored figures — they're already computed in UGX
+  // by the backend (buyer_revenue, gross_profit, investor_return).
+  const saleRevenue = settlement
+    ? Number(settlement.buyer_revenue || 0)
+    : saleRevenueUgx;
 
   const grossProfit = settlement
     ? Number(settlement.gross_profit || 0)
@@ -145,20 +170,21 @@ const TransactionTree: React.FC = () => {
     : null;
 
   const summaryCards = [
-    { label: "Sourcing Cost", value: formatCurrency(sourcingCost) },
+    { label: "Sourcing Cost", value: formatCurrency(sourcingCost, "UGX") },
     {
       label: "Sale Revenue",
-      value: saleRevenue > 0 ? formatCurrency(saleRevenue) : "—",
+      value: saleRevenue > 0 ? formatCurrency(saleRevenue, "UGX") : "—",
       color: "#4caf50",
+      hint: hasFxOrder ? "UGX equivalent" : undefined,
     },
     {
       label: "Gross Profit",
-      value: grossProfit !== null ? formatCurrency(grossProfit) : "—",
+      value: grossProfit !== null ? formatCurrency(grossProfit, "UGX") : "—",
       color: grossProfit !== null && grossProfit >= 0 ? "#4caf50" : "#f44336",
     },
     {
       label: "Investor Return",
-      value: investorReturn !== null ? formatCurrency(investorReturn) : "—",
+      value: investorReturn !== null ? formatCurrency(investorReturn, "UGX") : "—",
     },
   ];
 
@@ -238,7 +264,16 @@ const TransactionTree: React.FC = () => {
     const lot = tree.sale_lot;
     const stl = tree.trade_settlement;
 
-    // Build flat rows for Excel
+    // Build flat rows for Excel.
+    // The "Amount (UGX)" column must hold UGX; buyer-order/line/invoice/payment
+    // amounts are in the buyer order's trade currency, so convert them.
+    const boUgx = (bo: any, val: any): number => {
+      const n = Number(val || 0);
+      if (bo?.currency && bo.currency !== "UGX" && bo.exchange_rate_to_ugx) {
+        return n * Number(bo.exchange_rate_to_ugx);
+      }
+      return n;
+    };
     const rows: Record<string, any>[] = [];
 
     // Source order row
@@ -335,9 +370,9 @@ const TransactionTree: React.FC = () => {
       rows.push({
         Section: "Buyer Order",
         Reference: bo.order_number,
-        Detail: bo.buyer_name,
+        Detail: bo.buyer_name + (bo.currency && bo.currency !== "UGX" ? ` (${bo.currency} @ ${bo.exchange_rate_to_ugx})` : ""),
         "Qty (kg)": "",
-        "Amount (UGX)": Number(bo.subtotal || 0),
+        "Amount (UGX)": boUgx(bo, bo.subtotal),
         Status: bo.status_display || bo.status,
         Date: bo.created_at,
       });
@@ -346,10 +381,10 @@ const TransactionTree: React.FC = () => {
         rows.push({
           Section: "  ↳ Order Line",
           Reference: line.lot_number || "",
-          Detail: `${Number(line.quantity_kg).toLocaleString()} kg @ ${formatCurrency(line.sale_price_per_kg)}/kg`,
+          Detail: `${Number(line.quantity_kg).toLocaleString()} kg @ ${formatCurrency(line.sale_price_per_kg, bo.currency)}/kg`,
           "Qty (kg)": Number(line.quantity_kg || 0),
-          "Amount (UGX)": Number(line.line_total || 0),
-          Status: `Profit: ${formatCurrency(line.line_gross_profit)}`,
+          "Amount (UGX)": boUgx(bo, line.line_total),
+          Status: `Profit: ${formatCurrency(line.line_gross_profit, "UGX")}`,
           Date: "",
         });
       });
@@ -358,9 +393,9 @@ const TransactionTree: React.FC = () => {
         rows.push({
           Section: "  ↳ Buyer Invoice",
           Reference: bo.buyer_invoice.invoice_number,
-          Detail: `Balance: ${formatCurrency(bo.buyer_invoice.balance_due)}`,
+          Detail: `Balance: ${formatCurrency(bo.buyer_invoice.balance_due, bo.buyer_invoice.currency || bo.currency)}`,
           "Qty (kg)": "",
-          "Amount (UGX)": Number(bo.buyer_invoice.amount_due || 0),
+          "Amount (UGX)": boUgx(bo, bo.buyer_invoice.amount_due),
           Status: bo.buyer_invoice.status,
           Date: bo.buyer_invoice.due_date,
         });
@@ -372,7 +407,7 @@ const TransactionTree: React.FC = () => {
           Reference: p.payment_number,
           Detail: `Method: ${p.method} / Ref: ${p.reference_number || "—"}`,
           "Qty (kg)": "",
-          "Amount (UGX)": Number(p.amount || 0),
+          "Amount (UGX)": boUgx(bo, p.amount),
           Status: p.status,
           Date: p.payment_date || p.created_at,
         });
@@ -494,6 +529,11 @@ const TransactionTree: React.FC = () => {
                 >
                   {card.value}
                 </Typography>
+                {(card as any).hint && (
+                  <Typography variant="caption" color="text.secondary" sx={{ display: "block" }}>
+                    {(card as any).hint}
+                  </Typography>
+                )}
               </CardContent>
             </Card>
           </Grid>
@@ -777,8 +817,8 @@ const InvoiceDetail: React.FC<{ invoice: any; payments: any[] }> = ({ invoice, p
         <Row label="Invoice #" value={invoice.invoice_number} />
         <Row label="Grain Type" value={invoice.grain_type_name || "—"} />
         <Row label="Quantity" value={formatKg(invoice.quantity_kg)} />
-        <Row label="Amount Due" value={formatCurrency(invoice.amount_due)} />
-        <Row label="Amount Paid" value={formatCurrency(invoice.amount_paid)} />
+        <Row label="Amount Due" value={formatCurrency(invoice.amount_due, invoice.currency)} />
+        <Row label="Amount Paid" value={formatCurrency(invoice.amount_paid, invoice.currency)} />
         <Row
           label="Balance Due"
           value={
@@ -787,7 +827,7 @@ const InvoiceDetail: React.FC<{ invoice: any; payments: any[] }> = ({ invoice, p
               fontWeight={700}
               sx={{ color: Number(invoice.balance_due) > 0 ? "#f44336" : "#4caf50" }}
             >
-              {formatCurrency(invoice.balance_due)}
+              {formatCurrency(invoice.balance_due, invoice.currency)}
             </Typography>
           }
         />
@@ -916,10 +956,12 @@ const BuyerOrdersDetail: React.FC<{ orders: any[] }> = ({ orders }) => (
         </Box>
 
         <Grid container spacing={1} mb={1}>
-          <Row label="Subtotal" value={formatCurrency(bo.subtotal)} />
-          <Row label="COGS" value={formatCurrency(bo.total_cogs)} />
-          <Row label="Selling Expenses" value={formatCurrency(bo.total_selling_expenses)} />
-          <Row label="Gross Profit" value={formatCurrency(bo.gross_profit)} bold />
+          {/* Subtotal is in the order's trade currency; COGS / expenses /
+              gross profit are always stored in UGX (BuyerOrderLine invariant). */}
+          <Row label={`Subtotal (${bo.currency || "UGX"})`} value={formatCurrency(bo.subtotal, bo.currency)} />
+          <Row label="COGS (UGX)" value={formatCurrency(bo.total_cogs, "UGX")} />
+          <Row label="Selling Expenses (UGX)" value={formatCurrency(bo.total_selling_expenses, "UGX")} />
+          <Row label="Gross Profit (UGX)" value={formatCurrency(bo.gross_profit, "UGX")} bold />
         </Grid>
 
         {/* Order lines */}
@@ -943,10 +985,10 @@ const BuyerOrdersDetail: React.FC<{ orders: any[] }> = ({ orders }) => (
                       <TableCell sx={{ fontSize: "0.75rem" }}>{line.lot_number}</TableCell>
                       <TableCell sx={{ fontSize: "0.75rem" }}>{line.grain_type_name || line.grain_type}</TableCell>
                       <TableCell sx={{ fontSize: "0.75rem" }}>{Number(line.quantity_kg).toLocaleString()}</TableCell>
-                      <TableCell sx={{ fontSize: "0.75rem" }}>{formatCurrency(line.sale_price_per_kg)}</TableCell>
-                      <TableCell sx={{ fontSize: "0.75rem", fontWeight: 600 }}>{formatCurrency(line.line_total)}</TableCell>
-                      <TableCell sx={{ fontSize: "0.75rem" }}>{formatCurrency(line.cogs_total)}</TableCell>
-                      <TableCell sx={{ fontSize: "0.75rem", fontWeight: 600, color: "#4caf50" }}>{formatCurrency(line.line_gross_profit)}</TableCell>
+                      <TableCell sx={{ fontSize: "0.75rem" }}>{formatCurrency(line.sale_price_per_kg, bo.currency)}</TableCell>
+                      <TableCell sx={{ fontSize: "0.75rem", fontWeight: 600 }}>{formatCurrency(line.line_total, bo.currency)}</TableCell>
+                      <TableCell sx={{ fontSize: "0.75rem" }}>{formatCurrency(line.cogs_total, "UGX")}</TableCell>
+                      <TableCell sx={{ fontSize: "0.75rem", fontWeight: 600, color: "#4caf50" }}>{formatCurrency(line.line_gross_profit, "UGX")}</TableCell>
                     </TableRow>
                   ))}
                 </TableBody>
@@ -993,13 +1035,13 @@ const BuyerOrdersDetail: React.FC<{ orders: any[] }> = ({ orders }) => (
             </Typography>
             <Grid container spacing={1} mt={0.5}>
               <Row label="Invoice #" value={bo.buyer_invoice.invoice_number} />
-              <Row label="Amount Due" value={formatCurrency(bo.buyer_invoice.amount_due)} />
-              <Row label="Amount Paid" value={formatCurrency(bo.buyer_invoice.amount_paid)} />
+              <Row label="Amount Due" value={formatCurrency(bo.buyer_invoice.amount_due, bo.buyer_invoice.currency || bo.currency)} />
+              <Row label="Amount Paid" value={formatCurrency(bo.buyer_invoice.amount_paid, bo.buyer_invoice.currency || bo.currency)} />
               <Row
                 label="Balance"
                 value={
                   <Typography variant="body2" fontWeight={700} sx={{ color: Number(bo.buyer_invoice.balance_due) > 0 ? "#f44336" : "#4caf50" }}>
-                    {formatCurrency(bo.buyer_invoice.balance_due)}
+                    {formatCurrency(bo.buyer_invoice.balance_due, bo.buyer_invoice.currency || bo.currency)}
                   </Typography>
                 }
               />
