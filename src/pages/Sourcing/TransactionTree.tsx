@@ -592,7 +592,10 @@ const TransactionTree: React.FC = () => {
                   <OrderDetail order={order} />
                 )}
                 {step.key === "allocation" && tree.investor_allocation && (
-                  <AllocationDetail alloc={tree.investor_allocation} />
+                  <AllocationDetail
+                    alloc={tree.investor_allocation}
+                    chain={(tree as any).allocation_chain}
+                  />
                 )}
                 {step.key === "delivery" && tree.deliveries.length > 0 && (
                   <DeliveriesDetail deliveries={tree.deliveries} />
@@ -722,29 +725,106 @@ const OrderDetail: React.FC<{ order: any }> = ({ order }) => (
   </Grid>
 );
 
-const AllocationDetail: React.FC<{ alloc: any }> = ({ alloc }) => (
-  <Grid container spacing={1}>
-    <Row label="Allocation #" value={alloc.allocation_number} />
-    <Row label="Investor" value={alloc.investor_name} />
-    <Row label="Amount Allocated" value={formatCurrency(alloc.amount_allocated)} />
-    <Row label="Investor Margin" value={formatCurrency(alloc.investor_margin)} />
-    <Row label="Platform Fee" value={formatCurrency(alloc.platform_fee)} />
-    <Row label="Amount Returned" value={formatCurrency(alloc.amount_returned)} bold />
-    <Row
-      label="Status"
-      value={
-        <Chip
-          label={formatStatus(alloc.status)}
-          size="small"
-          sx={{ bgcolor: getStatusColor(alloc.status), color: "#fff" }}
+const AllocationDetail: React.FC<{ alloc: any; chain?: any[] }> = ({ alloc, chain }) => {
+  // Surface cost-basis once it's been touched by a transfer. Until then the
+  // allocator's cost = face value, which we elide as redundant.
+  const cb = alloc.cost_basis;
+  const face = Number(alloc.amount_allocated || 0);
+  const cbNum = cb != null ? Number(cb) : null;
+  const spread = cbNum != null ? face - cbNum : null;
+
+  return (
+    <Box>
+      <Grid container spacing={1}>
+        <Row label="Allocation #" value={alloc.allocation_number} />
+        <Row label="Current Owner" value={alloc.investor_name} />
+        <Row label="Face Value" value={formatCurrency(face)} />
+        {cbNum != null && (
+          <Row
+            label="Current Cost Basis"
+            value={
+              <span>
+                {formatCurrency(cbNum)}
+                {spread !== null && spread !== 0 && (
+                  <span style={{
+                    marginLeft: 6, fontSize: 12,
+                    color: spread > 0 ? "#2e7d32" : "#c62828",
+                  }}>
+                    ({spread > 0 ? "+" : ""}{formatCurrency(spread)} vs face)
+                  </span>
+                )}
+              </span>
+            }
+          />
+        )}
+        <Row label="Investor Margin" value={formatCurrency(alloc.investor_margin)} />
+        <Row label="Platform Fee" value={formatCurrency(alloc.platform_fee)} />
+        <Row label="Amount Returned" value={formatCurrency(alloc.amount_returned)} bold />
+        <Row
+          label="Status"
+          value={
+            <Chip
+              label={formatStatus(alloc.status)}
+              size="small"
+              sx={{ bgcolor: getStatusColor(alloc.status), color: "#fff" }}
+            />
+          }
         />
-      }
-    />
-    <Row label="Allocated At" value={formatDate(alloc.allocated_at)} />
-    {alloc.settled_at && <Row label="Settled At" value={formatDate(alloc.settled_at)} />}
-    {alloc.notes && <Row label="Notes" value={alloc.notes} />}
-  </Grid>
-);
+        <Row label="Allocated At" value={formatDate(alloc.allocated_at)} />
+        {alloc.settled_at && <Row label="Settled At" value={formatDate(alloc.settled_at)} />}
+        {alloc.notes && <Row label="Notes" value={alloc.notes} />}
+      </Grid>
+
+      {/* Ownership chain — only render when at least one transfer has occurred */}
+      {chain && chain.length > 1 && (
+        <Box mt={2} pt={2} sx={{ borderTop: "1px dashed #ccc" }}>
+          <Box sx={{ fontWeight: 700, fontSize: 13, mb: 1, color: "text.secondary" }}>
+            Ownership Chain ({chain.length - 1} transfer{chain.length > 2 ? "s" : ""})
+          </Box>
+          <Box sx={{ display: "flex", flexDirection: "column", gap: 0.5 }}>
+            {chain.map((link, i) => {
+              if (link.kind === "allocation") {
+                return (
+                  <Box key={i} sx={{ display: "flex", alignItems: "center", gap: 1, fontSize: 13 }}>
+                    <Chip label="ALLOCATED" size="small" color="primary" sx={{ height: 20, fontSize: 10 }} />
+                    <span style={{ fontWeight: 600 }}>{link.investor_name}</span>
+                    <span style={{ color: "#666" }}>@ cost {formatCurrency(Number(link.cost_basis))}</span>
+                    <span style={{ marginLeft: "auto", color: "#999", fontSize: 11 }}>
+                      {formatDate(link.at)}
+                    </span>
+                  </Box>
+                );
+              }
+              const m = Number(link.realized_margin || 0);
+              return (
+                <Box key={i} sx={{ display: "flex", alignItems: "center", gap: 1, fontSize: 13 }}>
+                  <Chip label={link.transfer_number} size="small" color="success" sx={{ height: 20, fontSize: 10, fontFamily: "monospace" }} />
+                  <span style={{ fontWeight: 600 }}>{link.from_investor_name}</span>
+                  <span style={{ color: "#666" }}>→</span>
+                  <span style={{ fontWeight: 600 }}>{link.to_investor_name}</span>
+                  <span style={{ color: "#666" }}>@ {formatCurrency(Number(link.transfer_price))}</span>
+                  <span style={{
+                    fontSize: 11, fontWeight: 700,
+                    color: m >= 0 ? "#2e7d32" : "#c62828",
+                  }}>
+                    seller margin {m >= 0 ? "+" : ""}{formatCurrency(m)}
+                  </span>
+                  <span style={{ marginLeft: "auto", color: "#999", fontSize: 11 }}>
+                    {formatDate(link.at)}
+                  </span>
+                </Box>
+              );
+            })}
+          </Box>
+          <Box mt={1} sx={{ fontSize: 11, color: "text.secondary", fontStyle: "italic" }}>
+            Each transfer locks in the seller's realized margin at <em>transfer price − their prior cost basis</em>.
+            At settlement, the final owner's margin is computed against their cost basis (not the original allocation amount).
+          </Box>
+        </Box>
+      )}
+    </Box>
+  );
+};
 
 const DeliveriesDetail: React.FC<{ deliveries: any[] }> = ({ deliveries }) => (
   <Paper variant="outlined" sx={{ overflow: "hidden" }}>

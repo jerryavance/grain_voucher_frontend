@@ -334,8 +334,9 @@ function pdfAssetsLiabilities(data: any) {
 
 function pdfInvestorExposure(data: any) {
   const t = data.totals || {};
+  const realizedXfer = parseFloat(t.total_realized_transfer_margin || "0");
   const cards = `
-  <div class="summary-grid" style="grid-template-columns:repeat(6,1fr);">
+  <div class="summary-grid" style="grid-template-columns:repeat(4,1fr);">
     ${[
       ["EMD Available", fmtUGX(t.total_emd_available), "pos"],
       ["EMD Utilized", fmtUGX(t.total_emd_utilized), ""],
@@ -343,21 +344,31 @@ function pdfInvestorExposure(data: any) {
       ["Margin Earned", fmtUGX(t.total_margin_earned), "pos"],
       ["Unpaid Margin", fmtUGX(t.total_unpaid_margin), ""],
       ["Receivable Exposure", fmtUGX(t.total_exposure), "neg"],
+      ["Unrealized Cost-Basis Margin", fmtUGX(t.total_unrealized_cost_basis_margin || "0"), ""],
+      ["Realized Transfer Margin", fmtUGX(t.total_realized_transfer_margin || "0"), realizedXfer >= 0 ? "pos" : "neg"],
     ].map(([l, v, cls]) => `<div class="card"><div class="card-label">${l}</div><div class="card-value ${cls}">${v}</div></div>`).join("")}
   </div>`;
 
-  const rows = (data.investors || []).map((inv: any) => `<tr>
-    <td style="font-weight:600;">${inv.investor_name}</td>
-    <td><span class="badge ${inv.payout_type === "interest" ? "badge-blue" : "badge-grey"}">${inv.payout_type === "interest" ? `Interest ${inv.interest_rate || ""}%` : "Margin"}</span></td>
-    <td class="r pos">${fmtUGX(inv.emd_balance)}</td>
-    <td class="r">${fmtUGX(inv.emd_utilized)}</td>
-    <td class="r">${inv.active_allocations}</td>
-    <td class="r" style="font-weight:600;">${fmtUGX(inv.active_capital)}</td>
-    <td class="r">${inv.settled_allocations}</td>
-    <td class="r pos">${fmtUGX(inv.total_margin_earned)}</td>
-    <td class="r" style="color:#d97706;font-weight:600;">${fmtUGX(inv.unpaid_margin)}</td>
-    <td class="r neg">${fmtUGX(inv.outstanding_receivable_exposure)}</td>
-  </tr>`).join("");
+  const rows = (data.investors || []).map((inv: any) => {
+    const unrealized = parseFloat(inv.unrealized_cost_basis_margin || "0");
+    const realized = parseFloat(inv.realized_transfer_margin || "0");
+    return `<tr>
+      <td style="font-weight:600;">${inv.investor_name}</td>
+      <td><span class="badge ${inv.payout_type === "interest" ? "badge-blue" : "badge-grey"}">${inv.payout_type === "interest" ? `Interest ${inv.interest_rate || ""}%` : "Margin"}</span></td>
+      <td class="r pos">${fmtUGX(inv.emd_balance)}</td>
+      <td class="r">${fmtUGX(inv.emd_utilized)}</td>
+      <td class="r">${inv.active_allocations}</td>
+      <td class="r" style="font-weight:600;">${fmtUGX(inv.active_capital)}</td>
+      <td class="r">${inv.settled_allocations}</td>
+      <td class="r pos">${fmtUGX(inv.total_margin_earned)}</td>
+      <td class="r" style="color:#d97706;font-weight:600;">${fmtUGX(inv.unpaid_margin)}</td>
+      <td class="r neg">${fmtUGX(inv.outstanding_receivable_exposure)}</td>
+      <td class="r">${inv.active_transferred_count > 0 ? `${inv.active_transferred_count} @ ${fmtUGX(inv.active_transferred_cost_basis)}` : "—"}</td>
+      <td class="r ${unrealized >= 0 ? "pos" : "neg"}" style="font-weight:600;">${unrealized !== 0 ? `${unrealized > 0 ? "+" : ""}${fmtUGX(unrealized)}` : "—"}</td>
+      <td class="r">${inv.transfers_out_count > 0 ? `${inv.transfers_out_count} (${fmtUGX(inv.transfers_out_gross)})` : "—"}</td>
+      <td class="r ${realized >= 0 ? "pos" : "neg"}" style="font-weight:600;">${realized !== 0 ? `${realized > 0 ? "+" : ""}${fmtUGX(realized)}` : "—"}</td>
+    </tr>`;
+  }).join("");
 
   const body = cards + `<div class="section-title">Investor Exposure Detail</div>
   <table>
@@ -365,6 +376,8 @@ function pdfInvestorExposure(data: any) {
       <th>Investor</th><th>Type</th><th class="r">EMD Available</th><th class="r">EMD Utilized</th>
       <th class="r">Active</th><th class="r">Active Capital</th><th class="r">Settled</th>
       <th class="r">Margin Earned</th><th class="r">Unpaid Margin</th><th class="r">Exposure</th>
+      <th class="r">Transferred (held)</th><th class="r">Unrealized Margin</th>
+      <th class="r">Transfers Out</th><th class="r">Realized Transfer Margin</th>
     </tr></thead>
     <tbody>${rows}</tbody>
   </table>`;
@@ -521,6 +534,16 @@ const COLUMNS: Record<number, ExportColumn[]> = {
     { header: "Margin Earned", key: "total_margin_earned" },
     { header: "Unpaid Margin", key: "unpaid_margin" },
     { header: "Receivable Exposure", key: "outstanding_receivable_exposure" },
+    // Cost-basis columns
+    { header: "Transferred Allocs Held", key: "active_transferred_count" },
+    { header: "Transferred Cost Basis Sum", key: "active_transferred_cost_basis" },
+    { header: "Transferred Face Sum", key: "active_transferred_face" },
+    { header: "Unrealized Cost-Basis Margin", key: "unrealized_cost_basis_margin" },
+    { header: "Transfers Out (count)", key: "transfers_out_count" },
+    { header: "Transfers Out Gross", key: "transfers_out_gross" },
+    { header: "Transfers Out Fees Paid", key: "transfers_out_fees_paid" },
+    { header: "Realized Transfer Margin", key: "realized_transfer_margin" },
+    { header: "Transfers In (count)", key: "transfers_in_count" },
   ],
   4: [ // Trade P&L
     { header: "Settlement #", key: "settlement_number" },

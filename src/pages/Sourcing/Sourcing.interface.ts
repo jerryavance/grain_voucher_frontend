@@ -157,6 +157,8 @@ export interface IInvestorAllocation {
   id: string; allocation_number: string; investor_account: string; investor_name: string;
   source_order: string; source_order_number: string; source_order_total_cost: number;
   amount_allocated: number; investor_margin: number; platform_fee: number;
+  /** What the current owner paid (null = never transferred, treat as face value). */
+  cost_basis: number | null;
   amount_returned: number; status: 'active'|'settled'|'force_settled'|'cancelled';
   expected_return_date: string | null;
   payout_type: 'margin' | 'interest';

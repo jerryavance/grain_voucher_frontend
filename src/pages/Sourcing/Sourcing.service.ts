@@ -604,6 +604,49 @@ export const SourcingService = {
     return instance.get(`sourcing/source-orders/${sourceOrderId}/reassignments/`).then(r => r.data);
   },
 
+  /**
+   * Cost-basis allocation transfer (Benjamin's "asset management" model).
+   * Moves an allocation between investor accounts at a user-chosen price.
+   * The buyer's `transfer_price` becomes the allocation's new `cost_basis`;
+   * the seller's realized margin = transfer_price − their prior cost basis.
+   * Optional `transfer_fee` is deducted from the seller's proceeds (platform
+   * revenue). Atomic; backend will reject if the recipient lacks EMD or the
+   * allocation isn't active.
+   */
+  async transferAllocation(
+    allocationId: string,
+    args: {
+      toInvestorAccountId: string;
+      transferPrice: number | string;
+      transferFee?: number | string;
+      reason?: string;
+      notes?: string;
+    },
+  ): Promise<{
+    message: string;
+    transfer_number: string;
+    allocation_number: string;
+    from_investor: string;
+    to_investor: string;
+    transfer_price: string;
+    transfer_fee: string;
+    from_realized_margin: string;
+    new_cost_basis: string;
+  }> {
+    return instance.post(`sourcing/investor-allocations/${allocationId}/transfer/`, {
+      to_investor_account_id: args.toInvestorAccountId,
+      transfer_price: args.transferPrice,
+      transfer_fee:   args.transferFee ?? "0",
+      reason:         args.reason ?? "mutual_agreement",
+      notes:          args.notes ?? "",
+    }).then(r => r.data);
+  },
+
+  /** Audit history of cost-basis transfers for a single allocation. */
+  async getAllocationTransfers(allocationId: string): Promise<any[]> {
+    return instance.get(`sourcing/investor-allocations/${allocationId}/transfers/`).then(r => r.data);
+  },
+
   async exportBuyerInvoicesCsv(params?: any): Promise<Blob> {
     return instance.get("sourcing/buyer-invoices/export_csv/", {
       params, responseType: "blob",

@@ -44,7 +44,9 @@ import ProgressIndicator from "../../components/UI/ProgressIndicator";
 import { SupplierInvoicePDFButton } from "./SupplierInvoicePDF";
 import { StandaloneDeliveryRecordForm, StandaloneWeighbridgeRecordForm, AggregatorTradeCostForm } from "./SourcingForms";
 import TradeReassignmentModal from "./TradeReassignmentModal";
+import AllocationTransferModal from "./AllocationTransferModal";
 import SwapHorizIcon from "@mui/icons-material/SwapHoriz";
+import TrendingUpIcon from "@mui/icons-material/TrendingUp";
 import HistoryIcon from "@mui/icons-material/History";
 import AssignmentIcon from "@mui/icons-material/Assignment";
 import LinkIcon from "@mui/icons-material/Link";
@@ -458,6 +460,10 @@ const SourceOrderDetails = () => {
   const [showReassignModal, setShowReassignModal] = useState(false);
   const [reassignments, setReassignments] = useState<any[]>([]);
   const [reassignmentsLoading, setReassignmentsLoading] = useState(false);
+  // Cost-basis allocation transfers (Benjamin's "asset management" model)
+  const [showTransferModal, setShowTransferModal] = useState(false);
+  const [transfers, setTransfers] = useState<any[]>([]);
+  const [transfersLoading, setTransfersLoading] = useState(false);
   const [purchaseOrders, setPurchaseOrders] = useState<IPurchaseOrder[]>([]);
   const [purchaseOrdersLoading, setPurchaseOrdersLoading] = useState(false);
   const [showGenerateLPO, setShowGenerateLPO] = useState(false);
@@ -474,6 +480,12 @@ const SourceOrderDetails = () => {
   useEffect(() => { if (id) fetchTradeTree(); }, [id]);
   useEffect(() => { if (id) fetchReassignments(); }, [id]);
   useEffect(() => { if (id) fetchPurchaseOrders(); }, [id]);
+  // Refetch transfers when the trade tree resolves (we need the allocation id first)
+  useEffect(() => {
+    const allocId = tradeTree?.investor_allocation?.id;
+    if (allocId) fetchTransfers(allocId);
+    else setTransfers([]);
+  }, [tradeTree?.investor_allocation?.id]);
 
   const fetchOrderDetails = async () => {
     try {
@@ -507,6 +519,13 @@ const SourceOrderDetails = () => {
     try { setReassignments(await SourcingService.getTradeReassignments(id)); }
     catch { setReassignments([]); }
     finally { setReassignmentsLoading(false); }
+  };
+
+  const fetchTransfers = async (allocationId: string) => {
+    setTransfersLoading(true);
+    try { setTransfers(await SourcingService.getAllocationTransfers(allocationId)); }
+    catch { setTransfers([]); }
+    finally { setTransfersLoading(false); }
   };
 
   const fetchPurchaseOrders = async () => {
@@ -547,6 +566,13 @@ const SourceOrderDetails = () => {
     order.has_investor_allocation
     && order.status !== "cancelled"
     && !order.has_paid_buyer_invoice;
+  // Same gating logic as reassign — transfer is also rejected once the buyer
+  // invoice has been paid, since settlement has already moved EMD.
+  const canTransfer =
+    !!treeAllocation
+    && treeAllocation?.status === "active"
+    && order.status !== "cancelled"
+    && !order.has_paid_buyer_invoice;
   // Investor can be assigned to any non-draft, non-sent, non-cancelled trade
   // that hasn't yet had its invoice paid. Covers old/in-production trades
   // (in_transit, delivered) that were never assigned.
@@ -562,6 +588,7 @@ const SourceOrderDetails = () => {
     `Deliveries (${treeDeliveries.length})`,
     "Weighbridge",
     `Re-assignments (${reassignments.length})`,
+    `Transfers (${transfers.length})`,
     `LPOs (${purchaseOrders.length})`,
   ];
   if (isAggregator) tabLabels.push("Aggregator Costs");
@@ -602,6 +629,11 @@ const SourceOrderDetails = () => {
         {canReassign && (
           <Button variant="outlined" color="warning" startIcon={<SwapHorizIcon />} onClick={() => setShowReassignModal(true)}>
             Re-assign Investor
+          </Button>
+        )}
+        {canTransfer && (
+          <Button variant="outlined" color="success" startIcon={<TrendingUpIcon />} onClick={() => setShowTransferModal(true)}>
+            Transfer Allocation
           </Button>
         )}
         <Button
@@ -880,9 +912,9 @@ const SourceOrderDetails = () => {
         )}
       </TabPanel>
 
-      {/* ── Tab 7: Aggregator Costs (conditional) ──────────────────────── */}
+      {/* ── Tab 8: Aggregator Costs (conditional) ──────────────────────── */}
       {isAggregator && (
-        <TabPanel value={tabValue} index={7}>
+        <TabPanel value={tabValue} index={8}>
           {aggregatorCostLoading ? <Box sx={{ display: "flex", justifyContent: "center", py: 4 }}><ProgressIndicator /></Box>
           : aggregatorCost ? (
             <Grid container spacing={3}>
@@ -985,8 +1017,78 @@ const SourceOrderDetails = () => {
         )}
       </TabPanel>
 
-      {/* ── Tab 6: Purchase Orders / LPOs ──────────────────────────────── */}
+      {/* ── Tab 6: Allocation Transfers (cost-basis history) ───────────── */}
       <TabPanel value={tabValue} index={6}>
+        <Box sx={{ mb: 2, display: "flex", alignItems: "center", gap: 1 }}>
+          <TrendingUpIcon color="success" />
+          <Typography variant="h6">Allocation Transfer History</Typography>
+          {canTransfer && (
+            <Button size="small" variant="outlined" color="success" startIcon={<TrendingUpIcon />}
+              onClick={() => setShowTransferModal(true)} sx={{ ml: "auto" }}>
+              Transfer Allocation
+            </Button>
+          )}
+        </Box>
+        {!treeAllocation ? (
+          <Alert severity="info">No allocation exists on this trade — nothing to transfer.</Alert>
+        ) : transfersLoading ? (
+          <LinearProgress />
+        ) : transfers.length === 0 ? (
+          <Alert severity="info">
+            No cost-basis transfers yet. The current owner ({treeAllocation?.investor_name ?? "—"})
+            is still the original allocator.
+            {treeAllocation?.cost_basis != null && (
+              <> Cost basis: <strong>{formatCurrency(parseFloat(treeAllocation.cost_basis))}</strong>.</>
+            )}
+          </Alert>
+        ) : (
+          <Paper variant="outlined">
+            <Table size="small">
+              <TableHead>
+                <TableRow sx={{ bgcolor: "action.hover" }}>
+                  {["#", "Ref", "From", "To", "Price", "Fee", "Seller Margin", "Reason", "By", "Date"].map(h => (
+                    <TableCell key={h} sx={{ fontWeight: 700, fontSize: "0.75rem" }}>{h}</TableCell>
+                  ))}
+                </TableRow>
+              </TableHead>
+              <TableBody>
+                {transfers.map((t: any, i: number) => {
+                  const margin = parseFloat(t.from_realized_margin ?? "0");
+                  return (
+                    <TableRow key={t.id} hover>
+                      <TableCell>{i + 1}</TableCell>
+                      <TableCell sx={{ fontWeight: 600, color: "success.main", fontFamily: "monospace" }}>
+                        {t.transfer_number}
+                      </TableCell>
+                      <TableCell>{t.from_investor_name ?? "—"}</TableCell>
+                      <TableCell sx={{ fontWeight: 600 }}>{t.to_investor_name}</TableCell>
+                      <TableCell>{formatCurrency(parseFloat(t.transfer_price))}</TableCell>
+                      <TableCell>{formatCurrency(parseFloat(t.transfer_fee ?? "0"))}</TableCell>
+                      <TableCell sx={{ fontWeight: 700, color: margin >= 0 ? "success.main" : "error.main" }}>
+                        {margin >= 0 ? "+" : ""}{formatCurrency(margin)}
+                      </TableCell>
+                      <TableCell>
+                        <Chip label={t.reason} size="small" variant="outlined" />
+                      </TableCell>
+                      <TableCell>{t.transferred_by_name}</TableCell>
+                      <TableCell>{formatDateToDDMMYYYY(t.transferred_at)}</TableCell>
+                    </TableRow>
+                  );
+                })}
+              </TableBody>
+            </Table>
+          </Paper>
+        )}
+        {transfers.length > 0 && (
+          <Typography variant="caption" color="text.secondary" sx={{ mt: 1, display: "block" }}>
+            {transfers.length} cost-basis transfer{transfers.length !== 1 ? "s" : ""} recorded.
+            Each row locks in the seller's realized margin at <em>transfer price − their cost basis</em>.
+          </Typography>
+        )}
+      </TabPanel>
+
+      {/* ── Tab 7: Purchase Orders / LPOs ──────────────────────────────── */}
+      <TabPanel value={tabValue} index={7}>
         <Box sx={{ mb: 2, display: "flex", alignItems: "center", gap: 1 }}>
           <AssignmentIcon color="primary" />
           <Typography variant="h6">Purchase Orders / LPOs</Typography>
@@ -1070,6 +1172,24 @@ const SourceOrderDetails = () => {
         allocationAmount={parseFloat(treeAllocation?.amount_allocated ?? "0")}
         onClose={() => setShowReassignModal(false)}
         onSuccess={() => { fetchOrderDetails(); fetchTradeTree(); fetchReassignments(); }}
+      />
+      <AllocationTransferModal
+        open={showTransferModal}
+        orderNumber={order.order_number}
+        allocationId={treeAllocation?.id ?? ""}
+        allocationAmount={parseFloat(treeAllocation?.amount_allocated ?? "0")}
+        currentCostBasis={
+          treeAllocation?.cost_basis != null
+            ? parseFloat(treeAllocation.cost_basis)
+            : null
+        }
+        currentInvestorName={treeAllocation?.investor_name ?? undefined}
+        onClose={() => setShowTransferModal(false)}
+        onSuccess={() => {
+          fetchOrderDetails();
+          fetchTradeTree();
+          if (treeAllocation?.id) fetchTransfers(treeAllocation.id);
+        }}
       />
     </Box>
   );

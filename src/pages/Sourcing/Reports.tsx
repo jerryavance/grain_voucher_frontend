@@ -443,6 +443,9 @@ const AssetsLiabilitiesReport: React.FC<{ data: any }> = ({ data }) => {
 
 const InvestorExposureReport: React.FC<{ data: any }> = ({ data }) => {
   const t = data.totals || {};
+  // Sign-aware coloring for realized transfer margin (lifetime P&L from
+  // selling positions — can go negative if positions were sold below cost).
+  const realizedTransferTotal = parseFloat(t.total_realized_transfer_margin || "0");
   return (
     <Box>
       <Grid container spacing={2} sx={{ mb: 3 }}>
@@ -453,6 +456,9 @@ const InvestorExposureReport: React.FC<{ data: any }> = ({ data }) => {
           { label: "Total Margin Earned", value: fmtUGX(t.total_margin_earned), color: "success.main" },
           { label: "Unpaid Margin", value: fmtUGX(t.total_unpaid_margin), color: "warning.main" },
           { label: "Receivable Exposure", value: fmtUGX(t.total_exposure), color: "error.main" },
+          // ── Cost-basis surfacing (Benjamin's "asset management" lens) ─
+          { label: "Unrealized Cost-Basis Margin", value: fmtUGX(t.total_unrealized_cost_basis_margin || "0"), color: "info.main" },
+          { label: "Realized Transfer Margin", value: fmtUGX(t.total_realized_transfer_margin || "0"), color: realizedTransferTotal >= 0 ? "success.main" : "error.main" },
         ].map(c => (
           <Grid item xs={6} sm={4} md={2} key={c.label}><SummaryCard {...c} /></Grid>
         ))}
@@ -461,29 +467,59 @@ const InvestorExposureReport: React.FC<{ data: any }> = ({ data }) => {
         <Table size="small">
           <TableHead>
             <TableRow sx={{ bgcolor: "action.hover" }}>
-              {["Investor", "Type", "EMD Available", "EMD Utilized", "Active Allocs", "Active Capital", "Settled", "Margin Earned", "Unpaid Margin", "Receivable Exposure"].map(h => (
+              {[
+                "Investor", "Type", "EMD Available", "EMD Utilized",
+                "Active Allocs", "Active Capital", "Settled",
+                "Margin Earned", "Unpaid Margin", "Receivable Exposure",
+                // Cost-basis columns
+                "Transferred (held)", "Unrealized Margin",
+                "Transfers Out", "Realized Transfer Margin",
+              ].map(h => (
                 <TableCell key={h} sx={{ fontWeight: 700, fontSize: "0.75rem" }}>{h}</TableCell>
               ))}
             </TableRow>
           </TableHead>
           <TableBody>
-            {(data.investors || []).map((inv: any, i: number) => (
-              <TableRow key={i} hover>
-                <TableCell sx={{ fontWeight: 600 }}>{inv.investor_name}</TableCell>
-                <TableCell>
-                  <Chip label={inv.payout_type === "interest" ? `Interest ${inv.interest_rate || ""}%` : "Margin"}
-                    size="small" color={inv.payout_type === "interest" ? "info" : "default"} variant="outlined" />
-                </TableCell>
-                <TableCell sx={{ color: "success.main" }}>{fmtUGX(inv.emd_balance)}</TableCell>
-                <TableCell>{fmtUGX(inv.emd_utilized)}</TableCell>
-                <TableCell>{inv.active_allocations}</TableCell>
-                <TableCell sx={{ fontWeight: 600 }}>{fmtUGX(inv.active_capital)}</TableCell>
-                <TableCell>{inv.settled_allocations}</TableCell>
-                <TableCell sx={{ color: "success.main" }}>{fmtUGX(inv.total_margin_earned)}</TableCell>
-                <TableCell sx={{ color: "warning.main", fontWeight: 600 }}>{fmtUGX(inv.unpaid_margin)}</TableCell>
-                <TableCell sx={{ color: "error.main", fontWeight: 600 }}>{fmtUGX(inv.outstanding_receivable_exposure)}</TableCell>
-              </TableRow>
-            ))}
+            {(data.investors || []).map((inv: any, i: number) => {
+              const unrealized = parseFloat(inv.unrealized_cost_basis_margin || "0");
+              const realizedXfer = parseFloat(inv.realized_transfer_margin || "0");
+              return (
+                <TableRow key={i} hover>
+                  <TableCell sx={{ fontWeight: 600 }}>{inv.investor_name}</TableCell>
+                  <TableCell>
+                    <Chip label={inv.payout_type === "interest" ? `Interest ${inv.interest_rate || ""}%` : "Margin"}
+                      size="small" color={inv.payout_type === "interest" ? "info" : "default"} variant="outlined" />
+                  </TableCell>
+                  <TableCell sx={{ color: "success.main" }}>{fmtUGX(inv.emd_balance)}</TableCell>
+                  <TableCell>{fmtUGX(inv.emd_utilized)}</TableCell>
+                  <TableCell>{inv.active_allocations}</TableCell>
+                  <TableCell sx={{ fontWeight: 600 }}>{fmtUGX(inv.active_capital)}</TableCell>
+                  <TableCell>{inv.settled_allocations}</TableCell>
+                  <TableCell sx={{ color: "success.main" }}>{fmtUGX(inv.total_margin_earned)}</TableCell>
+                  <TableCell sx={{ color: "warning.main", fontWeight: 600 }}>{fmtUGX(inv.unpaid_margin)}</TableCell>
+                  <TableCell sx={{ color: "error.main", fontWeight: 600 }}>{fmtUGX(inv.outstanding_receivable_exposure)}</TableCell>
+                  {/* Cost-basis cells */}
+                  <TableCell>
+                    {inv.active_transferred_count > 0 ? (
+                      <span>
+                        {inv.active_transferred_count} @ {fmtUGX(inv.active_transferred_cost_basis)}
+                      </span>
+                    ) : <span style={{ color: "#999" }}>—</span>}
+                  </TableCell>
+                  <TableCell sx={{ color: unrealized >= 0 ? "success.main" : "error.main", fontWeight: 600 }}>
+                    {unrealized !== 0 ? `${unrealized > 0 ? "+" : ""}${fmtUGX(unrealized)}` : "—"}
+                  </TableCell>
+                  <TableCell>
+                    {inv.transfers_out_count > 0
+                      ? `${inv.transfers_out_count} (${fmtUGX(inv.transfers_out_gross)})`
+                      : <span style={{ color: "#999" }}>—</span>}
+                  </TableCell>
+                  <TableCell sx={{ color: realizedXfer >= 0 ? "success.main" : "error.main", fontWeight: 600 }}>
+                    {realizedXfer !== 0 ? `${realizedXfer > 0 ? "+" : ""}${fmtUGX(realizedXfer)}` : "—"}
+                  </TableCell>
+                </TableRow>
+              );
+            })}
           </TableBody>
         </Table>
       </TableContainer>

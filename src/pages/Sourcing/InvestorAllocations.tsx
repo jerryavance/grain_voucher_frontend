@@ -102,6 +102,28 @@ const InvestorAllocations: FC = () => {
     },
     { Header: "Allocated", accessor: "amount_allocated", minWidth: 140, Cell: ({ row }: any) => <Span sx={{ fontWeight: 600 }}>{formatCurrency(row.original.amount_allocated)}</Span> },
     {
+      // Cost basis = what the current owner paid (NULL means never transferred).
+      // Show "—" when unset so the column reads cleanly across the mixed set.
+      Header: "Cost Basis", accessor: "cost_basis", minWidth: 130,
+      Cell: ({ row }: any) => {
+        const cb = row.original.cost_basis;
+        if (cb == null) return <Span sx={{ color: "text.secondary" }}>—</Span>;
+        const cbNum = Number(cb);
+        const face = Number(row.original.amount_allocated);
+        const spread = face - cbNum; // positive = bought below face
+        return (
+          <Span sx={{ fontWeight: 600 }}>
+            {formatCurrency(cbNum)}
+            {spread !== 0 && (
+              <Span sx={{ ml: 0.5, fontSize: 11, color: spread > 0 ? "success.main" : "error.main" }}>
+                ({spread > 0 ? "+" : ""}{formatCurrency(spread)})
+              </Span>
+            )}
+          </Span>
+        );
+      },
+    },
+    {
       Header: "Fin. %", accessor: "financing_percentage", minWidth: 80,
       Cell: ({ row }: any) => (
         <Chip label={`${row.original.financing_percentage ?? 100}%`} size="small"
