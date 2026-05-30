@@ -66,29 +66,33 @@ const SupplierColumnShape = (actions: IDropdownAction[]) => [
   },
   {
     Header: "Primary Hub",
-    accessor: "hub",
+    accessor: "hub_detail",
     minWidth: 150,
     Cell: ({ row }: any) => {
-      // hub is just the UUID string in this response
-      // If you have hub name available elsewhere → adjust accordingly
-      // For now we show the name from user_detail.hubs[0] if present
-      const hub = row.original.user_detail?.hubs?.[0];
-      return <Span sx={{ fontSize: 14 }}>{hub?.name || "Maracha Hub"}</Span>;
+      // hub_detail is the enriched object returned by SupplierProfileSerializer.
+      // The previous fallback to user_detail.hubs[0] / "Maracha Hub" was a leftover
+      // stub that masked the real hub for every supplier.
+      const hub = row.original.hub_detail;
+      return <Span sx={{ fontSize: 14 }}>{hub?.name || "—"}</Span>;
     },
   },
   {
     Header: "Grain Types",
-    accessor: "typical_grain_types",
+    accessor: "typical_grain_types_detail",
     minWidth: 200,
     Cell: ({ row }: any) => {
-      const types = row.original.typical_grain_types || [];
+      // typical_grain_types_detail = [{id, name}, …] from the serializer.
+      // The raw typical_grain_types field is just UUID strings, which is why
+      // the column used to render "None specified" for every row.
+      const types: Array<{ id: string; name: string }> =
+        row.original.typical_grain_types_detail || [];
       if (types.length === 0) {
         return <Span sx={{ fontSize: 14, color: "text.disabled" }}>None specified</Span>;
       }
       return (
         <Box sx={{ display: "flex", gap: 0.5, flexWrap: "wrap" }}>
-          {types.slice(0, 3).map((grain: string, idx: number) => (
-            <Chip key={idx} label={grain} size="small" />
+          {types.slice(0, 3).map((grain) => (
+            <Chip key={grain.id} label={grain.name} size="small" />
           ))}
           {types.length > 3 && (
             <Chip label={`+${types.length - 3}`} size="small" variant="outlined" />

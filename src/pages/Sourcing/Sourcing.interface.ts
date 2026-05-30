@@ -38,8 +38,13 @@ export interface IPaymentPreference {
 
 // ============ Supplier Profile ============
 export interface ISupplierProfile {
-  id: string; user: IUser; user_id?: string; hub: IHub | null; hub_id?: string;
-  business_name: string; farm_location: string; typical_grain_types: IGrainType[];
+  id: string; user: IUser; user_detail?: IUser; user_id?: string;
+  hub: string | IHub | null; hub_detail?: IHub | null; hub_id?: string;
+  business_name: string; farm_location: string;
+  /** Raw M2M write field — list of grain type UUIDs. */
+  typical_grain_types: string[];
+  /** Enriched read-only field added by the backend serializer; use this in tables / chips. */
+  typical_grain_types_detail?: Array<{ id: string; name: string }>;
   typical_grain_type_ids?: string[]; is_verified: boolean; verified_by: IUser | null;
   verified_at: string | null; payment_preferences: IPaymentPreference[];
   total_orders: number; total_supplied_kg: number; created_at: string; updated_at: string;

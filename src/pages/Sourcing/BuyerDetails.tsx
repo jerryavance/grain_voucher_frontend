@@ -166,12 +166,15 @@ const BuyerDetails: FC = () => {
       setInvoices(Array.isArray(inv) ? inv : ((inv as any).results || []));
       setContacts((cont as any).results || []);
 
-      // ✅ NEW: fetch payments for this buyer's invoices
+      // Fetch payments scoped to this buyer profile.
+      // Previously we fetched the GLOBAL payment list and filtered client-side,
+      // which silently dropped payments past page-size 100 — buyers ended up
+      // showing 0 in the Payments tab even when payments existed in the API.
+      // Now the backend filters by ?buyer=<id> directly and we ask for a
+      // generous page_size so a profile with many payments still loads.
       try {
-        const pResp = await SourcingService.getBuyerPayments({ page_size: 100 });
-        // Filter payments belonging to this buyer's invoices
-        const buyerInvIds = new Set((Array.isArray(inv) ? inv : ((inv as any).results || [])).map((i: any) => i.id));
-        setPayments((pResp.results || []).filter((p: IBuyerPayment) => buyerInvIds.has(p.buyer_invoice)));
+        const pResp = await SourcingService.getBuyerPayments({ buyer: id, page_size: 500 });
+        setPayments(pResp.results || []);
       } catch { setPayments([]); }
 
       // Fetch cash accounts for this buyer (one per currency)

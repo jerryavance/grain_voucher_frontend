@@ -113,10 +113,19 @@ const SupplierDetails = () => {
  // ── Resolve nested objects safely ────────────────────────────────────────
  // SupplierProfileSerializer returns user as write-only; nested data is in user_detail
  const user = (supplier as any).user_detail ?? supplier.user;
- // hub is returned as a UUID string from the serializer; hub object may be on hub_detail
- const hub = typeof supplier.hub === "object" ? supplier.hub : null;
+ // Prefer hub_detail (enriched) and fall back to legacy `hub` object if present.
+ const hub =
+   (supplier as any).hub_detail
+   ?? (typeof supplier.hub === "object" ? supplier.hub : null);
  // verified_by is returned as UUID; may be on verified_by_detail if serializer adds it
  const verifiedBy = typeof supplier.verified_by === "object" ? supplier.verified_by : null;
+ // Grain types — prefer the enriched {id,name}[] list, fall back to empty if backend
+ // only returned UUID strings (legacy clients).
+ const grainTypes: Array<{ id: string; name: string }> =
+   (supplier as any).typical_grain_types_detail
+   ?? ((supplier.typical_grain_types || []).every((g: any) => typeof g === "object")
+         ? (supplier.typical_grain_types as any[])
+         : []);
 
 
  return (
@@ -163,7 +172,7 @@ const SupplierDetails = () => {
        <Grid item xs={12} sm={6} md={3}>
          <Card><CardContent>
            <Typography color="text.primary" gutterBottom variant="overline">Grain Types</Typography>
-           <Typography variant="h4">{supplier.typical_grain_types.length}</Typography>
+           <Typography variant="h4">{grainTypes.length}</Typography>
          </CardContent></Card>
        </Grid>
        <Grid item xs={12} sm={6} md={3}>
@@ -208,9 +217,11 @@ const SupplierDetails = () => {
              <Box sx={styles.infoRow}>
                <Span sx={styles.label}>Grain Types:</Span>
                <Box sx={{ display: "flex", gap: 0.5, flexWrap: "wrap" }}>
-                 {supplier.typical_grain_types.map((grain) => (
-                   <Chip key={grain.id} label={grain.name} size="small" />
-                 ))}
+                 {grainTypes.length === 0
+                   ? <Span sx={{ fontSize: 13, color: "text.disabled" }}>None specified</Span>
+                   : grainTypes.map((grain) => (
+                       <Chip key={grain.id} label={grain.name} size="small" />
+                     ))}
                </Box>
              </Box>
            </CardContent></Card>

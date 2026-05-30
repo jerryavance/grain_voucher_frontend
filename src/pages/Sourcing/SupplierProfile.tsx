@@ -104,7 +104,7 @@ const SupplierProfile: React.FC = () => {
   const statCards = [
     { label: "TOTAL ORDERS",   value: supplier.total_orders ?? "—" },
     { label: "TOTAL SUPPLIED", value: formatKg(supplier.total_supplied_kg ?? supplier.total_supplied) },
-    { label: "GRAIN TYPES",    value: supplier.typical_grain_types?.length ?? supplier.grain_types_count ?? 0 },
+    { label: "GRAIN TYPES",    value: (supplier as any).typical_grain_types_detail?.length ?? supplier.typical_grain_types?.length ?? supplier.grain_types_count ?? 0 },
     { label: "MEMBER SINCE",   value: formatDate(supplier.created_at) },
   ];
 
@@ -185,16 +185,26 @@ const SupplierProfile: React.FC = () => {
                 sx={{ mt: 0.5 }}
               />
             </Grid>
-            {supplier.typical_grain_types?.length > 0 && (
-              <Grid item xs={12}>
-                <Typography variant="body2" color="text.secondary" mb={0.5}>Grain Types</Typography>
-                <Box display="flex" gap={0.5} flexWrap="wrap">
-                  {supplier.typical_grain_types.map((g: any) => (
-                    <Chip key={g.id} label={g.name} size="small" />
-                  ))}
-                </Box>
-              </Grid>
-            )}
+            {(() => {
+              // Prefer enriched detail (objects with id+name) from the backend
+              // serializer; fall back to legacy data if anything is already an object.
+              const list: Array<{ id: string; name: string }> =
+                (supplier as any).typical_grain_types_detail
+                ?? ((supplier.typical_grain_types || []).every((g: any) => typeof g === "object")
+                      ? (supplier.typical_grain_types as any[])
+                      : []);
+              if (list.length === 0) return null;
+              return (
+                <Grid item xs={12}>
+                  <Typography variant="body2" color="text.secondary" mb={0.5}>Grain Types</Typography>
+                  <Box display="flex" gap={0.5} flexWrap="wrap">
+                    {list.map((g) => (
+                      <Chip key={g.id} label={g.name} size="small" />
+                    ))}
+                  </Box>
+                </Grid>
+              );
+            })()}
           </Grid>
         </Card>
       )}

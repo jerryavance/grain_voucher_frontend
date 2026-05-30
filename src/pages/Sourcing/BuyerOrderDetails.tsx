@@ -553,7 +553,7 @@ const BuyerOrderDetails: FC = () => {
   const [showLinkContract, setShowLinkContract] = useState(false);
   const [availableLots, setAvailableLots] = useState<ISaleLot[]>([]);
   const [actionLoading, setActionLoading] = useState(false);
-  const [linkedSourceOrders, setLinkedSourceOrders] = useState<string[]>([]);
+  const [linkedSourceOrders, setLinkedSourceOrders] = useState<Array<{ id: string; order_number: string }>>([]);
   const [pfis, setPfis] = useState<IProformaInvoice[]>([]);
   const [pfiActionLoading, setPfiActionLoading] = useState(false);
   const [fulfillment, setFulfillment] = useState<IBuyerOrderFulfillment | null>(null);
@@ -574,7 +574,10 @@ const BuyerOrderDetails: FC = () => {
     SourcingService.getAvailableSaleLots().then(setAvailableLots).catch(() => {});
     if (id) {
       SourcingService.getLinkedSourceOrders(id).then((data: any[]) => {
-        setLinkedSourceOrders(data.map((so: any) => so.order_number));
+        // Keep both id (for navigation) and order_number (for display label).
+        // Earlier we mapped to just order_number, which caused 404s when the
+        // chip click pushed a non-UUID into the :id route param.
+        setLinkedSourceOrders(data.map((so: any) => ({ id: so.id, order_number: so.order_number })));
       }).catch(() => {});
       SourcingService.getProformaInvoices({ buyer_order: id, page_size: 50 })
         .then(r => setPfis(r.results || []))
@@ -649,9 +652,21 @@ const BuyerOrderDetails: FC = () => {
   if (loading) return <LoadingScreen />;
   if (!order) return null;
 
-  const grossMarginPct = order.subtotal > 0
-    ? (order.gross_profit / order.subtotal * 100).toFixed(1)
-    : "0.0";
+  // ── Gross margin (currency-aware) ────────────────────────────────────────
+  // gross_profit is always stored in UGX; subtotal is in the trade currency.
+  // For non-UGX trades, dividing UGX profit by USD/EUR/GBP revenue produces
+  // an enormous bogus percentage (e.g. 50,000%). Convert subtotal to its
+  // UGX equivalent first using exchange_rate_to_ugx, then take the ratio.
+  const subtotalUgx = (() => {
+    const sub = Number(order.subtotal) || 0;
+    if (!sub) return 0;
+    if ((order.currency || "UGX") === "UGX") return sub;
+    const rate = Number(order.exchange_rate_to_ugx) || 0;
+    return rate > 0 ? sub * rate : 0;
+  })();
+  const grossMarginPct = subtotalUgx > 0
+    ? (Number(order.gross_profit) / subtotalUgx * 100).toFixed(1)
+    : "—";
 
   const buyerDisplayName = order.buyer_detail?.business_name || order.buyer_name;
 
@@ -808,9 +823,9 @@ const BuyerOrderDetails: FC = () => {
       {linkedSourceOrders.length > 0 && (
         <Alert severity="info" sx={{ mb: 2 }}>
           <strong>Linked Source Orders:</strong>{" "}
-          {linkedSourceOrders.map((so, i) => (
-            <Chip key={so} label={so} size="small" color="primary" variant="outlined"
-              onClick={() => navigate(`/admin/sourcing/orders/${so}`)}
+          {linkedSourceOrders.map((so) => (
+            <Chip key={so.id} label={so.order_number} size="small" color="primary" variant="outlined"
+              onClick={() => navigate(`/admin/sourcing/orders/${so.id}`)}
               sx={{ ml: 0.5, cursor: "pointer" }} />
           ))}
           <Typography variant="caption" display="block" sx={{ mt: 0.5 }}>
@@ -832,8 +847,9 @@ const BuyerOrderDetails: FC = () => {
           },
           {
             label: "Gross Margin",
-            value: `${grossMarginPct}%`,
-            color: parseFloat(grossMarginPct) >= 5 ? "success.main" : "warning.main",
+            value: grossMarginPct === "—" ? "—" : `${grossMarginPct}%`,
+            color: grossMarginPct !== "—" && parseFloat(grossMarginPct) >= 5
+              ? "success.main" : "warning.main",
           },
         ].map(card => (
           <Grid item xs={6} sm={4} md={2.4} key={card.label}>

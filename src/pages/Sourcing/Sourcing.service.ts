@@ -177,7 +177,12 @@ export const SourcingService = {
 
   // ── Investor Accounts ─────────────────────────────────────────────────────
   async getInvestorAccounts(filters?: Record<string, any>): Promise<{ results: IInvestorAccount[]; count: number }> {
-    return instance.get("investors/accounts/", { params: filters }).then(r => r.data);
+    // Always request a large page so the dropdown for allocation /
+    // reassignment / transfer covers every account in one round-trip.
+    // Backend caps at 200 (LargeResultsSetPagination.max_page_size).
+    return instance.get("investors/accounts/", {
+      params: { page_size: 200, ...(filters || {}) },
+    }).then(r => r.data);
   },
   async getMyInvestorAccountId(): Promise<string> {
     const data = await instance.get("investors/accounts/").then(r => r.data);
@@ -576,13 +581,13 @@ export const SourcingService = {
     return instance.get("auth/users/", { params: { role: "farmer", search, page_size: 50 } }).then(r => r.data);
   },
   async getHubs(search?: string): Promise<any> {
-    return instance.get("hubs/", { params: { search, page_size: 50 } }).then(r => r.data);
+    return instance.get("hubs/", { params: { search, page_size: 200 } }).then(r => r.data);
   },
   async getGrainTypes(search?: string): Promise<any> {
-    return instance.get("vouchers/grain-types/", { params: { search, page_size: 50 } }).then(r => r.data);
+    return instance.get("vouchers/grain-types/", { params: { search, page_size: 200 } }).then(r => r.data);
   },
   async getQualityGrades(search?: string): Promise<any> {
-    return instance.get("vouchers/quality-grades/", { params: { search, page_size: 50 } }).then(r => r.data);
+    return instance.get("vouchers/quality-grades/", { params: { search, page_size: 200 } }).then(r => r.data);
   },
 
   // ── NEW: Backend integration endpoints ────────────────────────────────────
