@@ -661,6 +661,73 @@ const SourceOrderDetails = () => {
         )}
       </Box>
 
+      {/* ── Allocation Summary Banner ─────────────────────────────────────────
+          Always-visible at-a-glance snapshot of who currently owns this
+          allocation and at what cost basis. Surfaces the transfer model
+          per Benjamin's intent ("margin is separable from the receivable")
+          and makes the spread between face value and cost basis obvious
+          for downstream desk users (Maurice/Nelson). */}
+      {treeAllocation && (() => {
+        const face = parseFloat(treeAllocation.amount_allocated ?? "0");
+        const rawCostBasis = treeAllocation.cost_basis;
+        const cost = rawCostBasis != null ? parseFloat(rawCostBasis) : face;
+        const spread = cost - face;
+        const transferred = rawCostBasis != null && Math.abs(spread) > 0.005;
+        return (
+          <Box
+            sx={{
+              mb: 3, p: 2, borderRadius: 1,
+              border: 1, borderColor: transferred ? "warning.light" : "divider",
+              bgcolor: transferred ? "warning.lighter" : "action.hover",
+              display: "flex", flexWrap: "wrap", alignItems: "center", gap: 2,
+            }}
+          >
+            <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+              <AccountBalanceIcon fontSize="small" color={transferred ? "warning" : "action"} />
+              <Box>
+                <Typography variant="caption" color="text.secondary" sx={{ display: "block", lineHeight: 1 }}>
+                  Current Owner
+                </Typography>
+                <Typography variant="body2" sx={{ fontWeight: 700 }}>
+                  {treeAllocation.investor_name ?? "—"}
+                </Typography>
+              </Box>
+            </Box>
+            <Divider orientation="vertical" flexItem />
+            <Box>
+              <Typography variant="caption" color="text.secondary" sx={{ display: "block", lineHeight: 1 }}>
+                Face Value
+              </Typography>
+              <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                {formatCurrency(face)}
+              </Typography>
+            </Box>
+            <Box>
+              <Typography variant="caption" color="text.secondary" sx={{ display: "block", lineHeight: 1 }}>
+                Cost Basis
+              </Typography>
+              <Typography variant="body2" sx={{ fontWeight: 600, color: transferred ? "warning.dark" : "text.primary" }}>
+                {formatCurrency(cost)}
+              </Typography>
+            </Box>
+            {transferred && (
+              <Chip
+                size="small"
+                color={spread < 0 ? "error" : "success"}
+                label={`Spread ${spread >= 0 ? "+" : ""}${formatCurrency(spread)}`}
+                sx={{ fontWeight: 700 }}
+              />
+            )}
+            {transferred && (
+              <Typography variant="caption" color="text.secondary" sx={{ ml: "auto", maxWidth: 380 }}>
+                This allocation has been transferred. At settlement the holder's margin will
+                be computed as <strong>realized value − cost basis</strong>.
+              </Typography>
+            )}
+          </Box>
+        );
+      })()}
+
       {/* Tabs */}
       <Tabs value={tabValue} onChange={(_, v) => setTabValue(v)} sx={{ borderBottom: 1, borderColor: "divider" }}>
         {tabLabels.map((label, i) => <Tab key={i} label={label} />)}

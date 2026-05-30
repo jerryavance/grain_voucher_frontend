@@ -623,6 +623,11 @@ export interface IBuyerOrderLine {
   grain_type: string; lot_available_kg: number; quantity_kg: number;
   sale_price_per_kg: number; line_total: number; cogs_per_kg: number;
   cogs_total: number; line_gross_profit: number; notes: string; created_at: string;
+  /** Allocation provenance fields (added by BuyerOrderLineSerializer).
+   *  Used to surface cost-basis transfer footnotes on the Buyer Order P&L. */
+  allocation_cost_basis?: string | null;
+  allocation_face_value?: string | null;
+  allocation_was_transferred?: boolean;
 }
 
 export interface ISaleExpense {

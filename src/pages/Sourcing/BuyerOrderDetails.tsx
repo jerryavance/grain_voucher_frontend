@@ -21,6 +21,7 @@ import TrackChangesIcon from "@mui/icons-material/TrackChanges";
 import LinkOffIcon from "@mui/icons-material/LinkOff";
 import LinkIcon from "@mui/icons-material/Link";
 import HandshakeIcon from "@mui/icons-material/Handshake";
+import SwapHorizIcon from "@mui/icons-material/SwapHoriz";
 import LoadingScreen from "../../components/LoadingScreen";
 import ProgressIndicator from "../../components/UI/ProgressIndicator";
 import { Span } from "../../components/Typography";
@@ -835,7 +836,7 @@ const BuyerOrderDetails: FC = () => {
       )}
 
       {/* P&L Summary Cards */}
-      <Grid container spacing={2} sx={{ mb: 3 }}>
+      <Grid container spacing={2} sx={{ mb: 1 }}>
         {[
           { label: `Revenue (${order.currency || "UGX"})`, value: fmtTrade(order.subtotal, order.currency || "UGX"), color: "primary.main" },
           { label: "COGS (UGX)", value: fmtUGX(order.total_cogs), color: "text.primary" },
@@ -862,6 +863,25 @@ const BuyerOrderDetails: FC = () => {
           </Grid>
         ))}
       </Grid>
+
+      {/* Transfer-aware P&L footnote.
+          When ANY underlying allocation on this order has a cost basis ≠
+          face value, the platform-side gross profit shown above is correct
+          for accounting purposes but is NOT the investor-side margin. The
+          actual investor margin is settled against the holder's cost basis
+          (see allocation_transfer.py). We flag that to the user so they
+          don't try to reconcile the two numbers manually. */}
+      {(order.lines || []).some((l: any) => l.allocation_was_transferred) && (
+        <Alert severity="warning" icon={<SwapHorizIcon fontSize="small" />} sx={{ mb: 3 }}>
+          <Typography variant="body2">
+            One or more allocations on this order have been <strong>transferred</strong>{" "}
+            between investors. The Gross Profit shown above is the platform-side accounting
+            number (revenue − recorded COGS). The current investor's margin at settlement
+            will be computed against their <strong>cost basis</strong>, not the original COGS —
+            see the <em>Ownership Chain</em> on the source order's Trade Story for the full picture.
+          </Typography>
+        </Alert>
+      )}
 
       {/* Tabs */}
       <Tabs value={tab} onChange={(_, v) => setTab(v)} sx={{ mb: 2, borderBottom: 1, borderColor: "divider" }}>
