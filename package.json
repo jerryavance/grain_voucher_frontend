@@ -61,6 +61,8 @@
     "start": "react-scripts start --host 192.168.1.142",
     "start:local": "react-scripts start",
     "build": "CI=false DISABLE_ESLINT_PLUGIN=true react-scripts build",
+    "build:prod": "REACT_APP_API_BASE_URL=https://api.grainvoucher.com/api/ CI=false DISABLE_ESLINT_PLUGIN=true react-scripts build",
+    "build:staging": "REACT_APP_API_BASE_URL=https://staging-api.grainvoucher.com/api/ CI=false DISABLE_ESLINT_PLUGIN=true react-scripts build",
     "test": "react-scripts test --passWithNoTests",
     "eject": "react-scripts eject",
     "fix:prettier": "prettier --write ."
